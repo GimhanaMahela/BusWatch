@@ -1,83 +1,131 @@
 const Report = require("../models/Report");
 const cloudinary = require("../config/cloudinary");
 const { sendReportReceiptEmail } = require("../utils/emailService");
-const { generatePdfReceipt } = require("../utils/generateReceipt");
 const { v4: uuidv4 } = require("uuid");
 const generateUniqueId = require("../utils/generateUniqueId");
+const fs = require("fs");
+const path = require("path");
+const generatePdfReceipt = require("../utils/generatePdfReceipt");
 
 // @desc    Submit a new report
 // @route   POST /api/reports
 // @access  Public
 exports.submitReport = async (req, res) => {
   try {
+    // --- IMPORTANT CHANGE HERE ---
+    // Destructure flat fields, and get longitude/latitude directly from req.body
     const {
       busNumber,
       routeNumber,
       busName,
-      location,
       locationName,
       description,
       passengerEmail,
+      status // If you are sending 'status' as well
     } = req.body;
 
+    // Directly access location.longitude and location.latitude from req.body
+    const longitude = req.body['location.longitude']; // Access using bracket notation for string keys
+    const latitude = req.body['location.latitude'];   // Access using bracket notation for string keys
+
+    // --- You can add a console.log here to inspect req.body ---
+    // console.log("Incoming req.body:", req.body);
+    // console.log("Parsed Longitude:", longitude);
+    // console.log("Parsed Latitude:", latitude);
+
+    // Basic validation for longitude and latitude (optional but recommended)
+    if (longitude === undefined || latitude === undefined) {
+      return res.status(400).json({ message: "Location data (longitude, latitude) is required." });
+    }
+    // --- END IMPORTANT CHANGE ---
+
     // Generate receiptId early
-    const newReceiptId = generateUniqueId(); // Generate a unique ID
+    const newReceiptId = generateUniqueId();
 
     const images = [];
     const videos = [];
 
-    // ... (Your Cloudinary file upload logic remains the same) ...
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const result = await cloudinary.uploader.upload(
-          file.path ||
-            `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
-          {
-            resource_type: file.mimetype.startsWith("image")
-              ? "image"
-              : "video",
-          }
-        );
-        if (file.mimetype.startsWith("image")) {
+    // --- Process uploaded files (this part was already adjusted correctly) ---
+    if (req.files) {
+      if (req.files.images) {
+        for (const file of req.files.images) {
+          const result = await cloudinary.uploader.upload(
+            file.path || `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+            { resource_type: 'image' }
+          );
           images.push(result.secure_url);
-        } else {
+        }
+      }
+
+      if (req.files.videos) {
+        for (const file of req.files.videos) {
+          const result = await cloudinary.uploader.upload(
+            file.path || `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+            { resource_type: 'video' }
+          );
           videos.push(result.secure_url);
         }
       }
     }
+    // --- End file processing ---
 
     const newReport = new Report({
       busNumber,
       routeNumber,
       busName,
-      location: {
+      location: { // Now create the nested 'location' object here
         type: "Point",
         coordinates: [
-          parseFloat(location.longitude),
-          parseFloat(location.latitude),
+          parseFloat(longitude), // Use the directly accessed 'longitude'
+          parseFloat(latitude),  // Use the directly accessed 'latitude'
         ],
       },
       locationName,
       description,
       images,
       videos,
-      receiptId: newReceiptId, // <--- Assign the generated unique ID here!
+      receiptId: newReceiptId,
     });
 
-    const savedReport = await newReport.save(); // Only one save needed here
+    const savedReport = await newReport.save();
 
     // Generate PDF receipt (now with a guaranteed receiptId)
     const receiptDetails = await generatePdfReceipt({
       ...savedReport.toObject(),
       locationName: locationName,
-      receiptId: savedReport.receiptId, // Pass the already saved receiptId
+      receiptId: savedReport.receiptId,
     });
+
+    // --- TEMPORARY: Save PDF to a file for testing ---
+    if (receiptDetails && receiptDetails.pdfBuffer) {
+      const reportsDir = path.join(__dirname, "..", "reports");
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir, { recursive: true });
+      }
+      const filePath = path.join(reportsDir, `receipt_${savedReport._id}.pdf`);
+      fs.writeFileSync(filePath, receiptDetails.pdfBuffer);
+      console.log(`PDF receipt saved to: ${filePath}`);
+    } else {
+      console.warn("PDF buffer not available from generatePdfReceipt.");
+    }
+    // --- END TEMPORARY ---
+
+    // Update the report with the generated receiptId (if Option 2 was used)
+    // This block might be redundant if receiptId is already set before save
+    if (receiptDetails && receiptDetails.receiptId && savedReport.receiptId !== receiptDetails.receiptId) {
+      savedReport.receiptId = receiptDetails.receiptId;
+      await savedReport.save();
+    } else if (!receiptDetails || !receiptDetails.receiptId) {
+      console.warn(
+        "generatePdfReceipt did not return a receiptId. Report saved without receiptId."
+      );
+    }
 
     // Send receipt email to passenger
     if (passengerEmail && savedReport.receiptId) {
       await sendReportReceiptEmail(
         passengerEmail,
-        receiptDetails.pdfBuffer, // Assuming generatePdfReceipt returns pdfBuffer
+        receiptDetails.pdfBuffer,
         savedReport.receiptId
       );
     }
@@ -89,12 +137,15 @@ exports.submitReport = async (req, res) => {
     });
   } catch (err) {
     console.error("Error in submitReport:", err.message);
+    if (err instanceof multer.MulterError) {
+        console.error("Multer Error:", err.code, err.field);
+        return res.status(400).json({ message: "File Upload Error", error: err.message, field: err.field });
+    }
     if (err.name === "ValidationError") {
       return res
         .status(400)
         .json({ message: "Validation Error", errors: err.errors });
     }
-    // Handle duplicate key error specifically if it happens despite the above (unlikely now)
     if (err.code === 11000) {
       return res
         .status(409)
@@ -151,7 +202,7 @@ exports.updateReportStatus = async (req, res) => {
       return res.status(404).json({ msg: "Report not found" });
     }
 
-    report.status = status;
+    report.status = status;ADMIN_EMAIL;
     await report.save();
     res.json(report);
   } catch (err) {
