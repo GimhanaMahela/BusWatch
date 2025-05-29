@@ -16,6 +16,13 @@ createInitialAdmin();
 app.use(express.json({ extended: false })); // Allows us to get data in req.body
 app.use(cors()); // Enable CORS for frontend communication
 
+// Configure CORS
+app.use(cors({
+  origin: 'http://localhost:3000', // Allow requests from your frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'x-auth-token'] // Allow these headers
+}));
+
 // Define Routes
 app.use("/api/reports", require("./routes/reports"));
 app.use("/api/auth", require("./routes/auth"));
