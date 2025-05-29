@@ -100,7 +100,7 @@ const generatePdfReceipt = async (reportData) => {
       .font("Helvetica")
       .text(`Location of Incident:`, { continued: true, indent: detailIndent })
       .font("Helvetica-Bold")
-      .text(`${reportData.locationName}`)
+      .text(`${reportData.location}`)
       .moveDown(0.2);
 
     doc

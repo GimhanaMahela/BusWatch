@@ -12,32 +12,25 @@ const generatePdfReceipt = require("../utils/generatePdfReceipt");
 // @access  Public
 exports.submitReport = async (req, res) => {
   try {
-    // --- IMPORTANT CHANGE HERE ---
-    // Destructure flat fields, and get longitude/latitude directly from req.body
     const {
       busNumber,
       routeNumber,
       busName,
-      locationName,
+      location, 
       description,
       passengerEmail,
-      status // If you are sending 'status' as well
+      status, 
     } = req.body;
 
-    // Directly access location.longitude and location.latitude from req.body
-    const longitude = req.body['location.longitude']; // Access using bracket notation for string keys
-    const latitude = req.body['location.latitude'];   // Access using bracket notation for string keys
-
-    // --- You can add a console.log here to inspect req.body ---
-    // console.log("Incoming req.body:", req.body);
-    // console.log("Parsed Longitude:", longitude);
-    // console.log("Parsed Latitude:", latitude);
-
-    // Basic validation for longitude and latitude (optional but recommended)
-    if (longitude === undefined || latitude === undefined) {
-      return res.status(400).json({ message: "Location data (longitude, latitude) is required." });
+    // Optional: Basic validation for required string fields
+    if (!busNumber || !routeNumber || !location || !description) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Missing required report fields (Bus Number, Route Number, Location, Description).",
+        });
     }
-    // --- END IMPORTANT CHANGE ---
 
     // Generate receiptId early
     const newReceiptId = generateUniqueId();
@@ -45,42 +38,38 @@ exports.submitReport = async (req, res) => {
     const images = [];
     const videos = [];
 
-    // --- Process uploaded files (this part was already adjusted correctly) ---
+    // Process uploaded files
     if (req.files) {
       if (req.files.images) {
         for (const file of req.files.images) {
-          const result = await cloudinary.uploader.upload(
-            file.path || `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
-            { resource_type: 'image' }
-          );
+          const uploadSource =
+            file.path ||
+            `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+          const result = await cloudinary.uploader.upload(uploadSource, {
+            resource_type: "image",
+          });
           images.push(result.secure_url);
         }
       }
 
       if (req.files.videos) {
         for (const file of req.files.videos) {
-          const result = await cloudinary.uploader.upload(
-            file.path || `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
-            { resource_type: 'video' }
-          );
+          const uploadSource =
+            file.path ||
+            `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+          const result = await cloudinary.uploader.upload(uploadSource, {
+            resource_type: "video",
+          });
           videos.push(result.secure_url);
         }
       }
     }
-    // --- End file processing ---
 
     const newReport = new Report({
       busNumber,
       routeNumber,
       busName,
-      location: { // Now create the nested 'location' object here
-        type: "Point",
-        coordinates: [
-          parseFloat(longitude), // Use the directly accessed 'longitude'
-          parseFloat(latitude),  // Use the directly accessed 'latitude'
-        ],
-      },
-      locationName,
+      location, // Now a string
       description,
       images,
       videos,
@@ -90,9 +79,10 @@ exports.submitReport = async (req, res) => {
     const savedReport = await newReport.save();
 
     // Generate PDF receipt (now with a guaranteed receiptId)
+    // Ensure generatePdfReceipt is updated to accept a string location
     const receiptDetails = await generatePdfReceipt({
       ...savedReport.toObject(),
-      locationName: locationName,
+      location: savedReport.location, 
       receiptId: savedReport.receiptId,
     });
 
@@ -112,7 +102,13 @@ exports.submitReport = async (req, res) => {
 
     // Update the report with the generated receiptId (if Option 2 was used)
     // This block might be redundant if receiptId is already set before save
-    if (receiptDetails && receiptDetails.receiptId && savedReport.receiptId !== receiptDetails.receiptId) {
+    // Removed the receiptDetails.receiptId check from savedReport.receiptId comparison
+    // as receiptDetails might not return receiptId if it's already set in savedReport
+    if (
+      receiptDetails &&
+      receiptDetails.receiptId &&
+      savedReport.receiptId !== receiptDetails.receiptId
+    ) {
       savedReport.receiptId = receiptDetails.receiptId;
       await savedReport.save();
     } else if (!receiptDetails || !receiptDetails.receiptId) {
@@ -122,7 +118,12 @@ exports.submitReport = async (req, res) => {
     }
 
     // Send receipt email to passenger
-    if (passengerEmail && savedReport.receiptId) {
+    if (
+      passengerEmail &&
+      savedReport.receiptId &&
+      receiptDetails &&
+      receiptDetails.pdfBuffer
+    ) {
       await sendReportReceiptEmail(
         passengerEmail,
         receiptDetails.pdfBuffer,
@@ -138,18 +139,30 @@ exports.submitReport = async (req, res) => {
   } catch (err) {
     console.error("Error in submitReport:", err.message);
     if (err instanceof multer.MulterError) {
-        console.error("Multer Error:", err.code, err.field);
-        return res.status(400).json({ message: "File Upload Error", error: err.message, field: err.field });
-    }
-    if (err.name === "ValidationError") {
+      console.error("Multer Error:", err.code, err.field);
       return res
         .status(400)
-        .json({ message: "Validation Error", errors: err.errors });
+        .json({
+          message: "File Upload Error",
+          error: err.message,
+          field: err.field,
+        });
+    }
+    if (err.name === "ValidationError") {
+      // Mongoose validation errors
+      const errors = Object.values(err.errors).map((el) => el.message);
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: errors });
     }
     if (err.code === 11000) {
+      // Mongoose duplicate key error (for unique fields like receiptId)
       return res
         .status(409)
-        .json({ message: "Duplicate receipt ID detected. Please try again." });
+        .json({
+          message:
+            "Duplicate receipt ID detected or unique constraint violation. Please try again.",
+        });
     }
     res.status(500).send("Server Error");
   }
@@ -202,7 +215,7 @@ exports.updateReportStatus = async (req, res) => {
       return res.status(404).json({ msg: "Report not found" });
     }
 
-    report.status = status;ADMIN_EMAIL;
+    report.status = status;
     await report.save();
     res.json(report);
   } catch (err) {
