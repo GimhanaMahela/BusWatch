@@ -9,7 +9,6 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [admin, setAdmin] = useState(null);
 
-  // Set default headers for Axios
   const setAuthToken = useCallback((token) => {
     if (token) {
       axios.defaults.headers.common["x-auth-token"] = token;
@@ -20,14 +19,13 @@ const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Load admin details if token exists
   const loadAdmin = useCallback(async () => {
     if (token) {
-      setAuthToken(token);
+      setAuthToken(token); // Ensure token is set before making the request
       try {
-        const res = await axios.get("/api/auth"); 
+        const res = await axios.get("/api/auth"); // Your backend endpoint to get admin details
         setAdmin(res.data);
-        setIsAuthenticated(true);
+        setIsAuthenticated(true); // This sets isAuthenticated to true upon successful admin data fetch
       } catch (err) {
         console.error("Error loading admin:", err.message);
         setToken(null);
@@ -36,25 +34,41 @@ const AuthProvider = ({ children }) => {
         localStorage.removeItem("token");
       }
     } else {
+      // If there's no token, ensure isAuthenticated is false
       setIsAuthenticated(false);
       setAdmin(null);
     }
-    setLoading(false);
-  }, [token, setAuthToken]);
+    setLoading(false); // Loading is done once admin data is attempted to be loaded
+  }, [token, setAuthToken]); // `token` is a dependency here. When token changes, loadAdmin runs.
 
   useEffect(() => {
+    // This effect runs on component mount and when 'token' or 'setAuthToken' changes.
+    // When `login` sets a new token, this `useEffect` will trigger `loadAdmin`,
+    // which in turn will set `isAuthenticated`.
     loadAdmin();
   }, [loadAdmin]);
 
   // Login function
   const login = async (email, password) => {
     try {
-      setLoading(true);
-      // Change from `${API_URL}/auth/login` to just `/api/auth/login`
+      setLoading(true); // Start loading at the beginning of the login attempt
       const res = await axios.post("/api/auth/login", { email, password });
-      setToken(res.data.token);
-      setAuthToken(res.data.token);
-      await loadAdmin();
+      const receivedToken = res.data.token; // Get the token from the response
+
+      setToken(receivedToken); // Update the token state
+      setAuthToken(receivedToken); // Store token in localStorage and Axios headers
+
+      // Option 1 (Preferred): Let useEffect handle loadAdmin and setIsAuthenticated
+      // The `useEffect` listening to `token` will fire now, which will call `loadAdmin`
+      // and eventually set `isAuthenticated` to `true`.
+      // The `AdminLoginPage` should wait for this state update.
+
+      // Option 2 (Less ideal but more immediate in some scenarios):
+      // Force immediate update. Only use if Option 1 doesn't work after full testing.
+      // setIsAuthenticated(true);
+      // setAdmin(res.data.user); // If your login response directly returns user data
+
+      setLoading(false); // Stop loading after token is set
       return { success: true };
     } catch (err) {
       console.error("Login failed:", err.response?.data?.msg || err.message);
@@ -74,7 +88,7 @@ const AuthProvider = ({ children }) => {
     setToken(null);
     setIsAuthenticated(false);
     setAdmin(null);
-    setAuthToken(null); // Clear the token from localStorage and Axios headers
+    setAuthToken(null);
     console.log("Logged out");
   };
 
@@ -83,11 +97,11 @@ const AuthProvider = ({ children }) => {
       value={{
         token,
         isAuthenticated,
-        loading,
+        loading, // Expose loading state
         admin,
         login,
         logout,
-        setAuthToken, // Expose for initial setup if needed elsewhere
+        setAuthToken,
       }}
     >
       {children}

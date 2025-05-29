@@ -215,7 +215,7 @@ exports.updateReportStatus = async (req, res) => {
       return res.status(404).json({ msg: "Report not found" });
     }
 
-    report.status = status;ADMIN_EMAIL;
+    report.status = status;
     await report.save();
     res.json(report);
   } catch (err) {
