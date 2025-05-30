@@ -1,3 +1,4 @@
+// src/components/PrivateRoute.js
 import React, { useContext } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -10,13 +11,19 @@ const PrivateRoute = () => {
     return (
       <Box
         display="flex"
+        flexDirection="column" // Arrange vertically
         justifyContent="center"
         alignItems="center"
-        height="70vh"
+        height="100vh" // Take full viewport height
+        sx={{ bgcolor: "background.default" }} // Use theme background color
       >
-        <CircularProgress />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Loading user data...
+        <CircularProgress size={60} sx={{ color: "primary.main", mb: 3 }} />{" "}
+        {/* Larger, primary colored spinner */}
+        <Typography variant="h5" color="text.secondary">
+          Loading authentication data...
+        </Typography>
+        <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
+          Please wait.
         </Typography>
       </Box>
     );

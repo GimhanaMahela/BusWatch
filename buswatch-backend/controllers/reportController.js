@@ -1,10 +1,10 @@
 const Report = require("../models/Report");
-const cloudinary = require("../config/cloudinary");
+const cloudinary = require("../config/cloudinary"); // Ensure Cloudinary is configured
 const { sendReportReceiptEmail } = require("../utils/emailService");
-const { v4: uuidv4 } = require("uuid");
+const { v4: uuidv4 } = require("uuid"); // This import is not used in the provided snippet, consider removing if unused
 const generateUniqueId = require("../utils/generateUniqueId");
-const fs = require("fs");
-const path = require("path");
+const fs = require("fs"); // Not directly used for serving in this corrected version, but kept for context
+const path = require("path"); // Not directly used for serving in this corrected version, but kept for context
 const generatePdfReceipt = require("../utils/generatePdfReceipt");
 
 // @desc    Submit a new report
@@ -16,20 +16,18 @@ exports.submitReport = async (req, res) => {
       busNumber,
       routeNumber,
       busName,
-      location, 
+      location,
       description,
       passengerEmail,
-      status, 
+      status,
     } = req.body;
 
     // Optional: Basic validation for required string fields
     if (!busNumber || !routeNumber || !location || !description) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Missing required report fields (Bus Number, Route Number, Location, Description).",
-        });
+      return res.status(400).json({
+        message:
+          "Missing required report fields (Bus Number, Route Number, Location, Description).",
+      });
     }
 
     // Generate receiptId early
@@ -79,31 +77,41 @@ exports.submitReport = async (req, res) => {
     const savedReport = await newReport.save();
 
     // Generate PDF receipt (now with a guaranteed receiptId)
-    // Ensure generatePdfReceipt is updated to accept a string location
     const receiptDetails = await generatePdfReceipt({
       ...savedReport.toObject(),
-      location: savedReport.location, 
+      location: savedReport.location,
       receiptId: savedReport.receiptId,
     });
 
-    // --- TEMPORARY: Save PDF to a file for testing ---
+    let pdfPublicUrl = null; // Initialize a variable for the PDF URL
+
     if (receiptDetails && receiptDetails.pdfBuffer) {
-      const reportsDir = path.join(__dirname, "..", "reports");
-      if (!fs.existsSync(reportsDir)) {
-        fs.mkdirSync(reportsDir, { recursive: true });
+      try {
+        // Convert buffer to base64 string for Cloudinary upload
+        const pdfBase64 = `data:application/pdf;base64,${receiptDetails.pdfBuffer.toString(
+          "base64"
+        )}`;
+        const pdfUploadResult = await cloudinary.uploader.upload(pdfBase64, {
+          resource_type: "raw", // Use 'raw' for PDF files
+          folder: "buswatch_receipts", // Optional: organize your PDFs in a specific folder
+          public_id: `receipt_${savedReport._id}`, // Optional: unique ID for the PDF
+          // Add this line to ensure Cloudinary serves it inline if possible,
+          // though direct Cloudinary URLs often default to download for 'raw'
+          // You might need to configure a custom CNAME or proxy for full control
+          // over Content-Disposition from Cloudinary itself.
+          // For direct server response, this would be set on res.setHeader.
+        });
+        pdfPublicUrl = pdfUploadResult.secure_url;
+        console.log(`PDF receipt uploaded to Cloudinary: ${pdfPublicUrl}`);
+      } catch (uploadError) {
+        console.error("Failed to upload PDF to Cloudinary:", uploadError);
+        // Handle this error gracefully, e.g., send an email without PDF link
       }
-      const filePath = path.join(reportsDir, `receipt_${savedReport._id}.pdf`);
-      fs.writeFileSync(filePath, receiptDetails.pdfBuffer);
-      console.log(`PDF receipt saved to: ${filePath}`);
     } else {
       console.warn("PDF buffer not available from generatePdfReceipt.");
     }
-    // --- END TEMPORARY ---
 
     // Update the report with the generated receiptId (if Option 2 was used)
-    // This block might be redundant if receiptId is already set before save
-    // Removed the receiptDetails.receiptId check from savedReport.receiptId comparison
-    // as receiptDetails might not return receiptId if it's already set in savedReport
     if (
       receiptDetails &&
       receiptDetails.receiptId &&
@@ -131,38 +139,35 @@ exports.submitReport = async (req, res) => {
       );
     }
 
+    // Send the response with the public PDF URL
     res.status(201).json({
       msg: "Report submitted successfully!",
       report: savedReport,
       receiptId: savedReport.receiptId,
+      pdfUrl: pdfPublicUrl, // This is the URL your frontend will use
     });
   } catch (err) {
     console.error("Error in submitReport:", err.message);
-    if (err instanceof multer.MulterError) {
+    if (err instanceof Error && err.name === "MulterError") {
+      // Check for MulterError properly
       console.error("Multer Error:", err.code, err.field);
-      return res
-        .status(400)
-        .json({
-          message: "File Upload Error",
-          error: err.message,
-          field: err.field,
-        });
+      return res.status(400).json({
+        message: "File Upload Error",
+        error: err.message,
+        field: err.field,
+      });
     }
     if (err.name === "ValidationError") {
-      // Mongoose validation errors
       const errors = Object.values(err.errors).map((el) => el.message);
       return res
         .status(400)
         .json({ message: "Validation Error", errors: errors });
     }
     if (err.code === 11000) {
-      // Mongoose duplicate key error (for unique fields like receiptId)
-      return res
-        .status(409)
-        .json({
-          message:
-            "Duplicate receipt ID detected or unique constraint violation. Please try again.",
-        });
+      return res.status(409).json({
+        message:
+          "Duplicate receipt ID detected or unique constraint violation. Please try again.",
+      });
     }
     res.status(500).send("Server Error");
   }
