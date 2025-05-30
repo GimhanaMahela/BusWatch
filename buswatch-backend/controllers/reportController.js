@@ -205,6 +205,22 @@ exports.getReportById = async (req, res) => {
   }
 };
 
+// @desc    Get report by Receipt ID (Admin only)
+// @route   GET /api/reports/receipt/:receiptId
+// @access  Private (Admin)
+exports.getReportByReceiptId = async (req, res) => {
+  try {
+    const report = await Report.findOne({ receiptId: req.params.receiptId }); // Find by receiptId field
+    if (!report) {
+      return res.status(404).json({ msg: "Report not found with this Receipt ID" });
+    }
+    res.json(report);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
 // @desc    Update report status (Admin only)
 // @route   PUT /api/reports/:id/status
 // @access  Private (Admin)

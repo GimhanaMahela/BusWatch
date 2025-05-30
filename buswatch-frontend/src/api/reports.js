@@ -63,6 +63,23 @@ export const getReportById = async (id, token) => {
   }
 };
 
+export const getReportByReceiptId = async (id, token) => {
+  try {
+    const config = {
+      headers: {
+        "x-auth-token": token,
+      },
+    };
+    const response = await axios.get(
+      `${API_URL}/reports/receipt/${id}`,
+      config
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response.data;
+  }
+};
+
 export const updateReportStatus = async (id, status, token) => {
   try {
     const config = {

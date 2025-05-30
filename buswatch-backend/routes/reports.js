@@ -35,6 +35,11 @@ router.get("/", auth, reportController.getAllReports);
 // @access  Private (Admin)
 router.get("/:id", auth, reportController.getReportById);
 
+// @route   GET /api/reports/receipt/:receiptId
+// @desc    Get report by Receipt ID
+// @access  Private (Admin)
+router.get("/receipt/:receiptId", auth, reportController.getReportByReceiptId);
+
 // @route   PUT /api/reports/:id/status
 // @desc    Update report status
 // @access  Private (Admin)
