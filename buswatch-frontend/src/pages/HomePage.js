@@ -1,76 +1,66 @@
 // src/pages/HomePage.js
 import React from "react";
 import { Box, Typography, Button, Container } from "@mui/material";
-// --- CHANGE THIS LINE ---
-// import { styled } from "styled-components"; // <--- This is the problem!
-import { styled } from "@mui/material/styles"; // <--- Use this instead!
-// -----------------------
+import { styled } from "@mui/material/styles"; // Correct import for MUI's styled utility
 import { Link } from "react-router-dom";
 
-const HeroSection = styled(Box)`
-  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-    url("/assets/bus-hero.jpg"); /* Add a bus image to assets folder */
-  background-size: cover;
-  background-position: center;
-  color: white;
-  min-height: 70vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  // FIX: theme.spacing is a number now, multiply it
-  padding: ${({ theme }) => theme.spacing * 4}px;
-`;
+// Import the background image
+import busHero from "../assets/bus-hero.jpg"; // Adjust this path if your image is located elsewhere
 
-const HeroContent = styled(Box)`
-  max-width: 800px;
-  h1 {
-    font-size: 3.5rem;
-    // FIX: theme.spacing is a number now, multiply it
-    margin-bottom: ${({ theme }) => theme.spacing * 2}px;
-    ${({ theme }) => theme.breakpoints.down("md")} {
-      /* This line needs the correct theme */
-      font-size: 2.5rem;
-    }
-  }
-  p {
-    font-size: 1.25rem;
-    // FIX: theme.spacing is a number now, multiply it
-    margin-bottom: ${({ theme }) => theme.spacing * 4}px;
-    ${({ theme }) => theme.breakpoints.down("md")} {
-      /* This line needs the correct theme */
-      font-size: 1rem;
-    }
-  }
-  button {
-    font-size: 1.2rem;
-    // FIX: theme.spacing is a number now, multiply it. Use array for multiple values.
-    padding: ${({ theme }) => theme.spacing * 1.5}px
-      ${({ theme }) => theme.spacing * 4}px;
-    border-radius: 50px;
-    background-color: ${({ theme }) => theme.palette.primary.light};
-    color: white;
-    &:hover {
-      background-color: ${({ theme }) => theme.palette.primary.dark};
-    }
-  }
-`;
+const HeroSection = styled(Box)(({ theme }) => ({
+  // Use the imported image variable in the URL
+  background: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${busHero})`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  color: "white",
+  minHeight: "70vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+  padding: theme.spacing(4),
+}));
 
-const InfoSection = styled(Container)`
-  // FIX: theme.spacing is a number now, multiply it. Use array for multiple values.
-  padding: ${({ theme }) => theme.spacing * 8}px 0;
-  text-align: center;
-  h2 {
-    // FIX: theme.spacing is a number now, multiply it
-    margin-bottom: ${({ theme }) => theme.spacing * 4}px;
-    color: ${({ theme }) => theme.palette.primary.main};
-  }
-  p {
-    // FIX: theme.spacing is a number now, multiply it
-    margin-bottom: ${({ theme }) => theme.spacing * 3}px;
-    color: ${({ theme }) => theme.palette.text.secondary};
-  }
-`;
+const HeroContent = styled(Box)(({ theme }) => ({
+  maxWidth: 800,
+  "& h1": {
+    fontSize: "3.5rem",
+    marginBottom: theme.spacing(2),
+    [theme.breakpoints.down("md")]: {
+      fontSize: "2.5rem",
+    },
+  },
+  "& p": {
+    fontSize: "1.25rem",
+    marginBottom: theme.spacing(4),
+    [theme.breakpoints.down("md")]: {
+      fontSize: "1rem",
+    },
+  },
+  "& button": {
+    fontSize: "1.2rem",
+    padding: theme.spacing(1.5, 4),
+    borderRadius: 50,
+    backgroundColor: theme.palette.primary.light,
+    color: "white",
+    "&:hover": {
+      backgroundColor: theme.palette.primary.dark,
+    },
+  },
+}));
+
+const InfoSection = styled(Container)(({ theme }) => ({
+  padding: theme.spacing(8, 0),
+  textAlign: "center",
+  "& h2": {
+    marginBottom: theme.spacing(4),
+    color: theme.palette.primary.main,
+  },
+  "& p": {
+    marginBottom: theme.spacing(3),
+    color: theme.palette.text.secondary,
+  },
+}));
 
 function HomePage() {
   return (

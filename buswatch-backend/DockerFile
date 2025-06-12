@@ -1,0 +1,24 @@
+# Use an official Node.js runtime as the base image
+FROM node:20-alpine
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy package.json and package-lock.json first to leverage Docker cache
+# This means npm install only runs if dependencies change
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# Build your application (if you have a build step, e.g., TypeScript)
+# RUN npm run build # Uncomment if you have a build script
+
+# Expose the port your Express app listens on (e.g., 5000)
+EXPOSE 5000
+
+# Define the command to run your application
+CMD ["npm", "start"] # Or ["node", "server.js"] depending on your package.json scripts

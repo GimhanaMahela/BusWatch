@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000" # Host_Port:Container_Port
+    environment:
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongodb:27017/buswatchdb # Connect to the 'mongodb' service
+      # Add other backend environment variables here (e.g., JWT_SECRET, CLOUDINARY_CLOUD_NAME, etc.)
+      # It's best practice to load these from a .env file for docker-compose
+    volumes:
+      - ./backend/uploads:/app/uploads # Example: if you store local files (Cloudinary preferred)
+    depends_on:
+      - mongodb # Backend depends on MongoDB being up
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80" # Host_Port:Container_Port (React app will be accessible on localhost:3000)
+    depends_on:
+      - backend # Frontend might depend on backend for API calls (though not strictly necessary for startup)
+    environment:
+      REACT_APP_API_URL: http://backend:5000/api # Frontend connects to the 'backend' service inside Docker network
+      # Add other frontend env variables if any
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017" # Expose MongoDB port to host (optional, for connecting with Compass)
+    volumes:
+      - mongo-data:/data/db # Persist MongoDB data
+    networks:
+      - app-network
+
+volumes:
+  mongo-data: # Define the named volume for MongoDB persistence
+
+networks:
+  app-network: # Define a custom network for inter-service communication
+    driver: bridge

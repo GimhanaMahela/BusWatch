@@ -13,11 +13,13 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Link } from "react-router-dom";
-import { styled } from "@mui/system"; // Use MUI's styled utility if preferred for simple cases
+import { styled } from "@mui/system";
+
+// Import your logo image. Adjust the path as necessary.
+import logo from "../assets/logo.png";
 
 // Styled component for the logo text
 const LogoText = styled(Typography)(({ theme }) => ({
-  flexGrow: 1,
   textDecoration: "none",
   color: theme.palette.common.white,
   fontWeight: 700,
@@ -45,6 +47,7 @@ function Header() {
   const navItems = [
     { name: "Home", path: "/" },
     { name: "Submit Report", path: "/submit-report" },
+    { name: "About Us", path: "/about-us" },
     { name: "Admin Login", path: "/admin/login" },
   ];
 
@@ -67,33 +70,72 @@ function Header() {
 
   return (
     <AppBar position="static">
-      <Toolbar>
-        <LogoText
-          variant="h6"
-          component={Link}
-          to="/"
-          sx={{ display: { xs: "none", md: "block" } }}
+      <Toolbar sx={{ justifyContent: "space-between" }}>
+        {" "}
+        {/* Changed to space-between to push items to ends */}
+        {/* Desktop view: Logo and BusWatch text on the left */}
+        <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}>
+          <Link
+            to="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
+          >
+            <img
+              src={logo}
+              alt="BusWatch Logo"
+              style={{ height: 80, marginRight: 8 }}
+            />
+            <LogoText variant="h6" component="span">
+              BusWatch
+            </LogoText>
+          </Link>
+        </Box>
+        {/* Mobile view: Menu icon, Logo, and BusWatch text */}
+        <Box
+          sx={{
+            flexGrow: 1, // Allows this box to take available space
+            display: { xs: "flex", md: "none" },
+            alignItems: "center",
+          }}
         >
-          BusWatch
-        </LogoText>
-        <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
           <IconButton
             size="large"
             edge="start"
             color="inherit"
             aria-label="menu"
             onClick={toggleDrawer(true)}
+            sx={{ mr: 1 }}
           >
             <MenuIcon />
           </IconButton>
+          <Link
+            to="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
+          >
+            <img
+              src={logo}
+              alt="BusWatch Logo"
+              style={{ height: 80, marginRight: 8 }}
+            />
+            <LogoText variant="h6" component="span">
+              BusWatch
+            </LogoText>
+          </Link>
           <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
             {drawer}
           </Drawer>
-          <LogoText variant="h6" component={Link} to="/" sx={{ marginLeft: 2 }}>
-            BusWatch
-          </LogoText>
         </Box>
-        <Box sx={{ display: { xs: "none", md: "block" } }}>
+        {/* Navigation items for larger screens, now aligned to the right */}
+        <Box sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}>
+          {" "}
+          {/* This box naturally goes to the right */}
           {navItems.map((item) => (
             <NavButton key={item.name} component={Link} to={item.path}>
               {item.name}
