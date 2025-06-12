@@ -1,0 +1,30 @@
+# Stage 1: Build the React application
+FROM node:20-alpine as build-stage
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+# Build the React app for production
+# This creates the optimized static assets in the 'build' folder
+RUN npm run build
+
+# Stage 2: Serve the React application with a lightweight Nginx server
+FROM nginx:alpine as production-stage
+
+# Copy the built React app from the build-stage to Nginx's serving directory
+COPY --from=build-stage /app/build /usr/share/nginx/html
+
+# Copy a custom Nginx configuration if you have one (optional, but good for SPA routing)
+# For React Router, you'll need to configure Nginx to redirect all unmatched URLs to index.html
+# Example:
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose the port Nginx listens on
+EXPOSE 80
+
+# Command to run Nginx (default command for nginx:alpine is fine)
+CMD ["nginx", "-g", "daemon off;"]
