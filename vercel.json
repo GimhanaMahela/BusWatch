@@ -37,6 +37,6 @@
     "JWT_SECRET": "supersecretjwtkey",
     "ADMIN_EMAIL": "admin@gmail.com",
     "ADMIN_PASSWORD": "adminpassword",
-    "REACT_APP_BACKEND_URL": "/api"
+    "REACT_APP_BACKEND_URL": "http://localhost:5000/api"
   }
 }
