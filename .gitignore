@@ -1,0 +1,35 @@
+# Applies to the whole repo (buswatch-backend and buswatch-frontend)
+
+# Dependencies
+node_modules/
+
+# Environment variables (keep the committed templates)
+.env
+.env.*
+!.env.example
+
+# Build output
+build/
+dist/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local file uploads
+uploads/
+
+# IDE / editor
+.vscode/
+.idea/
+.refact/
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
