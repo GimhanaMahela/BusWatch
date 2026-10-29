@@ -180,7 +180,7 @@ function AdminDashboardPage() {
 
   const confirmDelete = () => {
     if (!reportToDelete) return;
-    deleteMutation.mutate(reportToDelete._id, { onSettled: closeDeleteDialog });
+    deleteMutation.mutate(reportToDelete.id, { onSettled: closeDeleteDialog });
   };
 
   return (
@@ -326,7 +326,7 @@ function AdminDashboardPage() {
               </TableRow>
             ) : (
               data.reports.map((report) => (
-                <StyledTableRow key={report._id}>
+                <StyledTableRow key={report.id}>
                   <StyledTableCell sx={{ fontFamily: "monospace" }}>
                     {report.receiptId}
                   </StyledTableCell>
@@ -342,7 +342,7 @@ function AdminDashboardPage() {
                     <StyledActionButton
                       aria-label="view"
                       color="primary"
-                      onClick={() => navigate(`/admin/reports/${report._id}`)}
+                      onClick={() => navigate(`/admin/reports/${report.id}`)}
                     >
                       <VisibilityIcon />
                     </StyledActionButton>

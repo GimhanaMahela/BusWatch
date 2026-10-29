@@ -1,10 +1,18 @@
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
-import { AdminModel, type AdminDocument } from "../models/admin.model.js";
+import type { AdminRow } from "../db/schema.js";
+import {
+  createAdmin,
+  findAdminByEmail,
+  findAdminById,
+  listAdmins as listAllAdmins,
+  toPublicAdmin,
+  verifyPassword,
+} from "../repositories/admin.repository.js";
 import type { LoginInput, RegisterAdminInput } from "../validators/auth.validator.js";
 
-const signToken = (admin: AdminDocument): string =>
+const signToken = (admin: AdminRow): string =>
   jwt.sign({ admin: { id: admin.id, email: admin.email, role: admin.role } }, env.JWT_SECRET, {
     expiresIn: "8h",
   });
@@ -16,31 +24,23 @@ export const registerAdmin = async (
   req: Request<object, object, RegisterAdminInput>,
   res: Response,
 ) => {
-  const { email, password, role } = req.body;
-
-  if (await AdminModel.exists({ email })) {
+  if (await findAdminByEmail(req.body.email)) {
     res.status(400).json({ msg: "Admin already exists" });
     return;
   }
-
-  const admin = await AdminModel.create({ email, password, role });
-  res.status(201).json({
-    admin: { _id: admin.id, email: admin.email, role: admin.role, createdAt: admin.createdAt },
-  });
+  const admin = await createAdmin(req.body);
+  res.status(201).json({ admin: toPublicAdmin(admin) });
 };
 
 // @desc    Authenticate admin & get token
 // @route   POST /api/auth/login
 // @access  Public
 export const loginAdmin = async (req: Request<object, object, LoginInput>, res: Response) => {
-  const { email, password } = req.body;
-
-  const admin = await AdminModel.findOne({ email });
-  if (!admin || !(await admin.matchPassword(password))) {
+  const admin = await findAdminByEmail(req.body.email);
+  if (!admin || !(await verifyPassword(admin, req.body.password))) {
     res.status(400).json({ msg: "Invalid Credentials" });
     return;
   }
-
   res.json({ token: signToken(admin) });
 };
 
@@ -48,18 +48,17 @@ export const loginAdmin = async (req: Request<object, object, LoginInput>, res: 
 // @route   GET /api/auth
 // @access  Private
 export const getAdmin = async (req: Request, res: Response) => {
-  const admin = await AdminModel.findById(req.admin?.id).select("-password");
+  const admin = req.admin ? await findAdminById(req.admin.id) : undefined;
   if (!admin) {
     res.status(401).json({ msg: "Admin no longer exists" });
     return;
   }
-  res.json(admin);
+  res.json(toPublicAdmin(admin));
 };
 
 // @desc    List admin accounts
 // @route   GET /api/auth/admins
 // @access  Private (superadmin only)
 export const listAdmins = async (_req: Request, res: Response) => {
-  const admins = await AdminModel.find().select("-password").sort({ createdAt: 1 });
-  res.json(admins);
+  res.json(await listAllAdmins());
 };

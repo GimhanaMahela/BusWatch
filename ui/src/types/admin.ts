@@ -1,7 +1,7 @@
 export type AdminRole = "superadmin" | "admin";
 
 export interface Admin {
-  _id: string;
+  id: string;
   email: string;
   role: AdminRole;
   createdAt?: string;

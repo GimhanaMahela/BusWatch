@@ -1,6 +1,6 @@
 # BusWatch API
 
-TypeScript REST API: Express 5, MongoDB (Mongoose 9), Zod validation, Cloudinary media, PDF receipts
+TypeScript REST API: Express 5, PostgreSQL (Drizzle ORM), Zod validation, Cloudinary media, PDF receipts
 (PDFKit) and email (Nodemailer). Setup and scripts are in the [root README](../README.md); structure
 and conventions in [ARCHITECTURE.md](../ARCHITECTURE.md).
 

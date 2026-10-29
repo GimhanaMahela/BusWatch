@@ -74,7 +74,7 @@ function ManageAdminsDialog({ open, onClose }: ManageAdminsDialogProps) {
         ) : (
           <List dense sx={{ mb: 2 }}>
             {admins.map((a) => (
-              <ListItem key={a._id} disableGutters>
+              <ListItem key={a.id} disableGutters>
                 <ListItemText
                   primary={a.email}
                   secondary={

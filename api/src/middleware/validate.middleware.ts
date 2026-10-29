@@ -1,6 +1,5 @@
 import type { RequestHandler } from "express";
-import { isValidObjectId } from "mongoose";
-import type { z } from "zod";
+import { z } from "zod";
 
 /**
  * Validates req.body against a Zod schema and replaces it with the parsed
@@ -19,11 +18,13 @@ export const validateBody =
     next();
   };
 
-/** 404s early when :id is not a valid ObjectId, so handlers can trust it. */
-export const validateObjectIdParam =
+const uuidSchema = z.uuid();
+
+/** 404s early when :id is not a valid UUID, so handlers (and Postgres) can trust it. */
+export const validateUuidParam =
   (param = "id"): RequestHandler =>
   (req, res, next) => {
-    if (!isValidObjectId(req.params[param])) {
+    if (!uuidSchema.safeParse(req.params[param]).success) {
       res.status(404).json({ msg: "Report not found" });
       return;
     }

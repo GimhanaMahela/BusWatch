@@ -3,10 +3,10 @@
 BusWatch is a monorepo with two TypeScript apps, one root `package.json` (one install, one
 `node_modules`) and one root `.env`:
 
-| App    | Stack                                                                                      | Entry point     |
-| ------ | ------------------------------------------------------------------------------------------ | --------------- |
-| `api/` | Node.js 24, Express 5, MongoDB (Mongoose 9), Zod 4, Helmet, Cloudinary, Nodemailer, PDFKit | `src/server.ts` |
-| `ui/`  | React 19, Vite 8, MUI 9, React Router 8, TanStack Query 5, Axios                           | `src/main.tsx`  |
+| App    | Stack                                                                                                             | Entry point     |
+| ------ | ----------------------------------------------------------------------------------------------------------------- | --------------- |
+| `api/` | Node.js 24, Express 5, PostgreSQL 18 (Drizzle ORM + node-postgres), Zod 4, Helmet, Cloudinary, Nodemailer, PDFKit | `src/server.ts` |
+| `ui/`  | React 19, Vite 8, MUI 9, React Router 8, TanStack Query 5, Axios                                                  | `src/main.tsx`  |
 
 **Shared tooling:** TypeScript 6 (strict), ESLint 10 (flat config with typescript-eslint),
 Prettier 3 (root `.prettierrc.json`), Vitest 5, GitHub Actions CI (`.github/workflows/ci.yml`),
@@ -22,7 +22,8 @@ api/
 │   ├── server.ts             # Entry point (Node, Docker, Vercel): DB connect, listen
 │   ├── app.ts                # createApp(): Helmet, CORS, JSON, routes, error handling
 │   ├── config/               # env.ts (validated env), db, cloudinary, constants (shared enums)
-│   ├── models/               # Mongoose schemas + TS interfaces   → <entity>.model.ts
+│   ├── db/                   # schema.ts (tables, enums, relations), client.ts, migrate.ts
+│   ├── repositories/         # All database queries                → <entity>.repository.ts
 │   ├── validators/           # Zod request schemas + inferred types → <entity>.validator.ts
 │   ├── routes/               # URL → middleware → handler         → <entity>.routes.ts, index.ts
 │   ├── controllers/          # Request/response handling           → <entity>.controller.ts
@@ -30,10 +31,12 @@ api/
 │   ├── services/             # Side effects: email, PDF, startup   → <name>.service.ts
 │   ├── utils/                # Small pure helpers                  → <name>.ts
 │   └── types/                # Global type augmentation (e.g. req.admin)
-└── tests/                    # Vitest + Supertest API tests on an in-memory MongoDB
+├── drizzle/                  # Generated SQL migrations (commit them; never edit applied ones)
+├── drizzle.config.ts         # drizzle-kit settings
+└── tests/                    # Vitest + Supertest API tests on PGlite (in-process PostgreSQL)
 ```
 
-A request goes `routes → middleware (auth, rate limit, upload, validateBody) → controller → model/service`.
+A request goes `routes → middleware (auth, rate limit, upload, validateBody) → controller → repository/service`.
 
 - **Validation lives in Zod schemas**, not controllers. `validateBody(schema)` replaces `req.body`
   with the parsed value, so controllers receive trimmed, typed input (`Request<Params, object, Input>`).
@@ -41,13 +44,21 @@ A request goes `routes → middleware (auth, rate limit, upload, validateBody) �
   fails fast with a list of problems. Never read `process.env` anywhere else.
 - **Async errors**: Express 5 forwards rejected promises to `errorHandler`, so handlers don't
   need try/catch unless a failure must be tolerated (e.g. email after a report is saved).
+- **Database access only in repositories.** Controllers call functions like `findReportById` and
+  never build queries. Multi-step writes (a report and its first timeline entry, a status change and
+  its history row) run in a transaction.
+- **Schema changes**: edit `src/db/schema.ts`, run `npm run db:generate` to create a migration in
+  `api/drizzle/`, review the SQL, commit it. `npm run db:migrate` (also run by `dev:api`, the Docker
+  image and the Vercel build) applies it.
 - **Testing**: `createApp()` builds the app without connecting or listening; tests use it with Supertest.
+  `tests/setup.ts` replaces the database client with PGlite, migrated with the same SQL files.
 
 **Naming**
 
 - Files are `kebab-case` with a layer suffix: `report.controller.ts`, `rate-limit.middleware.ts`.
 - ESM with `"type": "module"`: relative imports end in `.js` (TypeScript NodeNext resolution).
-- Entities are singular (`report`, `admin`); models export `<Entity>Model` and an `<Entity>` interface.
+- Entities are singular in code (`report`, `admin`); tables are plural snake_case (`reports`,
+  `report_status_changes`). Columns are camelCase in TypeScript and snake_case in SQL.
 - Shared enums (statuses, categories, roles, upload limits) live only in `src/config/constants.ts`.
 
 ## Frontend: Atomic Design

@@ -1,16 +1,19 @@
 // Entry point for Node, Docker and Vercel. The Express app itself lives in app.ts.
 import { createApp } from "./app.js";
-import { connectDB } from "./config/db.js";
+import { checkDatabaseConnection } from "./db/client.js";
 import { env } from "./config/env.js";
 import { createInitialAdmin } from "./services/admin-bootstrap.service.js";
 
 const app = createApp();
 
-// Connect Database, then make sure an initial superadmin exists
-connectDB()
+// Check the database (schema comes from `npm run db:migrate`), then ensure a superadmin exists
+checkDatabaseConnection()
   .then(createInitialAdmin)
   .catch((error: unknown) => {
-    console.error("Failed to connect to MongoDB:", error instanceof Error ? error.message : error);
+    console.error(
+      "Failed to connect to PostgreSQL:",
+      error instanceof Error ? error.message : error,
+    );
     process.exit(1);
   });
 

@@ -3,7 +3,7 @@ import * as reportController from "../controllers/report.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { submitLimiter, trackLimiter } from "../middleware/rate-limit.middleware.js";
 import { reportMediaUpload } from "../middleware/upload.middleware.js";
-import { validateBody, validateObjectIdParam } from "../middleware/validate.middleware.js";
+import { validateBody, validateUuidParam } from "../middleware/validate.middleware.js";
 import {
   addNoteSchema,
   submitReportSchema,
@@ -11,7 +11,7 @@ import {
 } from "../validators/report.validator.js";
 
 const router = Router();
-const validId = validateObjectIdParam("id");
+const validId = validateUuidParam("id");
 
 // --- Public ---
 router.post(

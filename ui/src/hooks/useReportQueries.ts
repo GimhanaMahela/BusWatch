@@ -51,7 +51,7 @@ export const useAdmins = (enabled: boolean) =>
 const useReportUpdated = () => {
   const queryClient = useQueryClient();
   return (report: Report) => {
-    queryClient.setQueryData(queryKeys.report(report._id), report);
+    queryClient.setQueryData(queryKeys.report(report.id), report);
     void queryClient.invalidateQueries({ queryKey: queryKeys.reports, refetchType: "none" });
   };
 };

@@ -17,6 +17,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/api/dist ./api/dist
+COPY api/drizzle ./api/drizzle
 USER node
 EXPOSE 5000
-CMD ["node", "api/dist/server.js"]
+# Apply pending database migrations, then start the API
+CMD ["sh", "-c", "node api/dist/db/migrate.js && exec node api/dist/server.js"]

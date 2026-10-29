@@ -1,7 +1,12 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { ReportModel } from "../src/models/report.model.js";
-import { app, createAdminAndLogin, submitReport, useTestDatabase } from "./helpers.js";
+import { eq } from "drizzle-orm";
+import { reportNotes, reports, reportStatusChanges } from "../src/db/schema.js";
+import { app, createAdminAndLogin, db, submitReport, useTestDatabase } from "./helpers.js";
+
+const firstReport = () => db.query.reports.findFirst();
+const reportByReceipt = (receiptId: string) =>
+  db.query.reports.findFirst({ where: eq(reports.receiptId, receiptId) });
 
 useTestDatabase();
 
@@ -24,8 +29,8 @@ describe("public report submission", () => {
     });
     expect(res.body.report).not.toHaveProperty("passengerEmail");
 
-    const saved = await ReportModel.findOne({ receiptId: res.body.receiptId });
-    expect(saved?.coordinates?.coordinates).toEqual([80.17, 7.25]);
+    const saved = await reportByReceipt(res.body.receiptId);
+    expect(saved).toMatchObject({ latitude: 7.25, longitude: 80.17, busNumber: "NE-9999" });
   });
 
   it.each([
@@ -54,7 +59,7 @@ describe("tracking and case management", () => {
   it("tracks a report case-insensitively and shows status updates on the timeline", async () => {
     const { body } = await submitReport();
     const token = await createAdminAndLogin();
-    const report = await ReportModel.findOne({ receiptId: body.receiptId });
+    const report = await reportByReceipt(body.receiptId);
 
     const updated = await request(app)
       .put(`/api/reports/${report?.id}/status`)
@@ -77,7 +82,7 @@ describe("tracking and case management", () => {
   it("rejects an unchanged status with no message", async () => {
     await submitReport();
     const token = await createAdminAndLogin();
-    const report = await ReportModel.findOne();
+    const report = await firstReport();
     const res = await request(app)
       .put(`/api/reports/${report?.id}/status`)
       .set("x-auth-token", token)
@@ -88,7 +93,7 @@ describe("tracking and case management", () => {
   it("adds internal notes with the author's email", async () => {
     await submitReport();
     const token = await createAdminAndLogin();
-    const report = await ReportModel.findOne();
+    const report = await firstReport();
     const res = await request(app)
       .post(`/api/reports/${report?.id}/notes`)
       .set("x-auth-token", token)
@@ -97,11 +102,18 @@ describe("tracking and case management", () => {
     expect(res.body.notes[0]).toMatchObject({ text: "Called depot", author: "root@test.com" });
   });
 
-  it("404s on unknown receipt IDs and invalid object IDs", async () => {
+  it("404s on unknown receipt IDs, invalid IDs and unknown IDs", async () => {
     const token = await createAdminAndLogin();
     expect((await request(app).get("/api/reports/track/BW-0000-AAAAAA")).status).toBe(404);
     expect(
       (await request(app).get("/api/reports/not-an-id").set("x-auth-token", token)).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(app)
+          .get("/api/reports/00000000-0000-4000-8000-000000000000")
+          .set("x-auth-token", token)
+      ).status,
     ).toBe(404);
   });
 });
@@ -140,5 +152,42 @@ describe("admin listing and stats", () => {
     expect(res.body.repeatOffenders).toEqual([
       expect.objectContaining({ busNumber: "NE-4521", count: 3 }),
     ]);
+  });
+});
+
+describe("deleting and resolution timing", () => {
+  it("deletes a report together with its history and notes", async () => {
+    await submitReport();
+    const token = await createAdminAndLogin();
+    const report = await firstReport();
+    await request(app)
+      .post(`/api/reports/${report?.id}/notes`)
+      .set("x-auth-token", token)
+      .send({ text: "Note" });
+
+    const res = await request(app).delete(`/api/reports/${report?.id}`).set("x-auth-token", token);
+    expect(res.status).toBe(200);
+    expect(await db.$count(reports)).toBe(0);
+    expect(await db.$count(reportNotes)).toBe(0);
+    expect(await db.$count(reportStatusChanges)).toBe(0);
+  });
+
+  it("averages resolution time over resolved reports", async () => {
+    await submitReport();
+    const token = await createAdminAndLogin();
+    const report = await firstReport();
+    // Pretend it was reported 10 hours ago
+    await db
+      .update(reports)
+      .set({ reportedAt: new Date(Date.now() - 10 * 36e5) })
+      .where(eq(reports.id, report?.id ?? ""));
+    await request(app)
+      .put(`/api/reports/${report?.id}/status`)
+      .set("x-auth-token", token)
+      .send({ status: "resolved" });
+
+    const stats = await request(app).get("/api/reports/stats").set("x-auth-token", token);
+    expect(stats.body.resolvedWithTiming).toBe(1);
+    expect(stats.body.avgResolutionHours).toBeCloseTo(10, 0);
   });
 });

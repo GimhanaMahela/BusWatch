@@ -8,7 +8,7 @@ export interface StatusChange {
 }
 
 export interface InternalNote {
-  _id: string;
+  id: string;
   text: string;
   author?: string;
   createdAt: string;
@@ -16,14 +16,15 @@ export interface InternalNote {
 
 /** Full report as admins see it */
 export interface Report {
-  _id: string;
+  id: string;
   receiptId: string;
   busNumber: string;
   routeNumber: string;
-  busName?: string;
+  busName?: string | null;
   category: ReportCategory;
   location: string;
-  coordinates?: { type: "Point"; coordinates: [longitude: number, latitude: number] };
+  latitude?: number | null;
+  longitude?: number | null;
   description: string;
   images: string[];
   videos: string[];
@@ -48,7 +49,7 @@ export interface PublicReport {
   incidentAt?: string;
   reportedAt: string;
   resolvedAt?: string;
-  timeline: { status: ReportStatus; note?: string; changedAt: string | null }[];
+  timeline: { status: ReportStatus; note?: string; changedAt: string }[];
 }
 
 export interface SubmitReportFields {

@@ -9,7 +9,7 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
   VERCEL: optional(z.string()),
 
-  MONGO_URI: z.string({ error: "MONGO_URI is required" }).min(1, "MONGO_URI is required"),
+  DATABASE_URL: z.string({ error: "DATABASE_URL is required" }).min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string({ error: "JWT_SECRET is required" }).min(1, "JWT_SECRET is required"),
 
   ADMIN_EMAIL: optional(z.email()),

@@ -1,29 +1,17 @@
-import { MongoMemoryServer } from "mongodb-memory-server";
-import mongoose from "mongoose";
+import { sql } from "drizzle-orm";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach } from "vitest";
+import { beforeEach } from "vitest";
 import { createApp } from "../src/app.js";
-import { AdminModel } from "../src/models/admin.model.js";
+import { db } from "../src/db/client.js";
+import { createAdmin } from "../src/repositories/admin.repository.js";
 
 export const app = createApp();
+export { db };
 
-/** Starts an in-memory MongoDB for the test file and clears it between tests. */
+/** Empties every table before each test (the PGlite database itself is per test file). */
 export const useTestDatabase = () => {
-  let mongo: MongoMemoryServer;
-
-  beforeAll(async () => {
-    mongo = await MongoMemoryServer.create();
-    await mongoose.connect(mongo.getUri());
-  });
-
   beforeEach(async () => {
-    await mongoose.connection.db?.dropDatabase();
-    await Promise.all(Object.values(mongoose.models).map((model) => model.syncIndexes()));
-  });
-
-  afterAll(async () => {
-    await mongoose.disconnect();
-    await mongo.stop();
+    await db.execute(sql`TRUNCATE admins, reports RESTART IDENTITY CASCADE`);
   });
 };
 
@@ -32,7 +20,7 @@ export const createAdminAndLogin = async (
   role: "superadmin" | "admin" = "superadmin",
 ) => {
   const password = "supersecret1";
-  await AdminModel.create({ email, password, role });
+  await createAdmin({ email, password, role });
   const res = await request(app).post("/api/auth/login").send({ email, password });
   return res.body.token as string;
 };

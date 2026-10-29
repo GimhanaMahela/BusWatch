@@ -313,9 +313,9 @@ function ReportDetailsPage() {
                   </InfoText>
                   <InfoText>
                     <LocationOnIcon /> <strong>Location:</strong> {report.location}
-                    {report.coordinates?.coordinates?.length === 2 && (
+                    {report.latitude != null && report.longitude != null && (
                       <Link
-                        href={`https://www.google.com/maps?q=${report.coordinates.coordinates[1]},${report.coordinates.coordinates[0]}`}
+                        href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{ ml: 1 }}
@@ -489,7 +489,7 @@ function ReportDetailsPage() {
                   {report.notes && report.notes.length > 0 ? (
                     <List dense disablePadding sx={{ mb: 2 }}>
                       {report.notes.map((note) => (
-                        <ListItem key={note._id} disableGutters alignItems="flex-start">
+                        <ListItem key={note.id} disableGutters alignItems="flex-start">
                           <ListItemText
                             primary={note.text}
 
