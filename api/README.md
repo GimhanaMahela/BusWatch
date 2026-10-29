@@ -1,29 +1,10 @@
 # BusWatch API
 
-TypeScript REST API for BusWatch: Express 5, MongoDB (Mongoose 9), Zod validation, Cloudinary media,
-PDF receipts (PDFKit) and email (Nodemailer). See [../ARCHITECTURE.md](../ARCHITECTURE.md).
+TypeScript REST API: Express 5, MongoDB (Mongoose 9), Zod validation, Cloudinary media, PDF receipts
+(PDFKit) and email (Nodemailer). Setup and scripts are in the [root README](../README.md); structure
+and conventions in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
-## Setup
-
-```bash
-cp .env.example .env   # JWT_SECRET and MONGO_URI are required; see comments in the file
-npm install
-npm run dev            # http://localhost:5000, reloads on change
-```
-
-Production: `npm run build && npm start` (runs `dist/server.js`). The `Dockerfile` does both.
-On Vercel, `vercel.json` serves `src/server.ts` as a serverless function.
-
-## Scripts
-
-| Script                        | Does                                              |
-| ----------------------------- | ------------------------------------------------- |
-| `dev`                         | Run with reload (`tsx watch`), loading `.env`     |
-| `build` / `start`             | Compile to `dist/` / run the compiled server      |
-| `test`                        | API tests (Vitest + Supertest, in-memory MongoDB) |
-| `lint`, `typecheck`, `format` | ESLint, `tsc --noEmit`, Prettier                  |
-
-## API
+## Endpoints
 
 | Method & path                                      | Access               | Purpose                                                 |
 | -------------------------------------------------- | -------------------- | ------------------------------------------------------- |

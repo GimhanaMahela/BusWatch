@@ -161,8 +161,7 @@ function SubmitReportPage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
 
-  const showError = (message: string) =>
-    setAlert({ open: true, message, severity: "error" });
+  const showError = (message: string) => setAlert({ open: true, message, severity: "error" });
 
   // Drop files over the size limit and tell the user which ones
   const withinSizeLimit = (files: File[]) => {
@@ -171,7 +170,7 @@ function SubmitReportPage() {
       showError(
         `${tooBig.map((f) => f.name).join(", ")} ${
           tooBig.length === 1 ? "is" : "are"
-        } larger than 10MB and ${tooBig.length === 1 ? "was" : "were"} not added.`
+        } larger than 10MB and ${tooBig.length === 1 ? "was" : "were"} not added.`,
       );
     }
     return files.filter((f) => f.size <= MAX_FILE_BYTES);
@@ -185,10 +184,7 @@ function SubmitReportPage() {
   // Handler for image file input changes
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     // Limit to a maximum of 5 images
-    const newImages = withinSizeLimit(Array.from(e.target.files ?? [])).slice(
-      0,
-      5 - images.length
-    );
+    const newImages = withinSizeLimit(Array.from(e.target.files ?? [])).slice(0, 5 - images.length);
     setImages([...images, ...newImages]);
     e.target.value = ""; // Allow picking the same file again after removing it
   };
@@ -196,10 +192,7 @@ function SubmitReportPage() {
   // Handler for video file input changes
   const handleVideoChange = (e: ChangeEvent<HTMLInputElement>) => {
     // Limit to a maximum of 2 videos
-    const newVideos = withinSizeLimit(Array.from(e.target.files ?? [])).slice(
-      0,
-      2 - videos.length
-    );
+    const newVideos = withinSizeLimit(Array.from(e.target.files ?? [])).slice(0, 2 - videos.length);
     setVideos([...videos, ...newVideos]);
     e.target.value = "";
   };
@@ -217,14 +210,12 @@ function SubmitReportPage() {
         {
           ...formData,
           // datetime-local has no timezone; send an unambiguous ISO timestamp
-          incidentAt: formData.incidentAt
-            ? new Date(formData.incidentAt).toISOString()
-            : "",
+          incidentAt: formData.incidentAt ? new Date(formData.incidentAt).toISOString() : "",
           latitude: coords ? coords.lat : "",
           longitude: coords ? coords.lng : "",
         },
         images,
-        videos
+        videos,
       );
 
       setReceiptId(data.receiptId);
@@ -243,7 +234,7 @@ function SubmitReportPage() {
       showError(
         (error.errors && error.errors.join(" ")) ||
           error.message ||
-          "Failed to submit report. Please try again."
+          "Failed to submit report. Please try again.",
       );
     } finally {
       setLoading(false); // Reset loading state
@@ -284,12 +275,7 @@ function SubmitReportPage() {
         >
           Submit a New Report
         </Typography>
-        <Typography
-          variant="body1"
-          align="center"
-          color="textSecondary"
-          sx={{ mb: 3 }}
-        >
+        <Typography variant="body1" align="center" color="textSecondary" sx={{ mb: 3 }}>
           Your feedback helps us improve public transport for everyone.
         </Typography>
 
@@ -352,12 +338,16 @@ function SubmitReportPage() {
             value={formData.busNumber}
             onChange={handleChange}
             required
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <DriveEtaIcon color="action" />
-                </InputAdornment>
-              ) } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <DriveEtaIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <StyledTextField
             fullWidth
             label="Route Number (e.g., 08, Colombo-Matale)"
@@ -365,24 +355,32 @@ function SubmitReportPage() {
             value={formData.routeNumber}
             onChange={handleChange}
             required
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <AltRouteIcon color="action" />
-                </InputAdornment>
-              ) } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <AltRouteIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <StyledTextField
             fullWidth
             label="Bus Name (Nuwantha Express)"
             name="busName"
             value={formData.busName}
             onChange={handleChange}
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <CommuteIcon color="action" />
-                </InputAdornment>
-              ) } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CommuteIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <StyledTextField
             select
             fullWidth
@@ -391,12 +389,16 @@ function SubmitReportPage() {
             value={formData.category}
             onChange={handleChange}
             required
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <CategoryIcon color="action" />
-                </InputAdornment>
-              ) } }}
->
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CategoryIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          >
             {CATEGORIES.map((c) => (
               <MenuItem key={c.value} value={c.value}>
                 {c.label}
@@ -411,12 +413,18 @@ function SubmitReportPage() {
             value={formData.incidentAt}
             onChange={handleChange}
             helperText="Leave empty if it just happened"
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <EventIcon color="action" />
-                </InputAdornment>
-              ) }, htmlInput: { max: nowForDateTimeInput() }, inputLabel: { shrink: true } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EventIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+              htmlInput: { max: nowForDateTimeInput() },
+              inputLabel: { shrink: true },
+            }}
+          />
           <StyledTextField
             fullWidth
             label="Location of Incident (e.g., Ambepussa Junction)"
@@ -424,12 +432,16 @@ function SubmitReportPage() {
             value={formData.location}
             onChange={handleChange}
             required
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <LocationOnIcon color="action" />
-                </InputAdornment>
-              ) } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LocationOnIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <LocationPicker value={coords} onChange={setCoords} />
           <StyledTextField
             fullWidth
@@ -440,12 +452,16 @@ function SubmitReportPage() {
             multiline
             rows={4}
             required
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <DescriptionIcon color="action" />
-                </InputAdornment>
-              ) } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <DescriptionIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <StyledTextField
             fullWidth
             label="Your Email (for receipt)"
@@ -453,12 +469,16 @@ function SubmitReportPage() {
             type="email"
             value={formData.passengerEmail}
             onChange={handleChange}
- slotProps={{ input: { startAdornment: (
-                <InputAdornment position="start">
-                  <EmailIcon color="action" />
-                </InputAdornment>
-              ) } }}
-/>
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon color="action" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
 
           <FileInputLabel variant="subtitle1">
             <ImageOutlinedIcon /> Upload Images (Max 5)
@@ -526,18 +546,15 @@ function SubmitReportPage() {
             ))}
           </PreviewContainer>
 
-          <GradientButton size="large"
+          <GradientButton
+            size="large"
             type="submit"
             variant="contained"
             fullWidth
             disabled={loading}
             sx={{ mt: 3 }}
           >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "Submit Report"
-            )}
+            {loading ? <CircularProgress size={24} color="inherit" /> : "Submit Report"}
           </GradientButton>
         </form>
       </FormContainer>

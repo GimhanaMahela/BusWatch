@@ -1,6 +1,7 @@
 # BusWatch Architecture
 
-BusWatch is two deployable TypeScript apps in one repo:
+BusWatch is a monorepo with two TypeScript apps, one root `package.json` (one install, one
+`node_modules`) and one root `.env`:
 
 | App    | Stack                                                                                      | Entry point     |
 | ------ | ------------------------------------------------------------------------------------------ | --------------- |
@@ -110,7 +111,10 @@ state (form fields, dialogs) stays in `useState`.
 
 - Status and category enums in `api/src/config/constants.ts` must match
   `ui/src/constants/reportConstants.ts`.
-- Frontend environment variables use the `VITE_` prefix (`.env.example`); backend variables are
-  listed in `api/.env.example`.
-- Before pushing: `npm run lint && npm run typecheck && npm test` in each app (CI runs the same,
+- One `.env` at the repo root (template: `.env.example`). The API reads all of it; Vite only exposes
+  `VITE_*` variables to the browser.
+- Dependencies: the API's runtime packages are `dependencies`; UI libraries and tooling are
+  `devDependencies` (Vite bundles the UI), so the API image installs with `--omit=dev`.
+- The UI calls same-origin `/api`. Vite (dev), nginx (Docker) and Vercel routes forward it to the API.
+- Before pushing: `npm run lint && npm run typecheck && npm test` at the root (CI runs the same,
   plus `format:check` and `build`).

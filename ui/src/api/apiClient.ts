@@ -1,7 +1,9 @@
 import axios, { isAxiosError } from "axios";
 
 // All API calls go through this client so they hit the configured backend
-export const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
+// Same-origin "/api" by default (Vite dev proxy, nginx or Vercel route it to the API).
+// Set VITE_BACKEND_URL only when the API is hosted on a different origin.
+export const API_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 const apiClient = axios.create({ baseURL: API_URL });
 

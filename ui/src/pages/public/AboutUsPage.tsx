@@ -1,10 +1,4 @@
-import {
-  Box,
-  Typography,
-  Paper,
-  IconButton,
-  Link as MuiLink,
-} from "@mui/material";
+import { Box, Typography, Paper, IconButton, Link as MuiLink } from "@mui/material";
 import { styled } from "@mui/system";
 import { PageContainer } from "../../components/atoms";
 import EmailIcon from "@mui/icons-material/Email";
@@ -38,17 +32,11 @@ function AboutUs() {
     <>
       {/* Contact Details Section - Placed above the main About Us component */}
       <ContactDetailsBox>
-        <Typography
-          variant="h5"
-          component="h2"
-          gutterBottom
-          sx={{ fontWeight: 700 }}
-        >
+        <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 700 }}>
           Get in Touch
         </Typography>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          We'd love to hear from you! Reach out to us through any of the
-          following channels:
+          We'd love to hear from you! Reach out to us through any of the following channels:
         </Typography>
         <Box
           sx={{
@@ -61,11 +49,7 @@ function AboutUs() {
         >
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <EmailIcon sx={{ mr: 1 }} />
-            <MuiLink
-              href="mailto:info@buswatch.com"
-              color="inherit"
-              underline="hover"
-            >
+            <MuiLink href="mailto:info@buswatch.com" color="inherit" underline="hover">
               info@buswatch.com
             </MuiLink>
           </Box>
@@ -112,88 +96,82 @@ function AboutUs() {
           >
             About BusWatch: Driving Better Commutes Together
           </Typography>
-          <Typography component="p"
+          <Typography
+            component="p"
             variant="body1"
-           
+
             align="center"
             sx={{ mb: 4, color: "text.secondary" }}
           >
-            Welcome to BusWatch, your dedicated partner in transforming public
-            bus services. We believe that every voice matters in shaping a more
-            efficient, safer, and user-friendly public transportation system.
+            Welcome to BusWatch, your dedicated partner in transforming public bus services. We
+            believe that every voice matters in shaping a more efficient, safer, and user-friendly
+            public transportation system.
           </Typography>
 
           <Box sx={{ mb: 4 }}>
-            <SectionTitle variant="h5">
-              Our Mission: Empowering Commuters
-            </SectionTitle>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              Our core mission is to empower daily commuters with a powerful
-              tool to report, track, and influence the quality of public bus
-              services. We are committed to fostering a transparent and
-              responsive ecosystem where feedback directly translates into
-              tangible improvements. By bridging the communication gap between
-              passengers and transport authorities, we aim to cultivate a public
-              transport network that truly serves its community.
+            <SectionTitle variant="h5">Our Mission: Empowering Commuters</SectionTitle>
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              Our core mission is to empower daily commuters with a powerful tool to report, track,
+              and influence the quality of public bus services. We are committed to fostering a
+              transparent and responsive ecosystem where feedback directly translates into tangible
+              improvements. By bridging the communication gap between passengers and transport
+              authorities, we aim to cultivate a public transport network that truly serves its
+              community.
             </Typography>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              We strive to make your voice heard, ensuring that every journey is
-              not just a ride, but a step towards a better urban experience.
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              We strive to make your voice heard, ensuring that every journey is not just a ride,
+              but a step towards a better urban experience.
             </Typography>
           </Box>
 
           <Box sx={{ mb: 4 }}>
-            <SectionTitle variant="h5">
-              What We Do: Your Feedback, Our Action
-            </SectionTitle>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              BusWatch provides an intuitive and accessible platform for you to
-              report a wide array of issues, ensuring that no concern goes
-              unnoticed. Our comprehensive reporting categories include:
+            <SectionTitle variant="h5">What We Do: Your Feedback, Our Action</SectionTitle>
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              BusWatch provides an intuitive and accessible platform for you to report a wide array
+              of issues, ensuring that no concern goes unnoticed. Our comprehensive reporting
+              categories include:
             </Typography>
             <ul>
               <li>
                 <Typography variant="body1">
-                  <strong>Overcrowding:</strong> Help us identify routes and
-                  times needing more capacity.
+                  <strong>Overcrowding:</strong> Help us identify routes and times needing more
+                  capacity.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Delays & Missed Schedules:</strong> Pinpoint
-                  inconsistencies for improved punctuality.
+                  <strong>Delays & Missed Schedules:</strong> Pinpoint inconsistencies for improved
+                  punctuality.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Driver Behavior:</strong> Report instances of unsafe
-                  driving or unprofessional conduct.
+                  <strong>Driver Behavior:</strong> Report instances of unsafe driving or
+                  unprofessional conduct.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Vehicle Condition:</strong> Highlight maintenance
-                  issues, cleanliness, or safety hazards.
+                  <strong>Vehicle Condition:</strong> Highlight maintenance issues, cleanliness, or
+                  safety hazards.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Safety Concerns:</strong> Any incident that
-                  compromises passenger safety.
+                  <strong>Safety Concerns:</strong> Any incident that compromises passenger safety.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Accessibility Issues:</strong> Report challenges faced
-                  by passengers with disabilities.
+                  <strong>Accessibility Issues:</strong> Report challenges faced by passengers with
+                  disabilities.
                 </Typography>
               </li>
             </ul>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              Each report you submit is meticulously categorized and routed to
-              the appropriate transport authorities for review and action. Our
-              system is designed to facilitate quicker resolution and enhance
-              accountability across the public transport network.
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              Each report you submit is meticulously categorized and routed to the appropriate
+              transport authorities for review and action. Our system is designed to facilitate
+              quicker resolution and enhance accountability across the public transport network.
             </Typography>
           </Box>
 
@@ -201,65 +179,53 @@ function AboutUs() {
             <SectionTitle variant="h5">
               Why BusWatch Matters: Community-Driven Improvement
             </SectionTitle>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              In today's fast-paced world, efficient and reliable public
-              transport is crucial. BusWatch stands as a testament to the power
-              of collective action. By participating, you contribute to:
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              In today's fast-paced world, efficient and reliable public transport is crucial.
+              BusWatch stands as a testament to the power of collective action. By participating,
+              you contribute to:
             </Typography>
             <ul>
               <li>
                 <Typography variant="body1">
-                  <strong>Enhanced Safety:</strong> Helping identify and rectify
-                  potential hazards.
+                  <strong>Enhanced Safety:</strong> Helping identify and rectify potential hazards.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Improved Punctuality:</strong> Contributing to more
-                  reliable schedules.
+                  <strong>Improved Punctuality:</strong> Contributing to more reliable schedules.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Better Service Quality:</strong> Encouraging higher
-                  standards of vehicle maintenance and driver professionalism.
+                  <strong>Better Service Quality:</strong> Encouraging higher standards of vehicle
+                  maintenance and driver professionalism.
                 </Typography>
               </li>
               <li>
                 <Typography variant="body1">
-                  <strong>Community Empowerment:</strong> Giving a voice to
-                  every commuter.
+                  <strong>Community Empowerment:</strong> Giving a voice to every commuter.
                 </Typography>
               </li>
             </ul>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              Join us in our endeavor to build a public transportation system
-              that is truly world-class, responsive, and serves the needs of
-              every passenger.
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              Join us in our endeavor to build a public transportation system that is truly
+              world-class, responsive, and serves the needs of every passenger.
             </Typography>
           </Box>
 
           <Box>
-            <SectionTitle variant="h5">
-              Our Vision: A Future of Seamless Commutes
-            </SectionTitle>
-            <Typography component="p" variant="body1" sx={{ mb: 2 }} >
-              We envision a future where public transportation is not just a
-              means to an end, but a consistently excellent, comfortable, and
-              reliable experience. BusWatch aspires to be the leading platform
-              for public transport advocacy, innovation, and continuous
-              improvement, driven by the invaluable insights of the community it
-              serves.
+            <SectionTitle variant="h5">Our Vision: A Future of Seamless Commutes</SectionTitle>
+            <Typography component="p" variant="body1" sx={{ mb: 2 }}>
+              We envision a future where public transportation is not just a means to an end, but a
+              consistently excellent, comfortable, and reliable experience. BusWatch aspires to be
+              the leading platform for public transport advocacy, innovation, and continuous
+              improvement, driven by the invaluable insights of the community it serves.
             </Typography>
           </Box>
 
-          <Typography
-            variant="body2"
-            align="center"
-            sx={{ mt: 5, color: "text.disabled" }}
-          >
-            Thank you for being an active and valued member of the BusWatch
-            community! Together, we can make a difference.
+          <Typography variant="body2" align="center" sx={{ mt: 5, color: "text.disabled" }}>
+            Thank you for being an active and valued member of the BusWatch community! Together, we
+            can make a difference.
           </Typography>
         </Paper>
       </PageContainer>

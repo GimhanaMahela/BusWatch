@@ -1,14 +1,16 @@
 services:
   api:
-    build: ./api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     ports:
       - "5000:5000"
     env_file:
-      - ./api/.env # JWT_SECRET, ADMIN_*, CLOUDINARY_*, EMAIL_* (see .env.example)
+      - .env # the single repo-root .env (see .env.example)
     environment:
       NODE_ENV: production
+      PORT: 5000 # nginx in the ui image proxies /api to api:5000
       MONGO_URI: mongodb://mongodb:27017/buswatchdb
-      CORS_ORIGINS: http://localhost:3000
       FRONTEND_URL: http://localhost:3000
     depends_on:
       mongodb:
@@ -21,17 +23,19 @@ services:
 
   ui:
     build:
-      context: ./ui
+      context: .
+      dockerfile: ui/Dockerfile
       args:
-        # Called from the browser, so this is the host-mapped backend port
-        VITE_BACKEND_URL: http://localhost:5000/api
+        # Read from the root .env; empty = same-origin /api through nginx
+        VITE_MAPS_API_KEY: ${VITE_MAPS_API_KEY:-}
     ports:
       - "3000:80"
     depends_on:
       - api
 
   mongodb:
-    image: mongo:8
+    # mongo:8 cannot start on Linux kernel >= 6.19 (SERVER-121912); stay on 7 until that is fixed
+    image: mongo:7
     ports:
       - "27017:27017" # Optional: for connecting with Compass
     volumes:

@@ -43,8 +43,12 @@ function TrackReportPage() {
   const { receiptId: receiptIdParam } = useParams();
   const navigate = useNavigate();
   const [input, setInput] = useState(receiptIdParam || "");
-  const { data: report, error: lookupError, isFetching: loading, refetch } =
-    useTrackedReport(receiptIdParam);
+  const {
+    data: report,
+    error: lookupError,
+    isFetching: loading,
+    refetch,
+  } = useTrackedReport(receiptIdParam);
 
   // The URL is the source of truth, so a tracking link can be shared or bookmarked.
   // When it changes (e.g. browser back), show that ID in the search box.
@@ -87,12 +91,16 @@ function TrackReportPage() {
           placeholder="BW-2026-XXXXXX"
           value={input}
           onChange={(e) => setInput(e.target.value)}
- slotProps={{ input: { startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ) } }}
-/>
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
         <Button type="submit" variant="contained" disabled={loading || !input.trim()}>
           Track
         </Button>
@@ -149,13 +157,15 @@ function TrackReportPage() {
           <Stepper orientation="vertical" activeStep={report.timeline.length}>
             {report.timeline.map((entry, index) => (
               <Step key={index} completed expanded>
-                <StepLabel optional={
-                  entry.changedAt && (
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(entry.changedAt)}
-                    </Typography>
-                  )
-                }>
+                <StepLabel
+                  optional={
+                    entry.changedAt && (
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(entry.changedAt)}
+                      </Typography>
+                    )
+                  }
+                >
                   {statusLabel(entry.status)}
                 </StepLabel>
                 <StepContent>

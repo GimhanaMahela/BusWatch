@@ -70,8 +70,7 @@ function HomePage() {
             BusWatch: Your Eye on Public Transport
           </Typography>
           <Typography variant="h5" component="p">
-            Report issues quickly and help us improve public transport for
-            everyone.
+            Report issues quickly and help us improve public transport for everyone.
           </Typography>
           <Button variant="contained" component={Link} to="/submit-report">
             Submit a Report Now
@@ -84,15 +83,14 @@ function HomePage() {
           How It Works
         </Typography>
         <Typography variant="body1">
-          BusWatch allows ordinary citizens to report various issues related to
-          public bus transport, such as over-speeding, reckless driving,
-          unpunctuality, misconduct of staff, or unhygienic conditions. Your
-          reports help authorities take necessary action to ensure a safer and
-          more reliable transport system.
+          BusWatch allows ordinary citizens to report various issues related to public bus
+          transport, such as over-speeding, reckless driving, unpunctuality, misconduct of staff, or
+          unhygienic conditions. Your reports help authorities take necessary action to ensure a
+          safer and more reliable transport system.
         </Typography>
         <Typography variant="body1">
-          Simply fill out our easy-to-use form, optionally attach photos or
-          videos as evidence, and receive a unique receipt ID for your report.
+          Simply fill out our easy-to-use form, optionally attach photos or videos as evidence, and
+          receive a unique receipt ID for your report.
         </Typography>
         <Button
           variant="outlined"

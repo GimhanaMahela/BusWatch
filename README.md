@@ -13,42 +13,42 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the structure, naming conventions and
 
 ## Quick start (local)
 
-Requires Node.js 24 (`nvm use`) and MongoDB.
+This is a monorepo with one `package.json` and one `.env` at the root. Requires Node.js 24 (`nvm use`)
+and MongoDB.
 
 ```bash
-# API on http://localhost:5000
-cd api
-cp .env.example .env        # set JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, MONGO_URI
+cp .env.example .env   # set JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, MONGO_URI
 npm install
-npm run dev
-
-# Web app on http://localhost:3000
-cd ../ui
-cp .env.example .env.local
-npm install
-npm run dev
+npm run dev            # API on :5000 and UI on http://localhost:3000, both reloading
 ```
 
+The UI calls the API at `/api` on its own origin; the Vite dev server forwards those requests to the API.
 On first start the API creates a superadmin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Other admins are
 added from the dashboard's **Admins** dialog.
+
+## Scripts
+
+| Script                                | Does                                                      |
+| ------------------------------------- | --------------------------------------------------------- |
+| `dev` (`dev:api`, `dev:ui`)           | Run both apps with reload                                 |
+| `build` (`build:api`, `build:ui`)     | Compile the API to `api/dist`, bundle the UI to `ui/dist` |
+| `start` / `preview`                   | Run the compiled API / serve the built UI                 |
+| `test` (`test:api`, `test:ui`)        | Vitest: API tests and UI component tests                  |
+| `lint`, `typecheck`, `format(:check)` | ESLint, TypeScript, Prettier                              |
+
+CI runs `format:check`, `lint`, `typecheck`, `test` and `build` on every push and pull request.
 
 ## Docker
 
 ```bash
-cp api/.env.example api/.env   # fill in secrets
+cp .env.example .env   # fill in secrets
 docker compose up --build
 ```
 
-The web app runs on http://localhost:3000, the API on http://localhost:5000 and MongoDB on port 27017.
+The UI runs on http://localhost:3000 (nginx serves it and forwards `/api` to the API container), the API
+on http://localhost:5000 and MongoDB on port 27017.
 
-## Checks
+## Vercel
 
-Each app has the same scripts, and CI runs them on every push and pull request:
-
-```bash
-npm run lint          # ESLint
-npm run typecheck     # TypeScript
-npm test              # Vitest
-npm run format:check  # Prettier
-npm run build
-```
+One Vercel project deploys both apps from the repo root (`vercel.json`): the UI as static files and
+the API as a serverless function under `/api`. Set the variables from `.env.example` in the project settings.
