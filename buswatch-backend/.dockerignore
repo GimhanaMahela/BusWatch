@@ -1,6 +1,8 @@
 node_modules
+dist
+coverage
+tests
 npm-debug.log
 .env
-uploads/
-reports/ 
-dist/   
+.env.*
+!.env.example

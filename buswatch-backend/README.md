@@ -1,68 +1,41 @@
-# BusWatch Backend API
+# BusWatch API
 
-## Project Overview
+TypeScript REST API for BusWatch: Express 5, MongoDB (Mongoose 9), Zod validation, Cloudinary media,
+PDF receipts (PDFKit) and email (Nodemailer). See [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
-This repository contains the backend API for the **BusWatch** application. The BusWatch application aims to provide a platform for users to report issues related to public bus transportation, such as overcrowding, reckless driving, unscheduled stops, or maintenance concerns. This API handles the submission, processing, and management of these reports, including geospatial data for location, file uploads, and notification services.
+## Setup
 
-## Features
+```bash
+cp .env.example .env   # JWT_SECRET and MONGO_URI are required; see comments in the file
+npm install
+npm run dev            # http://localhost:5000, reloads on change
+```
 
-* **Report Submission:** Allows users to submit detailed reports about bus incidents.
-* **Geospatial Data:** Stores and processes bus incident locations using MongoDB's `2dsphere` indexing for efficient spatial queries.
-* **File Uploads:** Supports uploading images and videos related to the report (via Cloudinary integration).
-* **PDF Receipt Generation:** Generates a unique PDF receipt for each submitted report.
-* **Email Notifications:** Sends a digital receipt to the passenger's email address upon successful report submission.
-* **Report Status Management:** Reports can have statuses like `pending`, `reviewed`, and `resolved`.
-* **Robust Validation:** Ensures data integrity with comprehensive schema validation.
+Production: `npm run build && npm start` (runs `dist/server.js`). The `Dockerfile` does both.
+On Vercel, `vercel.json` serves `src/server.ts` as a serverless function.
 
-## Technologies Used
+## Scripts
 
-* **Node.js:** JavaScript runtime environment.
-* **Express.js:** Web application framework for Node.js.
-* **MongoDB:** NoSQL database for flexible data storage.
-* **Mongoose:** ODM (Object Data Modeling) library for MongoDB and Node.js.
-* **Cloudinary:** Cloud-based media management service for image and video uploads.
-* **Nodemailer (or similar):** For sending email notifications.
-* **PDF generation library (e.g., pdfkit, puppeteer):** Used for creating PDF receipts.
-* **uuid:** For generating unique identifiers (e.g., for `receiptId`).
+| Script                        | Does                                              |
+| ----------------------------- | ------------------------------------------------- |
+| `dev`                         | Run with reload (`tsx watch`), loading `.env`     |
+| `build` / `start`             | Compile to `dist/` / run the compiled server      |
+| `test`                        | API tests (Vitest + Supertest, in-memory MongoDB) |
+| `lint`, `typecheck`, `format` | ESLint, `tsc --noEmit`, Prettier                  |
 
-## Getting Started
+## API
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
-
-### Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-* **Node.js** (LTS version recommended)
-* **npm** (comes with Node.js)
-* **MongoDB** (running locally or a cloud instance like MongoDB Atlas)
-* **Cloudinary Account:** (for image/video uploads)
-* **Email Service Credentials:** (e.g., Gmail, SendGrid, Mailgun for Nodemailer)
-
-### Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/YOUR_USERNAME/buswatch-backend.git](https://github.com/YOUR_USERNAME/buswatch-backend.git)
-    cd buswatch-backend
-    ```
-
-2.  **Install NPM packages:**
-    ```bash
-    npm install
-    ```
-
-### Environment Variables
-
-Create a `.env` file in the root directory of the project and add the following environment variables. Replace the placeholder values with your actual credentials.
-
-```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/buswatch # Or your MongoDB Atlas URI
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-EMAIL_SERVICE_HOST=smtp.your-email-service.com # e.g., smtp.gmail.com
-EMAIL_SERVICE_PORT=587 # e.g., 587 for TLS
-EMAIL_SERVICE_USER=your_email_address@example.com
-EMAIL_SERVICE_PASS=your_email_password_or_app_specific_password
+| Method & path                                      | Access               | Purpose                                                 |
+| -------------------------------------------------- | -------------------- | ------------------------------------------------------- |
+| `POST /api/reports`                                | Public, rate-limited | Submit a report (multipart: fields, `images`, `videos`) |
+| `GET /api/reports/track/:receiptId`                | Public, rate-limited | Status and timeline for a receipt ID                    |
+| `GET /api/reports`                                 | Admin                | List with `page, limit, status, category, q, from, to`  |
+| `GET /api/reports/stats`                           | Admin                | Dashboard analytics                                     |
+| `GET /api/reports/:id` · `/receipt/:receiptId`     | Admin                | One report                                              |
+| `PUT /api/reports/:id/status`                      | Admin                | Change status, optional message to the passenger        |
+| `POST /api/reports/:id/notes`                      | Admin                | Add an internal note                                    |
+| `DELETE /api/reports/:id`                          | Admin                | Delete a report and its media                           |
+| `POST /api/auth/login`                             | Public, rate-limited | Get a JWT (send it as `x-auth-token`)                   |
+| `GET /api/auth`                                    | Admin                | Current admin                                           |
+| `GET /api/auth/admins` · `POST /api/auth/register` | Superadmin           | List / create admins                                    |
+| `GET /health`                                      | Public               | Health check                                            |

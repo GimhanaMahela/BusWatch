@@ -1,42 +1,41 @@
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+import nodemailer from "nodemailer";
+import type { ReportStatus } from "../config/constants.js";
+import { env, frontendUrl as FRONTEND_URL } from "../config/env.js";
 
-const isEmailConfigured = () =>
-  Boolean(process.env.EMAIL_SERVICE_HOST && process.env.EMAIL_SERVICE_USER);
+const isEmailConfigured = (): boolean => Boolean(env.EMAIL_SERVICE_HOST && env.EMAIL_SERVICE_USER);
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_SERVICE_HOST,
-  port: process.env.EMAIL_SERVICE_PORT,
-  secure: false, // Use 'false' for STARTTLS on port 587
+  host: env.EMAIL_SERVICE_HOST,
+  port: env.EMAIL_SERVICE_PORT,
+  secure: false, // STARTTLS on port 587
   auth: {
-    user: process.env.EMAIL_SERVICE_USER,
-    pass: process.env.EMAIL_SERVICE_PASS,
+    user: env.EMAIL_SERVICE_USER,
+    pass: env.EMAIL_SERVICE_PASS,
   },
   tls: {
     // Only relax certificate checks when explicitly asked (e.g. Ethereal in development)
-    rejectUnauthorized: process.env.EMAIL_ALLOW_SELF_SIGNED !== "true",
+    rejectUnauthorized: !env.EMAIL_ALLOW_SELF_SIGNED,
   },
 });
 
-const FRONTEND_URL = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+const escapeHtml = (value = ""): string =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const escapeHtml = (value = "") =>
-  String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-const sendReportReceiptEmail = async (toEmail, receiptPdfBuffer, receiptId) => {
+/** Emails the PDF receipt. Returns false when email is not configured. */
+export const sendReportReceiptEmail = async (
+  toEmail: string,
+  receiptPdfBuffer: Buffer,
+  receiptId: string,
+): Promise<boolean> => {
   if (!isEmailConfigured()) {
     console.warn("Email service not configured; skipping receipt email.");
     return false;
   }
   try {
     const mailOptions = {
-      from: `BusWatch <${process.env.EMAIL_SERVICE_USER}>`, // More friendly sender name
+      from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
       to: toEmail,
-      subject: `Your BusWatch Report Receipt - ID: ${receiptId}`, // Clearer subject
+      subject: `Your BusWatch Report Receipt - ID: ${receiptId}`,
       html: `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -57,7 +56,7 @@ const sendReportReceiptEmail = async (toEmail, receiptPdfBuffer, receiptId) => {
                     <td style="padding-bottom: 20px; text-align: center;">
                         <div style="background-color: #e0f2f7; padding: 15px; border-radius: 5px; display: inline-block;">
                             <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin: 0;">Your Report ID:</p>
-                            <p style="font-size: 24px; font-weight: bold; color: #0056b3; margin: 5px 0 0;">${receiptId}</p>
+                            <p style="font-size: 24px; font-weight: bold; color: #0056b3; margin: 5px 0 0;">${escapeHtml(receiptId)}</p>
                         </div>
                     </td>
                 </tr>
@@ -91,11 +90,11 @@ const sendReportReceiptEmail = async (toEmail, receiptPdfBuffer, receiptId) => {
     return true;
   } catch (error) {
     console.error("Error sending receipt email:", error);
-    throw error; // Re-throw to handle in the calling function
+    throw error; // The caller decides whether this is fatal
   }
 };
 
-const STATUS_LABELS = {
+const STATUS_LABELS: Record<ReportStatus, string> = {
   pending: "Pending",
   reviewed: "Reviewed",
   escalated: "Escalated to authorities",
@@ -103,18 +102,22 @@ const STATUS_LABELS = {
   rejected: "Closed without action",
 };
 
-const sendStatusUpdateEmail = async (toEmail, receiptId, status, note) => {
+/** Tells the passenger their report status changed. Returns false when email is not configured. */
+export const sendStatusUpdateEmail = async (
+  toEmail: string,
+  receiptId: string,
+  status: ReportStatus,
+  note?: string,
+): Promise<boolean> => {
   if (!isEmailConfigured()) {
     console.warn("Email service not configured; skipping status update email.");
     return false;
   }
-  const label = STATUS_LABELS[status] || status;
-  const trackUrl = FRONTEND_URL
-    ? `${FRONTEND_URL}/track/${encodeURIComponent(receiptId)}`
-    : null;
+  const label = STATUS_LABELS[status];
+  const trackUrl = FRONTEND_URL ? `${FRONTEND_URL}/track/${encodeURIComponent(receiptId)}` : null;
 
   await transporter.sendMail({
-    from: `BusWatch <${process.env.EMAIL_SERVICE_USER}>`,
+    from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
     to: toEmail,
     subject: `Update on your BusWatch report ${receiptId}: ${label}`,
     html: `
@@ -131,5 +134,3 @@ const sendStatusUpdateEmail = async (toEmail, receiptId, status, note) => {
   });
   return true;
 };
-
-module.exports = { sendReportReceiptEmail, sendStatusUpdateEmail };

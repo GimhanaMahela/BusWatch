@@ -1,25 +1,60 @@
-const PDFDocument = require("pdfkit");
-const generateUniqueId = require("../utils/receipt-id");
-const axios = require("axios");
+import PDFDocument from "pdfkit";
+import { generateReceiptId } from "../utils/receipt-id.js";
 
-/**
- * Generates a professional PDF receipt for a BusWatch report with a modern, light theme.
- *
- * @param {object} reportData - The data for the report.
- * @param {string} [reportData.receiptId] - The report's receipt ID (generated if missing).
- * @param {string} [reportData.category] - The incident category.
- * @param {string} [reportData.incidentAt] - When the incident happened.
- * @param {string} reportData.busNumber - The bus number.
- * @param {string} reportData.routeNumber - The route number.
- * @param {string} [reportData.busName] - The name of the bus (optional).
- * @param {string} reportData.location - The location of the incident.
- * @param {string} reportData.reportedAt - The timestamp of when the report was made.
- * @param {string} reportData.description - The description of the incident.
- * @param {string[]} [reportData.images] - An array of image URLs related to the report (optional).
- * @returns {Promise<{pdfBuffer: Buffer, receiptId: string}>} A promise that resolves with the PDF buffer and the generated receipt ID.
- */
-const generatePdfReceipt = async (reportData) => {
-  return new Promise(async (resolve, reject) => {
+export interface ReceiptData {
+  receiptId?: string;
+  busNumber: string;
+  routeNumber: string;
+  busName?: string;
+  category?: string;
+  location: string;
+  incidentAt?: Date | string;
+  reportedAt: Date | string;
+  description: string;
+  images?: string[];
+}
+
+export interface ReceiptResult {
+  pdfBuffer: Buffer;
+  receiptId: string;
+}
+
+interface DownloadedImage {
+  buffer: Buffer | null;
+  index: number;
+  filename: string;
+}
+
+// pdfkit exposes openImage at runtime, but @types/pdfkit does not declare it
+const openImage = (doc: PDFKit.PDFDocument, buffer: Buffer) =>
+  (
+    doc as PDFKit.PDFDocument & { openImage(src: Buffer): { width: number; height: number } }
+  ).openImage(buffer);
+
+// Fetch evidence images up front so the PDF can be written in one synchronous pass
+const downloadImages = (urls: string[]): Promise<DownloadedImage[]> =>
+  Promise.all(
+    urls.map(async (imageUrl, index) => {
+      const filename = imageUrl.substring(imageUrl.lastIndexOf("/") + 1).split("?")[0] ?? "";
+      try {
+        const response = await fetch(imageUrl, { signal: AbortSignal.timeout(15_000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { buffer: Buffer.from(await response.arrayBuffer()), index, filename };
+      } catch (error) {
+        console.error(
+          `Failed to download image ${index + 1} from ${imageUrl}:`,
+          error instanceof Error ? error.message : error,
+        );
+        return { buffer: null, index, filename: `Image ${index + 1} (Failed)` };
+      }
+    }),
+  );
+
+/** Generates the passenger's PDF receipt: cover page, incident details and evidence images. */
+export const generatePdfReceipt = async (reportData: ReceiptData): Promise<ReceiptResult> => {
+  const imageResults = await downloadImages(reportData.images ?? []);
+
+  return new Promise<ReceiptResult>((resolve, reject) => {
     // Initialize PDFDocument with A4 size and bufferPages for post-generation page numbering
     // The first page is created by default, so we'll use it for the cover.
     const doc = new PDFDocument({
@@ -27,9 +62,9 @@ const generatePdfReceipt = async (reportData) => {
       size: "A4",
       bufferPages: true, // Enable buffering pages for later manipulation (like adding page numbers)
     });
-    const buffers = []; // Array to collect PDF data chunks
+    const buffers: Buffer[] = []; // Collected PDF data chunks
 
-    const receiptId = reportData.receiptId || generateUniqueId();
+    const receiptId = reportData.receiptId || generateReceiptId();
     const formattedDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -39,7 +74,7 @@ const generatePdfReceipt = async (reportData) => {
     });
 
     // Event listeners for PDF generation
-    doc.on("data", buffers.push.bind(buffers)); // Collect data chunks
+    doc.on("data", (chunk: Buffer) => buffers.push(chunk));
     doc.on("end", () => {
       // When document ends, concatenate buffers and resolve
       const pdfBuffer = Buffer.concat(buffers);
@@ -63,10 +98,10 @@ const generatePdfReceipt = async (reportData) => {
 
     // --- Helper Function: Add Horizontal Rule ---
     const addHorizontalRule = (
-      y,
+      y: number,
       color = borderColorLight,
       thickness = 0.5,
-      indent = 0
+      indent = 0,
     ) => {
       doc
         .strokeColor(color)
@@ -101,12 +136,9 @@ const generatePdfReceipt = async (reportData) => {
       .fillColor(textColorSecondary)
       .fontSize(18)
       .font(fontAccentItalic)
-      .text(
-        "Public Transport Monitoring System",
-        0,
-        doc.page.height / 2 - 100,
-        { align: "center" }
-      );
+      .text("Public Transport Monitoring System", 0, doc.page.height / 2 - 100, {
+        align: "center",
+      });
 
     // Main Title: Incident Report
     doc
@@ -114,9 +146,7 @@ const generatePdfReceipt = async (reportData) => {
       .fontSize(48)
       .font(fontPrimaryBold)
       .text("INCIDENT", 0, doc.page.height / 2 + 20, { align: "center" });
-    doc
-      .fontSize(56)
-      .text("REPORT", 0, doc.page.height / 2 + 80, { align: "center" });
+    doc.fontSize(56).text("REPORT", 0, doc.page.height / 2 + 80, { align: "center" });
 
     // Decorative accent line below title
     const titleLineY = doc.page.height / 2 + 150;
@@ -223,7 +253,7 @@ const generatePdfReceipt = async (reportData) => {
     const paddingY = 5; // Vertical padding within each row to center text
 
     // Set the starting Y position for the table
-    let currentTableY = doc.y;
+    const currentTableY = doc.y;
 
     detailRows.forEach((row, i) => {
       const rowY = currentTableY + i * actualRowHeight;
@@ -235,7 +265,7 @@ const generatePdfReceipt = async (reportData) => {
             detailTableX,
             rowY, // Start rect at rowY
             doc.page.width - doc.page.margins.left * 2,
-            actualRowHeight
+            actualRowHeight,
           )
           .fill(backgroundColorLight);
       }
@@ -265,10 +295,7 @@ const generatePdfReceipt = async (reportData) => {
       // Estimate height needed for the images section heading and first image.
       const estimatedImageSectionInitialHeight =
         16 + 0.8 * 16 + 10 + 1 * 10 + 300 + 9 + 1.5 * 9 + 60;
-      if (
-        doc.y + estimatedImageSectionInitialHeight >
-        doc.page.height - doc.page.margins.bottom
-      ) {
+      if (doc.y + estimatedImageSectionInitialHeight > doc.page.height - doc.page.margins.bottom) {
         doc.addPage(); // Add a new page only if necessary
       }
 
@@ -283,39 +310,13 @@ const generatePdfReceipt = async (reportData) => {
         .fillColor(textColorSecondary)
         .fontSize(10)
         .font(fontPrimaryRegular)
-        .text(
-          `Total ${reportData.images.length} image(s) attached to this report:`
-        )
+        .text(`Total ${reportData.images.length} image(s) attached to this report:`)
         .moveDown(1);
-
-      const imagePromises = reportData.images.map(async (imageUrl, index) => {
-        try {
-          const response = await axios.get(imageUrl, {
-            responseType: "arraybuffer",
-          });
-          const filename = imageUrl
-            .substring(imageUrl.lastIndexOf("/") + 1)
-            .split("?")[0];
-          return { buffer: Buffer.from(response.data), index, filename };
-        } catch (error) {
-          console.error(
-            `Failed to download image ${index + 1} from ${imageUrl}:`,
-            error.message
-          );
-          return {
-            buffer: null,
-            index,
-            filename: `Image ${index + 1} (Failed)`,
-          };
-        }
-      });
-
-      const imageResults = await Promise.all(imagePromises);
 
       for (const { buffer, index, filename } of imageResults) {
         if (buffer) {
           try {
-            const img = doc.openImage(buffer);
+            const img = openImage(doc, buffer);
             const maxWidth = doc.page.width - doc.page.margins.left * 2 - 40; // Content width minus padding
             const maxHeight = 300; // Max height for an image
 
@@ -336,18 +337,14 @@ const generatePdfReceipt = async (reportData) => {
 
             // Check if we need a new page for the image and its caption
             // 60 is approximate space for caption + padding
-            if (
-              doc.y + height + 60 >
-              doc.page.height - doc.page.margins.bottom
-            ) {
+            if (doc.y + height + 60 > doc.page.height - doc.page.margins.bottom) {
               doc.addPage();
               doc.y = doc.page.margins.top; // Reset Y to top margin
             }
 
             // Center the image
             const x =
-              doc.page.margins.left +
-              (doc.page.width - doc.page.margins.left * 2 - width) / 2;
+              doc.page.margins.left + (doc.page.width - doc.page.margins.left * 2 - width) / 2;
             const imageY = doc.y;
 
             // Add image
@@ -366,19 +363,20 @@ const generatePdfReceipt = async (reportData) => {
               .fontSize(9)
               .font(fontAccentItalic)
               .text(
-                `${filename} (Image ${index + 1} of ${
-                  reportData.images.length
-                })`,
+                `${filename} (Image ${index + 1} of ${reportData.images.length})`,
                 doc.page.margins.left, // Start at left margin
                 doc.y,
                 {
                   width: doc.page.width - doc.page.margins.left * 2, // Span full content width
                   align: "center",
-                }
+                },
               )
               .moveDown(1.5); // Space after caption
           } catch (imgErr) {
-            console.error("Error embedding image:", imgErr.message);
+            console.error(
+              "Error embedding image:",
+              imgErr instanceof Error ? imgErr.message : imgErr,
+            );
             doc
               .fillColor(textColorSecondary)
               .fontSize(10)
@@ -404,10 +402,7 @@ const generatePdfReceipt = async (reportData) => {
     // Estimate footer height (Thank you message, contact info, padding)
     const estimatedFooterHeight =
       16 + 0.5 * 16 + 11 + 1 * 11 + 10 + 0.3 * 10 + 9 + 0.2 * 9 + 9 + 50; // Roughly 150 points
-    if (
-      doc.y + estimatedFooterHeight >
-      doc.page.height - doc.page.margins.bottom
-    ) {
+    if (doc.y + estimatedFooterHeight > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
     }
 
@@ -431,7 +426,7 @@ const generatePdfReceipt = async (reportData) => {
         {
           align: "center",
           lineGap: 5,
-        }
+        },
       )
       .moveDown(1);
 
@@ -471,7 +466,7 @@ const generatePdfReceipt = async (reportData) => {
           `Page ${i + 1} of ${pageCount}`,
           pageNumberX, // X position
           pageNumberY, // Y position
-          { align: "right" }
+          { align: "right" },
         );
     }
 
@@ -479,5 +474,3 @@ const generatePdfReceipt = async (reportData) => {
     doc.end();
   });
 };
-
-module.exports = generatePdfReceipt;
