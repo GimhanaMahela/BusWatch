@@ -1,50 +1,11 @@
 import React from "react";
-import { Box, Typography, Container, Paper } from "@mui/material";
-import { styled } from "@mui/system";
-
-const PageContainer = styled(Container)(({ theme }) => ({
-  marginTop: theme.spacing(4),
-  marginBottom: theme.spacing(4),
-  padding: theme.spacing(3),
-  [theme.breakpoints.up("md")]: {
-    padding: theme.spacing(5),
-  },
-}));
-
-const ContentPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  borderRadius: theme.shape.borderRadius * 2,
-  boxShadow: theme.shadows[8],
-  background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.grey[50]})`,
-}));
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  marginTop: theme.spacing(4),
-  marginBottom: theme.spacing(2),
-  fontWeight: 600,
-  color: theme.palette.primary.main,
-}));
-
-const SubSectionTitle = styled(Typography)(({ theme }) => ({
-  marginTop: theme.spacing(3),
-  marginBottom: theme.spacing(1),
-  fontWeight: 500,
-  color: theme.palette.text.primary,
-}));
+import { Box, Typography } from "@mui/material";
+import { SectionHeading, SubsectionHeading } from "../../components/atoms";
+import { ContentPageTemplate } from "../../components/templates";
 
 function PrivacyPolicyPage() {
   return (
-    <PageContainer maxWidth="md">
-      <ContentPaper elevation={3}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          align="center"
-          sx={{ fontWeight: 700, color: "primary.dark" }}
-        >
-          Privacy Policy for BusWatch
-        </Typography>
+    <ContentPageTemplate title="Privacy Policy for BusWatch">
         <Typography
           variant="body2"
           align="center"
@@ -71,13 +32,13 @@ function PrivacyPolicyPage() {
           our Terms and Conditions.
         </Typography>
 
-        <SectionTitle variant="h5">Information Collection and Use</SectionTitle>
+        <SectionHeading variant="h5">Information Collection and Use</SectionHeading>
         <Typography variant="body1" paragraph>
           We collect several different types of information for various purposes
           to provide and improve our Service to you.
         </Typography>
 
-        <SubSectionTitle variant="h6">Types of Data Collected</SubSectionTitle>
+        <SubsectionHeading variant="h6">Types of Data Collected</SubsectionHeading>
         <Typography variant="body1" paragraph>
           **Personal Data** While using our Service, we may ask you to provide
           us with certain personally identifiable information that can be used
@@ -123,7 +84,7 @@ function PrivacyPolicyPage() {
           you may not be able to use some portions of our Service.
         </Typography>
 
-        <SectionTitle variant="h5">Use of Data</SectionTitle>
+        <SectionHeading variant="h5">Use of Data</SectionHeading>
         <Typography variant="body1" paragraph>
           BusWatch uses the collected data for various purposes:
         </Typography>
@@ -157,7 +118,7 @@ function PrivacyPolicyPage() {
           </Typography>
         </Box>
 
-        <SectionTitle variant="h5">Transfer Of Data</SectionTitle>
+        <SectionHeading variant="h5">Transfer Of Data</SectionHeading>
         <Typography variant="body1" paragraph>
           Your information, including Personal Data, may be transferred to — and
           maintained on — computers located outside of your state, province,
@@ -181,8 +142,8 @@ function PrivacyPolicyPage() {
           including the security of your data and other personal information.
         </Typography>
 
-        <SectionTitle variant="h5">Disclosure Of Data</SectionTitle>
-        <SubSectionTitle variant="h6">Legal Requirements</SubSectionTitle>
+        <SectionHeading variant="h5">Disclosure Of Data</SectionHeading>
+        <SubsectionHeading variant="h6">Legal Requirements</SubsectionHeading>
         <Typography variant="body1" paragraph>
           BusWatch may disclose your Personal Data in the good faith belief that
           such action is necessary to:
@@ -206,7 +167,7 @@ function PrivacyPolicyPage() {
           </Typography>
         </Box>
 
-        <SectionTitle variant="h5">Security Of Data</SectionTitle>
+        <SectionHeading variant="h5">Security Of Data</SectionHeading>
         <Typography variant="body1" paragraph>
           The security of your data is important to us, but remember that no
           method of transmission over the Internet, or method of electronic
@@ -215,7 +176,7 @@ function PrivacyPolicyPage() {
           security.
         </Typography>
 
-        <SectionTitle variant="h5">Service Providers</SectionTitle>
+        <SectionHeading variant="h5">Service Providers</SectionHeading>
         <Typography variant="body1" paragraph>
           We may employ third party companies and individuals to facilitate our
           Service ("Service Providers"), to provide the Service on our behalf,
@@ -228,7 +189,7 @@ function PrivacyPolicyPage() {
           for any other purpose.
         </Typography>
 
-        <SectionTitle variant="h5">Links To Other Sites</SectionTitle>
+        <SectionHeading variant="h5">Links To Other Sites</SectionHeading>
         <Typography variant="body1" paragraph>
           Our Service may contain links to other sites that are not operated by
           us. If you click on a third party link, you will be directed to that
@@ -240,7 +201,7 @@ function PrivacyPolicyPage() {
           privacy policies or practices of any third party sites or services.
         </Typography>
 
-        <SectionTitle variant="h5">Children's Privacy</SectionTitle>
+        <SectionHeading variant="h5">Children's Privacy</SectionHeading>
         <Typography variant="body1" paragraph>
           Our Service does not address anyone under the age of 18 ("Children").
         </Typography>
@@ -253,7 +214,7 @@ function PrivacyPolicyPage() {
           steps to remove that information from our servers.
         </Typography>
 
-        <SectionTitle variant="h5">Changes To This Privacy Policy</SectionTitle>
+        <SectionHeading variant="h5">Changes To This Privacy Policy</SectionHeading>
         <Typography variant="body1" paragraph>
           We may update our Privacy Policy from time to time. We will notify you
           of any changes by posting the new Privacy Policy on this page.
@@ -269,7 +230,7 @@ function PrivacyPolicyPage() {
           posted on this page.
         </Typography>
 
-        <SectionTitle variant="h5">Contact Us</SectionTitle>
+        <SectionHeading variant="h5">Contact Us</SectionHeading>
         <Typography variant="body1" paragraph>
           If you have any questions about this Privacy Policy, please contact
           us:
@@ -289,8 +250,7 @@ function PrivacyPolicyPage() {
             </a>
           </Typography>
         </Box>
-      </ContentPaper>
-    </PageContainer>
+    </ContentPageTemplate>
   );
 }
 

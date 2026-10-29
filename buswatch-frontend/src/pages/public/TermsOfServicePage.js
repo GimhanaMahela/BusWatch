@@ -1,43 +1,11 @@
 import React from "react";
-import { Box, Typography, Container, Paper } from "@mui/material";
-import { styled } from "@mui/system";
-
-const PageContainer = styled(Container)(({ theme }) => ({
-  marginTop: theme.spacing(4),
-  marginBottom: theme.spacing(4),
-  padding: theme.spacing(3),
-  [theme.breakpoints.up("md")]: {
-    padding: theme.spacing(5),
-  },
-}));
-
-const ContentPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  borderRadius: theme.shape.borderRadius * 2,
-  boxShadow: theme.shadows[8],
-  background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.grey[50]})`,
-}));
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  marginTop: theme.spacing(4),
-  marginBottom: theme.spacing(2),
-  fontWeight: 600,
-  color: theme.palette.primary.main,
-}));
+import { Box, Typography } from "@mui/material";
+import { SectionHeading } from "../../components/atoms";
+import { ContentPageTemplate } from "../../components/templates";
 
 function TermsOfServicePage() {
   return (
-    <PageContainer maxWidth="md">
-      <ContentPaper elevation={3}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          align="center"
-          sx={{ fontWeight: 700, color: "primary.dark" }}
-        >
-          Terms of Service for BusWatch
-        </Typography>
+    <ContentPageTemplate title="Terms of Service for BusWatch">
         <Typography
           variant="body2"
           align="center"
@@ -63,7 +31,7 @@ function TermsOfServicePage() {
           access the Service.
         </Typography>
 
-        <SectionTitle variant="h5">Accounts</SectionTitle>
+        <SectionHeading variant="h5">Accounts</SectionHeading>
         <Typography variant="body1" paragraph>
           When you create an account with us, you must provide us information
           that is accurate, complete, and current at all times. Failure to do so
@@ -82,7 +50,7 @@ function TermsOfServicePage() {
           unauthorized use of your account.
         </Typography>
 
-        <SectionTitle variant="h5">Intellectual Property</SectionTitle>
+        <SectionHeading variant="h5">Intellectual Property</SectionHeading>
         <Typography variant="body1" paragraph>
           The Service and its original content, features and functionality are
           and will remain the exclusive property of BusWatch and its licensors.
@@ -92,7 +60,7 @@ function TermsOfServicePage() {
           without the prior written consent of BusWatch.
         </Typography>
 
-        <SectionTitle variant="h5">Links To Other Web Sites</SectionTitle>
+        <SectionHeading variant="h5">Links To Other Web Sites</SectionHeading>
         <Typography variant="body1" paragraph>
           Our Service may contain links to third-party web sites or services
           that are not owned or controlled by BusWatch.
@@ -111,7 +79,7 @@ function TermsOfServicePage() {
           policies of any third-party web sites or services that you visit.
         </Typography>
 
-        <SectionTitle variant="h5">Termination</SectionTitle>
+        <SectionHeading variant="h5">Termination</SectionHeading>
         <Typography variant="body1" paragraph>
           We may terminate or suspend your account immediately, without prior
           notice or liability, for any reason whatsoever, including without
@@ -129,7 +97,7 @@ function TermsOfServicePage() {
           of liability.
         </Typography>
 
-        <SectionTitle variant="h5">Indemnification</SectionTitle>
+        <SectionHeading variant="h5">Indemnification</SectionHeading>
         <Typography variant="body1" paragraph>
           You agree to defend, indemnify and hold harmless BusWatch and its
           licensee and licensors, and their employees, contractors, agents,
@@ -140,7 +108,7 @@ function TermsOfServicePage() {
           person using your account and password; or b) a breach of these Terms.
         </Typography>
 
-        <SectionTitle variant="h5">Limitation Of Liability</SectionTitle>
+        <SectionHeading variant="h5">Limitation Of Liability</SectionHeading>
         <Typography variant="body1" paragraph>
           In no event shall BusWatch, nor its directors, employees, partners,
           agents, suppliers, or affiliates, be liable for any indirect,
@@ -157,7 +125,7 @@ function TermsOfServicePage() {
           purpose.
         </Typography>
 
-        <SectionTitle variant="h5">Disclaimer</SectionTitle>
+        <SectionHeading variant="h5">Disclaimer</SectionHeading>
         <Typography variant="body1" paragraph>
           Your use of the Service is at your sole risk. The Service is provided
           on an "AS IS" and "AS AVAILABLE" basis. The Service is provided
@@ -174,7 +142,7 @@ function TermsOfServicePage() {
           requirements.
         </Typography>
 
-        <SectionTitle variant="h5">Governing Law</SectionTitle>
+        <SectionHeading variant="h5">Governing Law</SectionHeading>
         <Typography variant="body1" paragraph>
           These Terms shall be governed and construed in accordance with the
           laws of Sri Lanka, without regard to its conflict of law provisions.
@@ -189,7 +157,7 @@ function TermsOfServicePage() {
           regarding the Service.
         </Typography>
 
-        <SectionTitle variant="h5">Changes</SectionTitle>
+        <SectionHeading variant="h5">Changes</SectionHeading>
         <Typography variant="body1" paragraph>
           We reserve the right, at our sole discretion, to modify or replace
           these Terms at any time. If a revision is material we will try to
@@ -203,7 +171,7 @@ function TermsOfServicePage() {
           do not agree to the new terms, please stop using the Service.
         </Typography>
 
-        <SectionTitle variant="h5">Contact Us</SectionTitle>
+        <SectionHeading variant="h5">Contact Us</SectionHeading>
         <Typography variant="body1" paragraph>
           If you have any questions about these Terms, please contact us:
         </Typography>
@@ -222,8 +190,7 @@ function TermsOfServicePage() {
             </a>
           </Typography>
         </Box>
-      </ContentPaper>
-    </PageContainer>
+    </ContentPageTemplate>
   );
 }
 

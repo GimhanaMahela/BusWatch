@@ -1,33 +1,45 @@
-const Admin = require("../models/Admin");
+const Admin = require("../models/admin.model");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+const { ADMIN_ROLES } = require("../config/constants");
 require("dotenv").config();
 
-// @desc    Register a new admin (initial setup only, or for new admins by existing admin)
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const signToken = (admin) =>
+  jwt.sign(
+    { admin: { id: admin.id, email: admin.email, role: admin.role } },
+    process.env.JWT_SECRET,
+    { expiresIn: "8h" }
+  );
+
+// @desc    Create a new admin account (invite)
 // @route   POST /api/auth/register
-// @access  Public (should be restricted later)
+// @access  Private (superadmin only)
 exports.registerAdmin = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role = "admin" } = req.body;
+
+  if (!email || !EMAIL_RE.test(email)) {
+    return res.status(400).json({ msg: "A valid email is required" });
+  }
+  if (!password || password.length < 8) {
+    return res.status(400).json({ msg: "Password must be at least 8 characters" });
+  }
+  if (!ADMIN_ROLES.includes(role)) {
+    return res.status(400).json({ msg: "Invalid role" });
+  }
 
   try {
-    let admin = await Admin.findOne({ email });
+    let admin = await Admin.findOne({ email: email.toLowerCase() });
     if (admin) {
       return res.status(400).json({ msg: "Admin already exists" });
     }
 
-    admin = new Admin({ email, password });
+    admin = new Admin({ email, password, role });
     await admin.save();
 
-    const payload = { admin: { id: admin.id } };
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
+    res.status(201).json({
+      admin: { _id: admin.id, email: admin.email, role: admin.role, createdAt: admin.createdAt },
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
@@ -40,8 +52,12 @@ exports.registerAdmin = async (req, res) => {
 exports.loginAdmin = async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({ msg: "Invalid Credentials" });
+  }
+
   try {
-    let admin = await Admin.findOne({ email });
+    const admin = await Admin.findOne({ email: String(email).toLowerCase() });
     if (!admin) {
       return res.status(400).json({ msg: "Invalid Credentials" });
     }
@@ -51,16 +67,7 @@ exports.loginAdmin = async (req, res) => {
       return res.status(400).json({ msg: "Invalid Credentials" });
     }
 
-    const payload = { admin: { id: admin.id } };
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
+    res.json({ token: signToken(admin) });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
@@ -73,6 +80,9 @@ exports.loginAdmin = async (req, res) => {
 exports.getAdmin = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin.id).select("-password");
+    if (!admin) {
+      return res.status(401).json({ msg: "Admin no longer exists" });
+    }
     res.json(admin);
   } catch (err) {
     console.error(err.message);
@@ -80,18 +90,15 @@ exports.getAdmin = async (req, res) => {
   }
 };
 
-// Helper to create initial admin if none exists (run once)
-exports.createInitialAdmin = async () => {
+// @desc    List admin accounts
+// @route   GET /api/auth/admins
+// @access  Private (superadmin only)
+exports.listAdmins = async (req, res) => {
   try {
-    const adminCount = await Admin.countDocuments();
-    if (adminCount === 0) {
-      const email = process.env.ADMIN_EMAIL || "admin@ptwatch.com";
-      const password = process.env.ADMIN_PASSWORD || "adminpass";
-      const newAdmin = new Admin({ email, password });
-      await newAdmin.save();
-      console.log("Initial admin created successfully!");
-    }
-  } catch (error) {
-    console.error("Error creating initial admin:", error.message);
+    const admins = await Admin.find().select("-password").sort({ createdAt: 1 });
+    res.json(admins);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
   }
 };

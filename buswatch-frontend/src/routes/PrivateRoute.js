@@ -1,31 +1,19 @@
-// src/components/PrivateRoute.js
-import React, { useContext } from "react";
+import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
-import { CircularProgress, Box, Typography } from "@mui/material";
+import useAuth from "../hooks/useAuth";
+import { LoadingState } from "../components/molecules";
 
+/** Renders child routes only for a signed-in admin; otherwise redirects to login. */
 const PrivateRoute = () => {
-  const { isAuthenticated, loading } = useContext(AuthContext);
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        flexDirection="column" // Arrange vertically
-        justifyContent="center"
-        alignItems="center"
-        height="100vh" // Take full viewport height
-        sx={{ bgcolor: "background.default" }} // Use theme background color
-      >
-        <CircularProgress size={60} sx={{ color: "primary.main", mb: 3 }} />{" "}
-        {/* Larger, primary colored spinner */}
-        <Typography variant="h5" color="text.secondary">
-          Loading authentication data...
-        </Typography>
-        <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
-          Please wait.
-        </Typography>
-      </Box>
+      <LoadingState
+        message="Loading authentication data..."
+        hint="Please wait."
+        minHeight="100vh"
+      />
     );
   }
 

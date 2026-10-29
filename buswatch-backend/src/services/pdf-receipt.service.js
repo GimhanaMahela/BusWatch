@@ -1,11 +1,14 @@
 const PDFDocument = require("pdfkit");
-const { v4: uuidv4 } = require("uuid");
+const generateUniqueId = require("../utils/receipt-id");
 const axios = require("axios");
 
 /**
  * Generates a professional PDF receipt for a BusWatch report with a modern, light theme.
  *
  * @param {object} reportData - The data for the report.
+ * @param {string} [reportData.receiptId] - The report's receipt ID (generated if missing).
+ * @param {string} [reportData.category] - The incident category.
+ * @param {string} [reportData.incidentAt] - When the incident happened.
  * @param {string} reportData.busNumber - The bus number.
  * @param {string} reportData.routeNumber - The route number.
  * @param {string} [reportData.busName] - The name of the bus (optional).
@@ -26,7 +29,7 @@ const generatePdfReceipt = async (reportData) => {
     });
     const buffers = []; // Array to collect PDF data chunks
 
-    const receiptId = uuidv4(); // Generate a unique receipt ID
+    const receiptId = reportData.receiptId || generateUniqueId();
     const formattedDate = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -189,9 +192,24 @@ const generatePdfReceipt = async (reportData) => {
       { label: "Bus Number", value: reportData.busNumber || "N/A" },
       { label: "Route Number", value: reportData.routeNumber || "N/A" },
       { label: "Bus Name", value: reportData.busName || "N/A" },
+      {
+        label: "Category",
+        value: reportData.category
+          ? reportData.category
+              .split("_")
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" ")
+          : "N/A",
+      },
       { label: "Location of Incident", value: reportData.location || "N/A" },
       {
         label: "Date & Time of Incident",
+        value: reportData.incidentAt
+          ? new Date(reportData.incidentAt).toLocaleString()
+          : "Not specified",
+      },
+      {
+        label: "Reported On",
         value: new Date(reportData.reportedAt).toLocaleString() || "N/A",
       },
       // Detailed Description of Incident is now part of the detailRows

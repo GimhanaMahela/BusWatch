@@ -2,27 +2,17 @@ import React from "react";
 import {
   Box,
   Typography,
-  Container,
   Paper,
   IconButton,
   Link as MuiLink,
 } from "@mui/material";
 import { styled } from "@mui/system";
+import { PageContainer } from "../../components/atoms";
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
-
-// Styled component for the main container to add padding and margin
-const AboutUsContainer = styled(Container)(({ theme }) => ({
-  marginTop: theme.spacing(4),
-  marginBottom: theme.spacing(4),
-  padding: theme.spacing(3),
-  [theme.breakpoints.up("md")]: {
-    padding: theme.spacing(5),
-  },
-}));
 
 // Styled component for the section titles
 const SectionTitle = styled(Typography)(({ theme }) => ({
@@ -112,7 +102,7 @@ function AboutUs() {
       </ContactDetailsBox>
 
       {/* Main About Us Component */}
-      <AboutUsContainer maxWidth="md">
+      <PageContainer maxWidth="md">
         <Paper elevation={3} sx={{ p: { xs: 3, md: 5 }, borderRadius: 2 }}>
           <Typography
             variant="h4"
@@ -273,7 +263,7 @@ function AboutUs() {
             community! Together, we can make a difference.
           </Typography>
         </Paper>
-      </AboutUsContainer>
+      </PageContainer>
     </>
   );
 }

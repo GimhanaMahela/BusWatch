@@ -1,8 +1,6 @@
-import React, { useState, useContext, useEffect } from "react"; // Added useEffect
+import React, { useState, useEffect } from "react";
 import {
   Typography,
-  TextField,
-  Button,
   Container,
   Paper,
   CircularProgress,
@@ -12,7 +10,8 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext"; // Assuming this path is correct
+import useAuth from "../../hooks/useAuth";
+import { FormTextField, GradientButton } from "../../components/atoms";
 
 // Icons for text fields
 import EmailIcon from "@mui/icons-material/Email";
@@ -38,50 +37,6 @@ const LoginContainer = styled(Paper)(({ theme }) => ({
   },
 }));
 
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  marginBottom: theme.spacing(3),
-  "& .MuiOutlinedInput-root": {
-    borderRadius: theme.shape.borderRadius,
-    transition: "all 0.3s ease-in-out",
-    "& fieldset": {
-      borderColor: theme.palette.grey[300],
-    },
-    "&:hover fieldset": {
-      borderColor: theme.palette.primary.main,
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: theme.palette.primary.dark,
-      boxShadow: `0 0 0 2px ${theme.palette.primary.light}40`,
-    },
-  },
-  "& .MuiInputLabel-root": {
-    color: theme.palette.text.secondary,
-    "&.Mui-focused": {
-      color: theme.palette.primary.dark,
-    },
-  },
-}));
-
-const StyledButton = styled(Button)(({ theme }) => ({
-  fontSize: "1.1rem",
-  padding: theme.spacing(1.5, 4),
-  borderRadius: 50,
-  fontWeight: 700,
-  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
-  boxShadow: `0 3px 5px 2px rgba(${theme.palette.primary.main},.3)`,
-  transition: "all 0.3s ease-in-out",
-  "&:hover": {
-    transform: "translateY(-2px)",
-    boxShadow: `0 6px 10px 3px rgba(${theme.palette.primary.main},.4)`,
-    background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.primary.main} 90%)`,
-  },
-  "&.Mui-disabled": {
-    background: theme.palette.grey[300],
-    color: theme.palette.grey[500],
-    boxShadow: "none",
-  },
-}));
-
 function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,7 +44,7 @@ function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useContext(AuthContext);
+  const { login, isAuthenticated } = useAuth();
 
   // Use useEffect to handle redirection based on authentication status
   useEffect(() => {
@@ -154,7 +109,7 @@ function AdminLoginPage() {
               {error}
             </Alert>
           )}
-          <StyledTextField
+          <FormTextField
             fullWidth
             label="Email"
             type="email"
@@ -169,7 +124,7 @@ function AdminLoginPage() {
               ),
             }}
           />
-          <StyledTextField
+          <FormTextField
             fullWidth
             label="Password"
             type={showPassword ? "text" : "password"}
@@ -196,7 +151,7 @@ function AdminLoginPage() {
               ),
             }}
           />
-          <StyledButton
+          <GradientButton size="large"
             type="submit"
             variant="contained"
             fullWidth
@@ -204,7 +159,7 @@ function AdminLoginPage() {
             sx={{ py: 1.5 }}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : "Login"}
-          </StyledButton>
+          </GradientButton>
         </form>
       </LoginContainer>
     </Container>

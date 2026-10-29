@@ -1,8 +1,10 @@
-import React, { useState } from "react"; // Removed useCallback
+import React, { useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import {
+  MenuItem,
+  IconButton,
   Box,
   Typography,
-  TextField,
   Button,
   Container,
   Paper,
@@ -24,6 +26,34 @@ import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import VideocamOutlinedIcon from "@mui/icons-material/VideocamOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline"; // Added for error alert
+import CloseIcon from "@mui/icons-material/Close";
+import CategoryIcon from "@mui/icons-material/Category";
+import EventIcon from "@mui/icons-material/Event";
+import { FormTextField, GradientButton } from "../../components/atoms";
+import { LocationPicker } from "../../components/molecules";
+import { submitReport } from "../../api/reportApi";
+import { CATEGORIES } from "../../constants/reportConstants";
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // Must match the backend upload limit
+
+const EMPTY_FORM = {
+  busNumber: "",
+  routeNumber: "",
+  busName: "",
+  category: "",
+  incidentAt: "",
+  location: "",
+  description: "",
+  passengerEmail: "",
+  website: "", // Honeypot: hidden from people, bots tend to fill it in
+};
+
+// Value for <input type="datetime-local" max=...> in the user's local time
+const nowForDateTimeInput = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
 
 // Styled component for the main form container (Paper)
 const FormContainer = styled(Paper)(({ theme }) => ({
@@ -40,30 +70,9 @@ const FormContainer = styled(Paper)(({ theme }) => ({
   },
 }));
 
-// Styled component for TextField to apply consistent styling
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  marginBottom: theme.spacing(3), // Space below each text field
-  paddingBottom: theme.spacing(1), // Additional padding at the bottom
-  "& .MuiOutlinedInput-root": {
-    borderRadius: theme.shape.borderRadius, // Rounded input borders
-    transition: "all 0.3s ease-in-out", // Smooth transition for hover/focus effects
-    "& fieldset": {
-      borderColor: theme.palette.grey[300], // Default border color
-    },
-    "&:hover fieldset": {
-      borderColor: theme.palette.primary.main, // Primary color on hover
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: theme.palette.primary.dark, // Darker primary color on focus
-      boxShadow: `0 0 0 2px ${theme.palette.primary.light}40`, // Subtle glow on focus
-    },
-  },
-  "& .MuiInputLabel-root": {
-    color: theme.palette.text.secondary, // Label color
-    "&.Mui-focused": {
-      color: theme.palette.primary.dark, // Darker primary color for focused label
-    },
-  },
+// Public form fields get a little extra space below the helper text
+const StyledTextField = styled(FormTextField)(({ theme }) => ({
+  paddingBottom: theme.spacing(1),
 }));
 
 // Styled component for file input labels
@@ -110,37 +119,11 @@ const MediaPreview = styled(Box)(({ theme }) => ({
   },
 }));
 
-// Styled component for the submit button
-const StyledButton = styled(Button)(({ theme }) => ({
-  fontSize: "1.1rem",
-  padding: theme.spacing(1.5, 4),
-  borderRadius: 50, // Pill-shaped button
-  fontWeight: 700,
-  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`, // Gradient background
-  boxShadow: `0 3px 5px 2px rgba(${theme.palette.primary.main},.3)`, // Shadow for depth
-  transition: "all 0.3s ease-in-out", // Smooth transitions
-  "&:hover": {
-    transform: "translateY(-2px)", // Lift effect on hover
-    boxShadow: `0 6px 10px 3px rgba(${theme.palette.primary.main},.4)`, // Enhanced shadow on hover
-    background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.primary.main} 90%)`, // Darker gradient on hover
-  },
-  "&.Mui-disabled": {
-    background: theme.palette.grey[300], // Disabled state background
-    color: theme.palette.grey[500], // Disabled state text color
-    boxShadow: "none", // No shadow when disabled
-  },
-}));
-
 function SubmitReportPage() {
   // State to manage form input data
-  const [formData, setFormData] = useState({
-    busNumber: "",
-    routeNumber: "",
-    busName: "",
-    location: "",
-    description: "",
-    passengerEmail: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  // GPS point for the incident: { lat, lng } or null
+  const [coords, setCoords] = useState(null);
   // State to store selected image files
   const [images, setImages] = useState([]);
   // State to store selected video files
@@ -157,6 +140,23 @@ function SubmitReportPage() {
   const [receiptId, setReceiptId] = useState(null);
   // State to store the PDF URL received from the backend
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const showError = (message) =>
+    setAlert({ open: true, message, severity: "error" });
+
+  // Drop files over the size limit and tell the user which ones
+  const withinSizeLimit = (files) => {
+    const tooBig = files.filter((f) => f.size > MAX_FILE_BYTES);
+    if (tooBig.length > 0) {
+      showError(
+        `${tooBig.map((f) => f.name).join(", ")} ${
+          tooBig.length === 1 ? "is" : "are"
+        } larger than 10MB and ${tooBig.length === 1 ? "was" : "were"} not added.`
+      );
+    }
+    return files.filter((f) => f.size <= MAX_FILE_BYTES);
+  };
 
   // Handler for text input changes
   const handleChange = (e) => {
@@ -166,15 +166,23 @@ function SubmitReportPage() {
   // Handler for image file input changes
   const handleImageChange = (e) => {
     // Limit to a maximum of 5 images
-    const newImages = Array.from(e.target.files).slice(0, 5 - images.length);
+    const newImages = withinSizeLimit(Array.from(e.target.files)).slice(
+      0,
+      5 - images.length
+    );
     setImages([...images, ...newImages]);
+    e.target.value = ""; // Allow picking the same file again after removing it
   };
 
   // Handler for video file input changes
   const handleVideoChange = (e) => {
     // Limit to a maximum of 2 videos
-    const newVideos = Array.from(e.target.files).slice(0, 2 - videos.length);
+    const newVideos = withinSizeLimit(Array.from(e.target.files)).slice(
+      0,
+      2 - videos.length
+    );
     setVideos([...videos, ...newVideos]);
+    e.target.value = "";
   };
 
   // Handler for form submission
@@ -183,61 +191,40 @@ function SubmitReportPage() {
     setLoading(true); // Set loading to true
     setAlert({ open: false, message: "", severity: "success" }); // Hide any previous alerts
     setPdfUrl(null); // Clear previous PDF URL
+    setReceiptId(null);
 
     try {
-      const formDataToSend = new FormData(); // Create FormData object for file uploads
-      // Append text fields to FormData
-      for (const key in formData) {
-        formDataToSend.append(key, formData[key]);
-      }
-      // Append image files to FormData
-      images.forEach((file) => {
-        formDataToSend.append("images", file); // 'images' should match req.files.images in backend
-      });
-      // Append video files to FormData
-      videos.forEach((file) => {
-        formDataToSend.append("videos", file); // 'videos' should match req.files.videos in backend
-      });
+      const data = await submitReport(
+        {
+          ...formData,
+          // datetime-local has no timezone; send an unambiguous ISO timestamp
+          incidentAt: formData.incidentAt
+            ? new Date(formData.incidentAt).toISOString()
+            : "",
+          latitude: coords ? coords.lat : "",
+          longitude: coords ? coords.lng : "",
+        },
+        images,
+        videos
+      );
 
-      // Send the report data to the backend API
-      const response = await fetch("/api/reports", {
-        method: "POST",
-        body: formDataToSend, // FormData automatically sets Content-Type to multipart/form-data
-      });
-
-      const data = await response.json(); // Parse the JSON response
-
-      if (!response.ok) {
-        // If response is not OK (e.g., 4xx, 5xx status codes)
-        throw new Error(data.message || "Failed to submit report");
-      }
-
-      setReceiptId(data.receiptId); // Store the receipt ID
-      setPdfUrl(data.pdfUrl); // Store the PDF URL from the backend response
-      setAlert({
-        open: true,
-        message: `Report submitted successfully! Your Receipt ID is: ${data.receiptId}`,
-        severity: "success",
-      });
+      setReceiptId(data.receiptId);
+      setPdfUrl(data.pdfUrl);
+      setEmailSent(Boolean(data.emailSent));
 
       // Clear form fields and media arrays after successful submission
-      setFormData({
-        busNumber: "",
-        routeNumber: "",
-        busName: "",
-        location: "",
-        description: "",
-        passengerEmail: "",
-      });
+      setFormData(EMPTY_FORM);
+      setCoords(null);
       setImages([]);
       setVideos([]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       console.error("Submission error:", error);
-      setAlert({
-        open: true,
-        message: error.message || "Failed to submit report. Please try again.",
-        severity: "error",
-      });
+      showError(
+        (error.errors && error.errors.join(" ")) ||
+          error.message ||
+          "Failed to submit report. Please try again."
+      );
     } finally {
       setLoading(false); // Reset loading state
     }
@@ -260,7 +247,6 @@ function SubmitReportPage() {
       document.body.appendChild(link);
       link.click(); // Programmatically click the link to start download
       document.body.removeChild(link); // Clean up the temporary link
-      setAlert({ ...alert, open: false }); // Close the alert prompt after download click
     } else {
       console.warn("No PDF URL available to download.");
     }
@@ -287,7 +273,58 @@ function SubmitReportPage() {
           Your feedback helps us improve public transport for everyone.
         </Typography>
 
+        {receiptId && (
+          <Alert
+            severity="success"
+            icon={<CheckCircleOutlineIcon fontSize="inherit" />}
+            sx={{ mb: 4, borderRadius: 2, alignItems: "flex-start" }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              Report submitted. Thank you!
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              Your Receipt ID is
+            </Typography>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 800, letterSpacing: 1, my: 0.5, fontFamily: "monospace" }}
+            >
+              {receiptId}
+            </Typography>
+            <Typography variant="body2">
+              Save this ID to check on your report later.
+              {emailSent && " We've also emailed you a copy of the receipt."}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1, mt: 1.5, flexWrap: "wrap" }}>
+              <Button
+                variant="contained"
+                size="small"
+                component={RouterLink}
+                to={`/track/${encodeURIComponent(receiptId)}`}
+              >
+                Track this report
+              </Button>
+              {pdfUrl && (
+                <Button variant="outlined" size="small" onClick={handleDownloadPdf}>
+                  Download Receipt PDF
+                </Button>
+              )}
+            </Box>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit}>
+          {/* Honeypot field: invisible to people and screen readers */}
+          <input
+            type="text"
+            name="website"
+            value={formData.website}
+            onChange={handleChange}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }}
+          />
           <StyledTextField
             fullWidth
             label="Bus Number (e.g., NE-9999)"
@@ -333,6 +370,46 @@ function SubmitReportPage() {
             }}
           />
           <StyledTextField
+            select
+            fullWidth
+            label="What happened?"
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            required
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <CategoryIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          >
+            {CATEGORIES.map((c) => (
+              <MenuItem key={c.value} value={c.value}>
+                {c.label}
+              </MenuItem>
+            ))}
+          </StyledTextField>
+          <StyledTextField
+            fullWidth
+            type="datetime-local"
+            label="When did it happen?"
+            name="incidentAt"
+            value={formData.incidentAt}
+            onChange={handleChange}
+            helperText="Leave empty if it just happened"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ max: nowForDateTimeInput() }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EventIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <StyledTextField
             fullWidth
             label="Location of Incident (e.g., Ambepussa Junction)"
             name="location"
@@ -347,6 +424,7 @@ function SubmitReportPage() {
               ),
             }}
           />
+          <LocationPicker value={coords} onChange={setCoords} />
           <StyledTextField
             fullWidth
             label="Description of Incident"
@@ -395,6 +473,20 @@ function SubmitReportPage() {
             {images.map((file, index) => (
               <MediaPreview key={index}>
                 <img src={URL.createObjectURL(file)} alt={`preview-${index}`} />
+                <IconButton
+                  size="small"
+                  aria-label="Remove file"
+                  onClick={() => setImages(images.filter((_, i) => i !== index))}
+                  sx={{
+                    position: "absolute",
+                    top: 4,
+                    right: 4,
+                    bgcolor: "rgba(255,255,255,0.85)",
+                    "&:hover": { bgcolor: "white" },
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
               </MediaPreview>
             ))}
           </PreviewContainer>
@@ -414,11 +506,25 @@ function SubmitReportPage() {
             {videos.map((file, index) => (
               <MediaPreview key={index}>
                 <video controls src={URL.createObjectURL(file)} />
+                <IconButton
+                  size="small"
+                  aria-label="Remove file"
+                  onClick={() => setVideos(videos.filter((_, i) => i !== index))}
+                  sx={{
+                    position: "absolute",
+                    top: 4,
+                    right: 4,
+                    bgcolor: "rgba(255,255,255,0.85)",
+                    "&:hover": { bgcolor: "white" },
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
               </MediaPreview>
             ))}
           </PreviewContainer>
 
-          <StyledButton
+          <GradientButton size="large"
             type="submit"
             variant="contained"
             fullWidth
@@ -430,78 +536,29 @@ function SubmitReportPage() {
             ) : (
               "Submit Report"
             )}
-          </StyledButton>
+          </GradientButton>
         </form>
       </FormContainer>
 
       <Snackbar
         open={alert.open}
-        autoHideDuration={6000}
+        autoHideDuration={8000}
         onClose={handleCloseAlert}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }} // Positions the Snackbar at the top-center
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleCloseAlert}
           severity={alert.severity}
-          variant="filled" // Provides a solid background for better visibility
-          icon={
-            alert.severity === "success" ? (
-              <CheckCircleOutlineIcon fontSize="inherit" />
-            ) : (
-              <ErrorOutlineIcon fontSize="inherit" />
-            )
-          } // Displays a dynamic icon based on severity
+          variant="filled"
+          icon={<ErrorOutlineIcon fontSize="inherit" />}
           sx={{
             width: "100%",
-            minWidth: { xs: "90%", sm: "400px" }, // Ensures responsiveness
-            boxShadow: (theme) => theme.shadows[6], // Adds a subtle shadow for depth
-            borderRadius: (theme) => theme.shape.borderRadius, // Rounds the corners
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            py: 1.5, // Vertical padding
-            px: 2, // Horizontal padding
-            // Custom light green color for success alerts
-            backgroundColor:
-              alert.severity === "success" ? "#d0f0c0" : undefined,
-            color: alert.severity === "success" ? "#155724" : undefined, // Darker text for contrast
+            minWidth: { xs: "90%", sm: "400px" },
+            boxShadow: (theme) => theme.shadows[6],
+            borderRadius: (theme) => theme.shape.borderRadius,
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-            }}
-          >
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
-              {alert.message.split("Your Receipt ID is:")[0]}{" "}
-              {/* Displays the main message */}
-            </Typography>
-            {receiptId && alert.severity === "success" && (
-              <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.9 }}>
-                Your Receipt ID is: {receiptId}
-              </Typography>
-            )}
-            <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.9 }}>
-              Please check your email for the detailed receipt.
-            </Typography>
-            {pdfUrl && (
-              <Button
-                variant="text"
-                color="inherit"
-                size="small"
-                onClick={handleDownloadPdf}
-                sx={{
-                  mt: 1,
-                  textDecoration: "underline",
-                  "&:hover": { textDecoration: "underline" },
-                }}
-              >
-                Download Receipt PDF
-              </Button>
-            )}
-          </Box>
+          {alert.message}
         </Alert>
       </Snackbar>
     </Container>

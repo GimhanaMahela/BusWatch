@@ -1,5 +1,5 @@
 // src/pages/ReportDetailsPage.js
-import React, { useEffect, useState, useContext, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -13,14 +13,23 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Chip,
   Card,
   CardContent,
   Divider,
+  TextField,
+  FormControlLabel,
+  Checkbox,
+  Link,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { getReportById, updateReportStatus } from "../api/reports";
-import { AuthContext } from "../context/AuthContext";
+import { getReportById, updateReportStatus, addReportNote } from "../../api/reportApi";
+import { STATUSES, categoryLabel } from "../../constants/reportConstants";
+import useAuth from "../../hooks/useAuth";
+import { GradientButton, StatusChip } from "../../components/atoms";
+import { LoadingState } from "../../components/molecules";
 import { useParams, useNavigate } from "react-router-dom";
 
 // Icons for report details
@@ -36,6 +45,10 @@ import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CategoryIcon from "@mui/icons-material/Category";
+import EventIcon from "@mui/icons-material/Event";
+import HistoryIcon from "@mui/icons-material/History";
+import StickyNote2Icon from "@mui/icons-material/StickyNote2";
 
 const PageWrapper = styled(Box)(({ theme }) => ({
   background: `linear-gradient(to bottom right, ${theme.palette.background.default}, ${theme.palette.grey[100]})`,
@@ -145,26 +158,6 @@ const MediaItem = styled(Box)(({ theme }) => ({
   },
 }));
 
-const StyledButton = styled(Button)(({ theme }) => ({
-  fontSize: "1.0rem",
-  padding: theme.spacing(1.5, 4),
-  borderRadius: 50,
-  fontWeight: 700,
-  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
-  boxShadow: `0 4px 8px rgba(${theme.palette.primary.main},.4)`,
-  transition: "all 0.3s ease-in-out",
-  "&:hover": {
-    transform: "translateY(-3px)",
-    boxShadow: `0 8px 16px rgba(${theme.palette.primary.main},.6)`,
-    background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.primary.main} 90%)`,
-  },
-  "&.Mui-disabled": {
-    background: theme.palette.grey[300],
-    color: theme.palette.grey[500],
-    boxShadow: "none",
-  },
-}));
-
 const StyledOutlinedButton = styled(Button)(({ theme }) => ({
   fontSize: "1.0rem",
   padding: theme.spacing(1.5, 4),
@@ -199,89 +192,88 @@ const StyledSelect = styled(Select)(({ theme }) => ({
   },
 }));
 
-const StyledChip = styled(Chip)(({ theme }) => ({
-  fontWeight: 700,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(0.5, 1),
-  minWidth: "80px",
-  justifyContent: "center",
-}));
-
 function ReportDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useContext(AuthContext);
+  const { admin } = useAuth();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentStatus, setCurrentStatus] = useState("");
+  const [newStatus, setNewStatus] = useState("");
+  const [statusNote, setStatusNote] = useState("");
+  const [notifyPassenger, setNotifyPassenger] = useState(true);
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(null); // { severity, text }
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState(null);
 
   const fetchReportDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getReportById(id, token);
+      setError(null);
+      const data = await getReportById(id);
       setReport(data);
-      setCurrentStatus(data.status);
+      setNewStatus(data.status);
     } catch (err) {
       console.error("Failed to fetch report details:", err);
       setError(err.message || "Failed to fetch report details");
     } finally {
       setLoading(false);
     }
-  }, [id, token]);
+  }, [id]);
 
   useEffect(() => {
     fetchReportDetails();
   }, [fetchReportDetails]);
 
-  const handleStatusChange = async (event) => {
-    const newStatus = event.target.value;
-    setCurrentStatus(newStatus);
+  const handleStatusSubmit = async (event) => {
+    event.preventDefault();
     try {
-      setLoading(true);
-      const updatedReport = await updateReportStatus(
+      setSavingStatus(true);
+      setStatusMessage(null);
+      const updated = await updateReportStatus(
         report._id,
         newStatus,
-        token
+        statusNote.trim(),
+        notifyPassenger
       );
-      setReport(updatedReport);
-      setError(null);
+      setReport(updated);
+      setStatusNote("");
+      setStatusMessage({
+        severity: "success",
+        text: updated.emailSent
+          ? "Status updated and the passenger was emailed."
+          : "Status updated.",
+      });
     } catch (err) {
       console.error("Failed to update status:", err);
-      setError(err.message || "Failed to update status");
+      setStatusMessage({ severity: "error", text: err.message || "Failed to update status" });
     } finally {
-      setLoading(false);
+      setSavingStatus(false);
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "pending":
-        return "warning";
-      case "reviewed":
-        return "info";
-      case "resolved":
-        return "success";
-      default:
-        return "default";
+  const handleAddNote = async (event) => {
+    event.preventDefault();
+    if (!noteText.trim()) return;
+    try {
+      setSavingNote(true);
+      setNoteError(null);
+      const updated = await addReportNote(report._id, noteText.trim());
+      setReport(updated);
+      setNoteText("");
+    } catch (err) {
+      setNoteError(err.message || "Failed to add note");
+    } finally {
+      setSavingNote(false);
     }
   };
+
+  const statusUnchanged = report && newStatus === report.status && !statusNote.trim();
 
   if (loading) {
-    return (
-      <Box
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-        alignItems="center"
-        height="70vh"
-      >
-        <CircularProgress size={60} sx={{ mb: 2 }} />
-        <Typography variant="h6" color="primary">
-          Loading report details...
-        </Typography>
-      </Box>
-    );
+    return <LoadingState message="Loading report details..." />;
   }
 
   if (error) {
@@ -290,9 +282,9 @@ function ReportDetailsPage() {
         <Alert severity="error" sx={{ borderRadius: 2, mb: 2 }}>
           {error}
         </Alert>
-        <StyledButton variant="contained" onClick={fetchReportDetails}>
+        <GradientButton onClick={fetchReportDetails}>
           Retry
-        </StyledButton>
+        </GradientButton>
       </Container>
     );
   }
@@ -331,7 +323,7 @@ function ReportDetailsPage() {
           </HeaderSection>
 
           <Grid container spacing={4}>
-            <Grid xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <StyledCard>
                 <CardContent>
                   <SectionTitle variant="h5">
@@ -351,20 +343,36 @@ function ReportDetailsPage() {
                     </InfoText>
                   )}
                   <InfoText>
+                    <CategoryIcon /> <strong>Category:</strong>{" "}
+                    {categoryLabel(report.category)}
+                  </InfoText>
+                  <InfoText>
                     <LocationOnIcon /> <strong>Location:</strong>{" "}
                     {report.location}
+                    {report.coordinates?.coordinates?.length === 2 && (
+                      <Link
+                        href={`https://www.google.com/maps?q=${report.coordinates.coordinates[1]},${report.coordinates.coordinates[0]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ ml: 1 }}
+                      >
+                        (view on map)
+                      </Link>
+                    )}
                   </InfoText>
+                  {report.incidentAt && (
+                    <InfoText>
+                      <EventIcon /> <strong>Incident Time:</strong>{" "}
+                      {new Date(report.incidentAt).toLocaleString()}
+                    </InfoText>
+                  )}
                   <InfoText>
                     <CalendarTodayIcon /> <strong>Reported At:</strong>{" "}
                     {new Date(report.reportedAt).toLocaleString()}
                   </InfoText>
                   <InfoText>
                     <CheckCircleOutlineIcon /> <strong>Current Status:</strong>{" "}
-                    <StyledChip
-                      label={report.status.toUpperCase()}
-                      color={getStatusColor(report.status)}
-                      size="medium"
-                    />
+                    <StatusChip status={report.status} uppercase sx={{ minWidth: 80 }} />
                   </InfoText>
                   {report.passengerEmail && (
                     <InfoText>
@@ -376,7 +384,7 @@ function ReportDetailsPage() {
               </StyledCard>
             </Grid>
 
-            <Grid xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <StyledCard>
                 <CardContent>
                   <SectionTitle variant="h5">
@@ -395,35 +403,152 @@ function ReportDetailsPage() {
                   <SectionTitle variant="h5">
                     <CheckCircleOutlineIcon /> Update Status
                   </SectionTitle>
-                  <FormControl fullWidth sx={{ mb: 2 }}>
-                    <InputLabel id="status-select-label">
-                      Change Status
-                    </InputLabel>
-                    <StyledSelect
-                      labelId="status-select-label"
-                      id="status-select"
-                      value={currentStatus}
-                      label="Change Status"
-                      onChange={handleStatusChange}
-                      disabled={loading}
-                    >
-                      <MenuItem value="pending">Pending</MenuItem>
-                      <MenuItem value="reviewed">Reviewed</MenuItem>
-                      <MenuItem value="resolved">Resolved</MenuItem>
-                    </StyledSelect>
-                  </FormControl>
-                  {loading && (
-                    <CircularProgress
-                      size={24}
-                      color="primary"
-                      sx={{ display: "block", mx: "auto", my: 2 }}
+                  <Box component="form" onSubmit={handleStatusSubmit}>
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <InputLabel id="status-select-label">
+                        Change Status
+                      </InputLabel>
+                      <StyledSelect
+                        labelId="status-select-label"
+                        id="status-select"
+                        value={newStatus}
+                        label="Change Status"
+                        onChange={(e) => setNewStatus(e.target.value)}
+                        disabled={savingStatus}
+                      >
+                        {STATUSES.map((st) => (
+                          <MenuItem key={st.value} value={st.value}>
+                            {st.label}
+                          </MenuItem>
+                        ))}
+                      </StyledSelect>
+                    </FormControl>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label="Message to the passenger (optional)"
+                      helperText="Shown on the public tracking page and in the email"
+                      value={statusNote}
+                      onChange={(e) => setStatusNote(e.target.value)}
+                      inputProps={{ maxLength: 2000 }}
+                      sx={{ mb: 1 }}
                     />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={notifyPassenger && Boolean(report.passengerEmail)}
+                          onChange={(e) => setNotifyPassenger(e.target.checked)}
+                          disabled={!report.passengerEmail}
+                        />
+                      }
+                      label={
+                        report.passengerEmail
+                          ? "Email the passenger about this update"
+                          : "No passenger email on file"
+                      }
+                    />
+                    <Box sx={{ mt: 1 }}>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={savingStatus || statusUnchanged}
+                      >
+                        {savingStatus ? <CircularProgress size={20} color="inherit" /> : "Update status"}
+                      </Button>
+                    </Box>
+                    {statusMessage && (
+                      <Alert severity={statusMessage.severity} sx={{ mt: 2, borderRadius: 2 }}>
+                        {statusMessage.text}
+                      </Alert>
+                    )}
+                  </Box>
+                </CardContent>
+              </StyledCard>
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={4}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <StyledCard>
+                <CardContent>
+                  <SectionTitle variant="h5">
+                    <HistoryIcon /> Status History
+                  </SectionTitle>
+                  {report.statusHistory && report.statusHistory.length > 0 ? (
+                    <List dense disablePadding>
+                      {[...report.statusHistory].reverse().map((entry, index) => (
+                        <ListItem key={index} disableGutters alignItems="flex-start">
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                                <StatusChip size="small" status={entry.status} />
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(entry.changedAt).toLocaleString()}
+                                  {entry.changedBy ? ` by ${entry.changedBy}` : ""}
+                                </Typography>
+                              </Box>
+                            }
+                            secondary={entry.note}
+                            secondaryTypographyProps={{ sx: { mt: 0.5, whiteSpace: "pre-line" } }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No status changes recorded yet.
+                    </Typography>
                   )}
-                  {error && (
-                    <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
-                      {error}
-                    </Alert>
+                </CardContent>
+              </StyledCard>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <StyledCard>
+                <CardContent>
+                  <SectionTitle variant="h5">
+                    <StickyNote2Icon /> Internal Notes
+                  </SectionTitle>
+                  <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
+                    Only admins can see these.
+                  </Typography>
+                  {report.notes && report.notes.length > 0 ? (
+                    <List dense disablePadding sx={{ mb: 2 }}>
+                      {report.notes.map((note) => (
+                        <ListItem key={note._id} disableGutters alignItems="flex-start">
+                          <ListItemText
+                            primary={note.text}
+                            primaryTypographyProps={{ sx: { whiteSpace: "pre-line" } }}
+                            secondary={`${note.author || "Unknown"} · ${new Date(note.createdAt).toLocaleString()}`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      No notes yet.
+                    </Typography>
                   )}
+                  <Box component="form" onSubmit={handleAddNote}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label={`Add a note${admin ? ` as ${admin.email}` : ""}`}
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      inputProps={{ maxLength: 2000 }}
+                      sx={{ mb: 1 }}
+                    />
+                    <Button type="submit" variant="outlined" disabled={savingNote || !noteText.trim()}>
+                      {savingNote ? <CircularProgress size={20} /> : "Add note"}
+                    </Button>
+                    {noteError && (
+                      <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
+                        {noteError}
+                      </Alert>
+                    )}
+                  </Box>
                 </CardContent>
               </StyledCard>
             </Grid>
@@ -451,7 +576,7 @@ function ReportDetailsPage() {
                     </SubSectionTitle>
                     <MediaGrid container spacing={3}>
                       {report.images.map((imgUrl, index) => (
-                        <Grid xs={12} sm={6} md={6} lg={4} key={index}>
+                        <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={index}>
                           <MediaItem elevation={2}>
                             <img
                               src={imgUrl}
@@ -493,7 +618,7 @@ function ReportDetailsPage() {
                     </SubSectionTitle>
                     <MediaGrid container spacing={3}>
                       {report.videos.map((videoUrl, index) => (
-                        <Grid xs={12} sm={6} md={6} lg={4} key={index}>
+                        <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={index}>
                           <MediaItem elevation={2}>
                             <video
                               controls

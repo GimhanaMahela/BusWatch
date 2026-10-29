@@ -16,7 +16,7 @@ import { Link } from "react-router-dom";
 import { styled } from "@mui/system";
 
 // Import your logo image. Adjust the path as necessary.
-import logo from "../assets/logo.png";
+import logo from "../../assets/logo.png";
 
 // Styled component for the logo text
 const LogoText = styled(Typography)(({ theme }) => ({
@@ -47,6 +47,7 @@ function Header() {
   const navItems = [
     { name: "Home", path: "/" },
     { name: "Submit Report", path: "/submit-report" },
+    { name: "Track Report", path: "/track" },
     { name: "About Us", path: "/about-us" },
     { name: "Admin Login", path: "/admin/login" },
   ];

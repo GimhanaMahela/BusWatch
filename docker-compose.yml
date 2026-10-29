@@ -1,46 +1,48 @@
-version: '3.8'
-
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./buswatch-backend
+      dockerfile: DockerFile
     ports:
       - "5000:5000" # Host_Port:Container_Port
+    env_file:
+      - ./buswatch-backend/.env # JWT_SECRET, ADMIN_*, CLOUDINARY_*, EMAIL_* (see .env.example)
     environment:
       NODE_ENV: production
       MONGO_URI: mongodb://mongodb:27017/buswatchdb # Connect to the 'mongodb' service
-      # Add other backend environment variables here (e.g., JWT_SECRET, CLOUDINARY_CLOUD_NAME, etc.)
-      # It's best practice to load these from a .env file for docker-compose
-    volumes:
-      - ./backend/uploads:/app/uploads # Example: if you store local files (Cloudinary preferred)
+      CORS_ORIGINS: http://localhost:3000
+      FRONTEND_URL: http://localhost:3000
     depends_on:
-      - mongodb # Backend depends on MongoDB being up
+      - mongodb
     networks:
       - app-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./buswatch-frontend
+      dockerfile: DockerFile
+      args:
+        # Called from the browser, so this is the host-mapped backend port
+        REACT_APP_BACKEND_URL: http://localhost:5000/api
     ports:
-      - "3000:80" # Host_Port:Container_Port (React app will be accessible on localhost:3000)
+      - "3000:80" # React app at http://localhost:3000
     depends_on:
-      - backend # Frontend might depend on backend for API calls (though not strictly necessary for startup)
-    environment:
-      REACT_APP_API_URL: http://backend:5000/api # Frontend connects to the 'backend' service inside Docker network
-      # Add other frontend env variables if any
+      - backend
     networks:
       - app-network
 
   mongodb:
-    image: mongo:latest
+    image: mongo:7
     ports:
-      - "27017:27017" # Expose MongoDB port to host (optional, for connecting with Compass)
+      - "27017:27017" # Optional: for connecting with Compass
     volumes:
-      - mongo-data:/data/db # Persist MongoDB data
+      - mongo-data:/data/db
     networks:
       - app-network
 
 volumes:
-  mongo-data: # Define the named volume for MongoDB persistence
+  mongo-data:
 
 networks:
-  app-network: # Define a custom network for inter-service communication
+  app-network:
     driver: bridge

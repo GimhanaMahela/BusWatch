@@ -5,7 +5,7 @@ import { styled } from "@mui/material/styles"; // Correct import for MUI's style
 import { Link } from "react-router-dom";
 
 // Import the background image
-import busHero from "../assets/bus-hero.jpg"; // Adjust this path if your image is located elsewhere
+import busHero from "../../assets/bus-hero.jpg"; // Adjust this path if your image is located elsewhere
 
 const HeroSection = styled(Box)(({ theme }) => ({
   // Use the imported image variable in the URL

@@ -1,31 +1,21 @@
-import axios from "axios";
+import client, { toApiError } from "./apiClient";
 
-const API_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://localhost:5000/api";
-
-export const loginAdmin = async (email, password) => {
+const call = async (request) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/login`, {
-      email,
-      password,
-    });
-    return response.data; // Contains the token
+    const response = await request;
+    return response.data;
   } catch (error) {
-    throw error.response.data; // Throw backend error message
+    throw toApiError(error);
   }
 };
 
-export const getAdminProfile = async (token) => {
-  try {
-    const config = {
-      headers: {
-        "x-auth-token": token,
-      },
-    };
-    const response = await axios.get(`${API_URL}/auth`, config);
-    return response.data; // Contains admin details
-  } catch (error) {
-    throw error.response.data;
-  }
-};
+export const loginAdmin = (email, password) =>
+  call(client.post("/auth/login", { email, password })); // { token }
 
+export const getAdminProfile = () => call(client.get("/auth"));
+
+// Superadmin only
+export const listAdmins = () => call(client.get("/auth/admins"));
+
+export const createAdmin = (email, password, role = "admin") =>
+  call(client.post("/auth/register", { email, password, role }));
