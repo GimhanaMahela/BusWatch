@@ -1,46 +1,54 @@
-version: '3.8'
-
 services:
-  backend:
-    build: ./backend
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
     ports:
-      - "5000:5000" # Host_Port:Container_Port
+      - "5000:5000"
+    env_file:
+      - .env # the single repo-root .env (see .env.example)
     environment:
       NODE_ENV: production
-      MONGO_URI: mongodb://mongodb:27017/buswatchdb # Connect to the 'mongodb' service
-      # Add other backend environment variables here (e.g., JWT_SECRET, CLOUDINARY_CLOUD_NAME, etc.)
-      # It's best practice to load these from a .env file for docker-compose
-    volumes:
-      - ./backend/uploads:/app/uploads # Example: if you store local files (Cloudinary preferred)
+      PORT: 5000 # nginx in the ui image proxies /api to api:5000
+      DATABASE_URL: postgres://buswatch:buswatch@postgres:5432/buswatch
+      FRONTEND_URL: http://localhost:3000
     depends_on:
-      - mongodb # Backend depends on MongoDB being up
-    networks:
-      - app-network
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-  frontend:
-    build: ./frontend
+  ui:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+      args:
+        # Read from the root .env; empty = same-origin /api through nginx
+        VITE_MAPS_API_KEY: ${VITE_MAPS_API_KEY:-}
     ports:
-      - "3000:80" # Host_Port:Container_Port (React app will be accessible on localhost:3000)
+      - "3000:80"
     depends_on:
-      - backend # Frontend might depend on backend for API calls (though not strictly necessary for startup)
+      - api
+
+  postgres:
+    image: postgres:18-alpine
     environment:
-      REACT_APP_API_URL: http://backend:5000/api # Frontend connects to the 'backend' service inside Docker network
-      # Add other frontend env variables if any
-    networks:
-      - app-network
-
-  mongodb:
-    image: mongo:latest
+      POSTGRES_USER: buswatch
+      POSTGRES_PASSWORD: buswatch
+      POSTGRES_DB: buswatch
     ports:
-      - "27017:27017" # Expose MongoDB port to host (optional, for connecting with Compass)
+      # Host port 5440 (override with POSTGRES_HOST_PORT) to avoid clashing with other local Postgres instances
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5440}:5432"
     volumes:
-      - mongo-data:/data/db # Persist MongoDB data
-    networks:
-      - app-network
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buswatch -d buswatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  mongo-data: # Define the named volume for MongoDB persistence
-
-networks:
-  app-network: # Define a custom network for inter-service communication
-    driver: bridge
+  postgres-data:

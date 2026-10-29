@@ -1,0 +1,22 @@
+import rateLimit from "express-rate-limit";
+import { env } from "../config/env.js";
+
+// Note: the default store is in-memory, so on serverless hosts each instance
+// keeps its own counters. Swap in a shared store (e.g. Redis) for strict limits.
+const limiter = (windowMinutes: number, max: number, message: string) =>
+  rateLimit({
+    windowMs: windowMinutes * 60 * 1000,
+    limit: max,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { msg: message, message },
+    skip: () => env.NODE_ENV === "test",
+  });
+
+export const submitLimiter = limiter(
+  15,
+  5,
+  "Too many reports from this device. Please try again later.",
+);
+export const loginLimiter = limiter(15, 10, "Too many login attempts. Please try again later.");
+export const trackLimiter = limiter(15, 60, "Too many lookups. Please try again later.");
