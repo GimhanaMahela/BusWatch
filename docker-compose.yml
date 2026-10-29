@@ -1,48 +1,46 @@
 services:
   backend:
-    build:
-      context: ./buswatch-backend
-      dockerfile: DockerFile
+    build: ./buswatch-backend
     ports:
-      - "5000:5000" # Host_Port:Container_Port
+      - "5000:5000"
     env_file:
       - ./buswatch-backend/.env # JWT_SECRET, ADMIN_*, CLOUDINARY_*, EMAIL_* (see .env.example)
     environment:
       NODE_ENV: production
-      MONGO_URI: mongodb://mongodb:27017/buswatchdb # Connect to the 'mongodb' service
+      MONGO_URI: mongodb://mongodb:27017/buswatchdb
       CORS_ORIGINS: http://localhost:3000
       FRONTEND_URL: http://localhost:3000
     depends_on:
-      - mongodb
-    networks:
-      - app-network
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   frontend:
     build:
       context: ./buswatch-frontend
-      dockerfile: DockerFile
       args:
         # Called from the browser, so this is the host-mapped backend port
-        REACT_APP_BACKEND_URL: http://localhost:5000/api
+        VITE_BACKEND_URL: http://localhost:5000/api
     ports:
-      - "3000:80" # React app at http://localhost:3000
+      - "3000:80"
     depends_on:
       - backend
-    networks:
-      - app-network
 
   mongodb:
-    image: mongo:7
+    image: mongo:8
     ports:
       - "27017:27017" # Optional: for connecting with Compass
     volumes:
       - mongo-data:/data/db
-    networks:
-      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mongo-data:
-
-networks:
-  app-network:
-    driver: bridge

@@ -1,83 +1,116 @@
 # BusWatch Architecture
 
-BusWatch is two deployable apps in one repo:
+BusWatch is two deployable TypeScript apps in one repo:
 
-| App | Stack | Entry point |
-|---|---|---|
-| `buswatch-backend/` | Node.js, Express 5, MongoDB (Mongoose), Cloudinary, Nodemailer, PDFKit | `server.js` |
-| `buswatch-frontend/` | React 19 (Create React App), MUI v7, React Router 7 | `src/index.js` |
+| App                  | Stack                                                                                      | Entry point     |
+| -------------------- | ------------------------------------------------------------------------------------------ | --------------- |
+| `buswatch-backend/`  | Node.js 24, Express 5, MongoDB (Mongoose 9), Zod 4, Helmet, Cloudinary, Nodemailer, PDFKit | `src/server.ts` |
+| `buswatch-frontend/` | React 19, Vite 8, MUI 9, React Router 8, TanStack Query 5, Axios                           | `src/main.tsx`  |
+
+**Shared tooling:** TypeScript 6 (strict), ESLint 10 (flat config with typescript-eslint),
+Prettier 3 (root `.prettierrc.json`), Vitest 5, GitHub Actions CI (`.github/workflows/ci.yml`),
+Dependabot, and Node 24 (`.nvmrc`).
+
+> TypeScript stays on 6.0.x until typescript-eslint supports TypeScript 7.
 
 ## Backend: layered structure
 
 ```
 buswatch-backend/
-├── server.js                 # Entry point (Node, Docker, Vercel): env check, DB connect, listen
-└── src/
-    ├── app.js                # Express app: CORS, body parsing, routes, error handling
-    ├── config/               # Connections and shared enums (db, cloudinary, constants)
-    ├── models/               # Mongoose schemas         → <entity>.model.js
-    ├── routes/               # URL → middleware → handler → <entity>.routes.js, index.js mounts them
-    ├── controllers/          # Request/response handling → <entity>.controller.js
-    ├── middleware/           # Express middleware       → <name>.middleware.js
-    ├── services/             # Work with side effects: email, PDF, startup tasks → <name>.service.js
-    └── utils/                # Small pure helpers       → <name>.js
+├── src/
+│   ├── server.ts             # Entry point (Node, Docker, Vercel): DB connect, listen
+│   ├── app.ts                # createApp(): Helmet, CORS, JSON, routes, error handling
+│   ├── config/               # env.ts (validated env), db, cloudinary, constants (shared enums)
+│   ├── models/               # Mongoose schemas + TS interfaces   → <entity>.model.ts
+│   ├── validators/           # Zod request schemas + inferred types → <entity>.validator.ts
+│   ├── routes/               # URL → middleware → handler         → <entity>.routes.ts, index.ts
+│   ├── controllers/          # Request/response handling           → <entity>.controller.ts
+│   ├── middleware/           # Express middleware                  → <name>.middleware.ts
+│   ├── services/             # Side effects: email, PDF, startup   → <name>.service.ts
+│   ├── utils/                # Small pure helpers                  → <name>.ts
+│   └── types/                # Global type augmentation (e.g. req.admin)
+└── tests/                    # Vitest + Supertest API tests on an in-memory MongoDB
 ```
 
-A request goes `routes → middleware → controller → model/service`. Controllers parse and validate
-input and shape the response. Anything that talks to a third party (email, PDF, Cloudinary uploads
-that outlive one request) belongs in a service.
+A request goes `routes → middleware (auth, rate limit, upload, validateBody) → controller → model/service`.
+
+- **Validation lives in Zod schemas**, not controllers. `validateBody(schema)` replaces `req.body`
+  with the parsed value, so controllers receive trimmed, typed input (`Request<Params, object, Input>`).
+- **Configuration is read once** through `config/env.ts`. It validates `process.env` at startup and
+  fails fast with a list of problems. Never read `process.env` anywhere else.
+- **Async errors**: Express 5 forwards rejected promises to `errorHandler`, so handlers don't
+  need try/catch unless a failure must be tolerated (e.g. email after a report is saved).
+- **Testing**: `createApp()` builds the app without connecting or listening; tests use it with Supertest.
 
 **Naming**
-- Files are `kebab-case` with a layer suffix: `report.controller.js`, `rate-limit.middleware.js`,
-  `pdf-receipt.service.js`. The suffix makes the layer obvious in search results and tabs.
-- Entities are singular: `report`, `admin`.
-- Shared enums (statuses, categories, roles) live only in `src/config/constants.js`.
+
+- Files are `kebab-case` with a layer suffix: `report.controller.ts`, `rate-limit.middleware.ts`.
+- ESM with `"type": "module"`: relative imports end in `.js` (TypeScript NodeNext resolution).
+- Entities are singular (`report`, `admin`); models export `<Entity>Model` and an `<Entity>` interface.
+- Shared enums (statuses, categories, roles, upload limits) live only in `src/config/constants.ts`.
 
 ## Frontend: Atomic Design
 
 ```
 buswatch-frontend/src/
-├── index.js, App.js          # Providers and the route table
-├── api/                      # HTTP calls, one file per resource → <resource>Api.js; apiClient.js is shared
-├── constants/                # Enums and label helpers           → <topic>Constants.js
-├── context/                  # React context providers           → <Name>Context.js
-├── hooks/                    # Custom hooks                      → use<Name>.js
-├── routes/                   # Route guards                      → PrivateRoute.js
+├── main.tsx, App.tsx         # Providers (Query, Router, Theme, Auth) and the lazy route table
+├── api/                      # HTTP calls, one file per resource → <resource>Api.ts; apiClient.ts is shared
+├── hooks/                    # useAuth, useReportQueries (TanStack Query hooks + query keys)
+├── lib/                      # Library setup (queryClient)
+├── context/                  # authContext.ts (context object) + AuthProvider.tsx
+├── constants/                # Enums and label helpers → <topic>Constants.ts
+├── types/                    # Domain types shared by API and UI → <topic>.ts
+├── routes/                   # Route guards → PrivateRoute.tsx
 ├── theme/                    # MUI theme
-├── assets/                   # Images
+├── test/                     # Test setup and render helpers
 ├── components/
 │   ├── atoms/                # Smallest UI pieces, no app state: GradientButton, FormTextField, StatusChip
 │   ├── molecules/            # A few atoms working together: LoadingState, DetailRow, StatTile, LocationPicker
 │   ├── organisms/            # Self-contained sections, may fetch data: Header, Footer, ManageAdminsDialog
 │   └── templates/            # Page layouts with no data: MainLayout, ContentPageTemplate
-└── pages/                    # Route-level screens that own data fetching and state
+└── pages/                    # Route-level screens
     ├── public/               # Anyone: Home, Submit, Track, About, Privacy, Terms
     └── admin/                # Signed-in admins: Login, Dashboard, Report details, Analytics
 ```
 
 **Which level does a component belong to?**
-- **Atom**: one element with styling and a few props. It knows nothing about reports or the API.
+
+- **Atom**: one element with styling and a few props. It knows nothing about the API.
   It may read shared constants for display only (e.g. `StatusChip` maps a status to its label and colour).
 - **Molecule**: a small group of atoms with one job, configured through props. No API calls.
-- **Organism**: a distinct section of a page, often reused, which may call the API (e.g. `ManageAdminsDialog`).
+- **Organism**: a distinct section of a page, often reused, which may use query hooks (e.g. `ManageAdminsDialog`).
 - **Template**: arranges organisms and page content; holds layout only, no data.
-- **Page**: fills a template with real data; the only level wired to routes.
+- **Page**: fills a template with real data; the only level wired to routes, and lazy-loaded.
 
 A component may only import from its own level or lower levels (pages → templates → organisms →
 molecules → atoms). Styling that only one page uses stays in that page file. Once a second page
 needs it, promote it to the right level.
 
+**Server state: TanStack Query.** Pages never fetch inside `useEffect`. They call hooks from
+`hooks/useReportQueries.ts` (`useReportList`, `useReport`, `useUpdateReportStatus`, …). That module
+owns the query keys, so a mutation can update or invalidate exactly the caches it affects. Local UI
+state (form fields, dialogs) stays in `useState`.
+
+**Errors**: every API helper throws `ApiError` (an `Error` with `status`). Show them with
+`errorMessage(error, fallback)`.
+
 **Naming**
-- Components are `PascalCase`, one component per file, file named after the component.
+
+- Components are `PascalCase.tsx`, one component per file, file named after the component.
 - Pages end in `Page`, templates in `Template` or `Layout`, hooks start with `use`.
-- Non-component modules are `camelCase` with a role suffix: `reportApi.js`, `reportConstants.js`.
-- Each level in `components/` has an `index.js` barrel. Import from the level, not the file:
+- Non-component modules are `camelCase.ts` with a role suffix: `reportApi.ts`, `reportConstants.ts`.
+- Tests sit next to the code they test: `StatusChip.test.tsx`.
+- Each level in `components/` has an `index.ts` barrel. Import from the level, not the file:
   `import { GradientButton, StatusChip } from "../../components/atoms";`
 - Read auth state with `useAuth()`, not `useContext(AuthContext)`.
+- `styled()` wrappers that need MUI's `component` prop are cast back to the base type
+  (`as typeof Button`) so the prop stays typed.
 
 ## Cross-cutting conventions
-- Backend status and category enums in `src/config/constants.js` must match
-  `src/constants/reportConstants.js` in the frontend.
-- All frontend HTTP calls go through `api/apiClient.js`, which reads `REACT_APP_BACKEND_URL` and attaches
-  the admin token.
-- Environment variables are documented in `buswatch-backend/.env.example`.
+
+- Status and category enums in `buswatch-backend/src/config/constants.ts` must match
+  `buswatch-frontend/src/constants/reportConstants.ts`.
+- Frontend environment variables use the `VITE_` prefix (`.env.example`); backend variables are
+  listed in `buswatch-backend/.env.example`.
+- Before pushing: `npm run lint && npm run typecheck && npm test` in each app (CI runs the same,
+  plus `format:check` and `build`).
