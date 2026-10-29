@@ -4,10 +4,10 @@ Passengers report public transport incidents (reckless driving, overcharging, ha
 photos, videos and a map pin, get a receipt ID, and track what happens to their report. Admins
 review, escalate and resolve reports, keep internal notes, and see analytics such as repeat-offender buses.
 
-| App                                       | What it is                               |
-| ----------------------------------------- | ---------------------------------------- |
-| [`buswatch-backend/`](buswatch-backend)   | REST API: TypeScript, Express 5, MongoDB |
-| [`buswatch-frontend/`](buswatch-frontend) | Web app: TypeScript, React 19, Vite, MUI |
+| App           | What it is                               |
+| ------------- | ---------------------------------------- |
+| [`api/`](api) | REST API: TypeScript, Express 5, MongoDB |
+| [`ui/`](ui)   | Web app: TypeScript, React 19, Vite, MUI |
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the structure, naming conventions and tech stack.
 
@@ -17,13 +17,13 @@ Requires Node.js 24 (`nvm use`) and MongoDB.
 
 ```bash
 # API on http://localhost:5000
-cd buswatch-backend
+cd api
 cp .env.example .env        # set JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, MONGO_URI
 npm install
 npm run dev
 
 # Web app on http://localhost:3000
-cd ../buswatch-frontend
+cd ../ui
 cp .env.example .env.local
 npm install
 npm run dev
@@ -35,7 +35,7 @@ added from the dashboard's **Admins** dialog.
 ## Docker
 
 ```bash
-cp buswatch-backend/.env.example buswatch-backend/.env   # fill in secrets
+cp api/.env.example api/.env   # fill in secrets
 docker compose up --build
 ```
 

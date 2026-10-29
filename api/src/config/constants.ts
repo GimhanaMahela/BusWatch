@@ -1,5 +1,5 @@
 // Shared enums used by models, validators and controllers.
-// Keep in sync with buswatch-frontend/src/constants/reportConstants.ts
+// Keep in sync with ui/src/constants/reportConstants.ts
 
 export const REPORT_STATUSES = [
   "pending",

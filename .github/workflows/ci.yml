@@ -10,19 +10,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend
+  api:
+    name: API
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: buswatch-backend
+        working-directory: api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: buswatch-backend/package-lock.json
+          cache-dependency-path: api/package-lock.json
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
@@ -30,19 +30,19 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  frontend:
-    name: Frontend
+  ui:
+    name: UI
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: buswatch-frontend
+        working-directory: ui
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: buswatch-frontend/package-lock.json
+          cache-dependency-path: ui/package-lock.json
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint

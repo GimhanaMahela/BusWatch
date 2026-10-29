@@ -1,12 +1,12 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /buswatch-backend
+    directory: /api
     schedule: { interval: weekly }
     groups:
       minor-and-patch: { update-types: [minor, patch] }
   - package-ecosystem: npm
-    directory: /buswatch-frontend
+    directory: /ui
     schedule: { interval: weekly }
     groups:
       minor-and-patch: { update-types: [minor, patch] }

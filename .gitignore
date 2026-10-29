@@ -1,4 +1,4 @@
-# Applies to the whole repo (buswatch-backend and buswatch-frontend)
+# Applies to the whole repo (api and ui apps)
 
 # Dependencies
 node_modules/

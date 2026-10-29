@@ -1,10 +1,10 @@
 services:
-  backend:
-    build: ./buswatch-backend
+  api:
+    build: ./api
     ports:
       - "5000:5000"
     env_file:
-      - ./buswatch-backend/.env # JWT_SECRET, ADMIN_*, CLOUDINARY_*, EMAIL_* (see .env.example)
+      - ./api/.env # JWT_SECRET, ADMIN_*, CLOUDINARY_*, EMAIL_* (see .env.example)
     environment:
       NODE_ENV: production
       MONGO_URI: mongodb://mongodb:27017/buswatchdb
@@ -19,16 +19,16 @@ services:
       timeout: 3s
       retries: 5
 
-  frontend:
+  ui:
     build:
-      context: ./buswatch-frontend
+      context: ./ui
       args:
         # Called from the browser, so this is the host-mapped backend port
         VITE_BACKEND_URL: http://localhost:5000/api
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - api
 
   mongodb:
     image: mongo:8

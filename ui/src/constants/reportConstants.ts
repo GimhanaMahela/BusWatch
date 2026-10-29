@@ -1,4 +1,4 @@
-// Keep in sync with buswatch-backend/src/config/constants.ts
+// Keep in sync with api/src/config/constants.ts
 
 export const CATEGORIES = [
   { value: "reckless_driving", label: "Reckless / dangerous driving" },

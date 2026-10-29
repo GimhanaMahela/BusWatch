@@ -1,5 +1,5 @@
 {
-  "name": "buswatch-frontend",
+  "name": "buswatch-ui",
   "version": "2.0.0",
   "private": true,
   "type": "module",

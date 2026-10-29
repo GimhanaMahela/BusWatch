@@ -1,5 +1,5 @@
 {
-  "name": "buswatch-backend",
+  "name": "buswatch-api",
   "version": "2.0.0",
   "private": true,
   "description": "BusWatch REST API: public incident reports, tracking and admin case management",

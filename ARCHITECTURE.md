@@ -2,10 +2,10 @@
 
 BusWatch is two deployable TypeScript apps in one repo:
 
-| App                  | Stack                                                                                      | Entry point     |
-| -------------------- | ------------------------------------------------------------------------------------------ | --------------- |
-| `buswatch-backend/`  | Node.js 24, Express 5, MongoDB (Mongoose 9), Zod 4, Helmet, Cloudinary, Nodemailer, PDFKit | `src/server.ts` |
-| `buswatch-frontend/` | React 19, Vite 8, MUI 9, React Router 8, TanStack Query 5, Axios                           | `src/main.tsx`  |
+| App    | Stack                                                                                      | Entry point     |
+| ------ | ------------------------------------------------------------------------------------------ | --------------- |
+| `api/` | Node.js 24, Express 5, MongoDB (Mongoose 9), Zod 4, Helmet, Cloudinary, Nodemailer, PDFKit | `src/server.ts` |
+| `ui/`  | React 19, Vite 8, MUI 9, React Router 8, TanStack Query 5, Axios                           | `src/main.tsx`  |
 
 **Shared tooling:** TypeScript 6 (strict), ESLint 10 (flat config with typescript-eslint),
 Prettier 3 (root `.prettierrc.json`), Vitest 5, GitHub Actions CI (`.github/workflows/ci.yml`),
@@ -16,7 +16,7 @@ Dependabot, and Node 24 (`.nvmrc`).
 ## Backend: layered structure
 
 ```
-buswatch-backend/
+api/
 ├── src/
 │   ├── server.ts             # Entry point (Node, Docker, Vercel): DB connect, listen
 │   ├── app.ts                # createApp(): Helmet, CORS, JSON, routes, error handling
@@ -52,7 +52,7 @@ A request goes `routes → middleware (auth, rate limit, upload, validateBody) �
 ## Frontend: Atomic Design
 
 ```
-buswatch-frontend/src/
+ui/src/
 ├── main.tsx, App.tsx         # Providers (Query, Router, Theme, Auth) and the lazy route table
 ├── api/                      # HTTP calls, one file per resource → <resource>Api.ts; apiClient.ts is shared
 ├── hooks/                    # useAuth, useReportQueries (TanStack Query hooks + query keys)
@@ -108,9 +108,9 @@ state (form fields, dialogs) stays in `useState`.
 
 ## Cross-cutting conventions
 
-- Status and category enums in `buswatch-backend/src/config/constants.ts` must match
-  `buswatch-frontend/src/constants/reportConstants.ts`.
+- Status and category enums in `api/src/config/constants.ts` must match
+  `ui/src/constants/reportConstants.ts`.
 - Frontend environment variables use the `VITE_` prefix (`.env.example`); backend variables are
-  listed in `buswatch-backend/.env.example`.
+  listed in `api/.env.example`.
 - Before pushing: `npm run lint && npm run typecheck && npm test` in each app (CI runs the same,
   plus `format:check` and `build`).
