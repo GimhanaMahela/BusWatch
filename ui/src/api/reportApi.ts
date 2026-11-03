@@ -6,9 +6,9 @@ import type {
   ReportStats,
   SubmitReportFields,
   SubmitReportResponse,
-} from "../types/report";
-import type { ReportStatus } from "../constants/reportConstants";
-import apiClient, { call } from "./apiClient";
+} from "@/types/report";
+import type { ReportStatus } from "@/constants/reportConstants";
+import apiClient, { call } from "@/api/apiClient";
 
 export const submitReport = (
   fields: SubmitReportFields,

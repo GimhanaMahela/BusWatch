@@ -1,14 +1,16 @@
 import axios, { isAxiosError } from "axios";
 
 // All API calls go through this client so they hit the configured backend
-// Same-origin "/api" by default (Vite dev proxy, nginx or Vercel route it to the API).
-// Set VITE_BACKEND_URL only when the API is hosted on a different origin.
-export const API_URL = import.meta.env.VITE_BACKEND_URL || "/api";
+// Same-origin "/api" by default (Next rewrites or Vercel routes forward it to the API).
+// Set NEXT_PUBLIC_API_URL only when the API is hosted on a different origin.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+
+export const TOKEN_KEY = "token";
 
 const apiClient = axios.create({ baseURL: API_URL });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.set("x-auth-token", token);
   }

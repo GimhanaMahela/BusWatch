@@ -3,12 +3,10 @@
   "version": 2,
   "builds": [
     { "src": "api/src/server.ts", "use": "@vercel/node" },
-    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "ui/dist" } }
+    { "src": "ui/next.config.ts", "use": "@vercel/next" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/src/server.ts" },
-    { "src": "/health", "dest": "/api/src/server.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/health", "dest": "/api/src/server.ts" }
   ]
 }

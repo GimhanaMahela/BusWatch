@@ -1,7 +1,7 @@
 import js from "@eslint/js";
+import nextPlugin from "@next/eslint-plugin-next";
 import prettier from "eslint-config-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -11,7 +11,7 @@ const unusedVars = [
 ];
 
 export default tseslint.config(
-  { ignores: ["**/dist", "**/coverage"] },
+  { ignores: ["**/dist", "**/coverage", "ui/.next", "ui/next-env.d.ts"] },
   js.configs.recommended,
 
   // --- API: Node, type-aware rules ---
@@ -38,14 +38,16 @@ export default tseslint.config(
     },
   },
 
-  // --- UI: browser, React ---
+  // --- UI: Next.js, React ---
   {
     files: ["ui/**/*.{ts,tsx}"],
     extends: [...tseslint.configs.recommended, reactHooks.configs.flat.recommended],
-    languageOptions: { globals: globals.browser },
-    plugins: { "react-refresh": reactRefresh },
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    plugins: { "@next/next": nextPlugin },
+    settings: { next: { rootDir: "ui/" } },
     rules: {
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
       "@typescript-eslint/no-unused-vars": unusedVars,
       "@typescript-eslint/consistent-type-imports": "error",
     },

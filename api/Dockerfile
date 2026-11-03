@@ -10,7 +10,7 @@ COPY api ./api
 RUN npm run build:api
 
 # --- Runtime: API runtime dependencies + compiled JS only ---
-# UI libraries are devDependencies (bundled by Vite), so --omit=dev leaves them out.
+# UI libraries are devDependencies (bundled by Next), so --omit=dev leaves them out.
 FROM node:24-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app

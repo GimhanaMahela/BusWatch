@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, type FormEvent } from "react";
 import {
   Dialog,
@@ -16,9 +18,9 @@ import {
   Chip,
   CircularProgress,
 } from "@mui/material";
-import { errorMessage } from "../../api/apiClient";
-import { useAdmins, useCreateAdmin } from "../../hooks/useReportQueries";
-import type { AdminRole } from "../../types/admin";
+import { errorMessage } from "@/api/apiClient";
+import { useAdmins, useCreateAdmin } from "@/hooks/useReportQueries";
+import type { AdminRole } from "@/types/admin";
 
 interface ManageAdminsDialogProps {
   open: boolean;

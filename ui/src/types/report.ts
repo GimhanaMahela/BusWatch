@@ -1,4 +1,4 @@
-import type { ReportCategory, ReportStatus } from "../constants/reportConstants";
+import type { ReportCategory, ReportStatus } from "@/constants/reportConstants";
 
 export interface StatusChange {
   status: ReportStatus;
