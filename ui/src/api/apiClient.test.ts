@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from "axios";
 import { describe, expect, it } from "vitest";
-import { errorMessage, toApiError } from "./apiClient";
+import { errorMessage, toApiError } from "@/api/apiClient";
 
 const axiosError = (status?: number, data?: unknown) =>
   new AxiosError(

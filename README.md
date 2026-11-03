@@ -7,7 +7,7 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
 | App           | What it is                                  |
 | ------------- | ------------------------------------------- |
 | [`api/`](api) | REST API: TypeScript, Express 5, PostgreSQL |
-| [`ui/`](ui)   | Web app: TypeScript, React 19, Vite, MUI    |
+| [`ui/`](ui)   | Web app: TypeScript, Next.js 16, MUI 9      |
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the structure, naming conventions and tech stack.
 
@@ -22,7 +22,7 @@ npm install
 npm run dev            # migrates the DB, then API on :5000 and UI on http://localhost:3000
 ```
 
-The UI calls the API at `/api` on its own origin; the Vite dev server forwards those requests to the API.
+The UI calls the API at `/api` on its own origin; the Next.js server forwards those requests to the API.
 On first start the API creates a superadmin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Other admins are
 added from the dashboard's **Admins** dialog.
 
@@ -31,8 +31,8 @@ added from the dashboard's **Admins** dialog.
 | Script                                | Does                                                      |
 | ------------------------------------- | --------------------------------------------------------- |
 | `dev` (`dev:api`, `dev:ui`)           | Run both apps with reload                                 |
-| `build` (`build:api`, `build:ui`)     | Compile the API to `api/dist`, bundle the UI to `ui/dist` |
-| `start` / `preview`                   | Run the compiled API / serve the built UI                 |
+| `build` (`build:api`, `build:ui`)     | Compile the API to `api/dist`, build the UI to `ui/.next` |
+| `start` / `start:ui`                  | Run the compiled API / serve the built UI                 |
 | `test` (`test:api`, `test:ui`)        | Vitest: API tests and UI component tests                  |
 | `lint`, `typecheck`, `format(:check)` | ESLint, TypeScript, Prettier                              |
 
@@ -45,12 +45,12 @@ cp .env.example .env   # fill in secrets
 docker compose up --build
 ```
 
-The UI runs on http://localhost:3000 (nginx serves it and forwards `/api` to the API container), the API
+The UI runs on http://localhost:3000 (a Next.js server that forwards `/api` to the API container), the API
 on http://localhost:5000 and PostgreSQL on host port 5440 (`POSTGRES_HOST_PORT`). The API container applies database migrations on
 start.
 
 ## Vercel
 
-One Vercel project deploys both apps from the repo root (`vercel.json`): the UI as static files and
+One Vercel project deploys both apps from the repo root (`vercel.json`): the UI as a Next.js app and
 the API as a serverless function under `/api`. Set the variables from `.env.example` in the project settings;
 `DATABASE_URL` should point to a hosted Postgres (Neon, Supabase, …). Migrations run during the build.

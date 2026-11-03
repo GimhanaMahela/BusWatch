@@ -1,5 +1,7 @@
+"use client";
+
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listAdmins, createAdmin } from "../api/authApi";
+import { listAdmins, createAdmin } from "@/api/authApi";
 import {
   addReportNote,
   deleteReport,
@@ -8,10 +10,10 @@ import {
   getReportStats,
   trackReport,
   updateReportStatus,
-} from "../api/reportApi";
-import type { ReportStatus } from "../constants/reportConstants";
-import type { AdminRole } from "../types/admin";
-import type { Report, ReportListParams } from "../types/report";
+} from "@/api/reportApi";
+import type { ReportStatus } from "@/constants/reportConstants";
+import type { AdminRole } from "@/types/admin";
+import type { Report, ReportListParams } from "@/types/report";
 
 /** Query keys in one place so mutations can invalidate the right caches */
 export const queryKeys = {

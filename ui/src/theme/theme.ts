@@ -1,71 +1,119 @@
-import { createTheme } from "@mui/material/styles";
+"use client";
+
+import { alpha, createTheme } from "@mui/material/styles";
+import NextLink from "next/link";
+
+// Brand colours shared by both colour schemes
+const brand = {
+  blue: "#2457F5",
+  blueLight: "#5B83FF",
+  blueDark: "#1638B8",
+  violet: "#7A4DF0",
+  ink: "#0B1220",
+};
 
 const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#0056b3", // BusWatch Blue
+  // CSS variables let the light/dark switch happen without a re-render or a flash on load
+  cssVariables: { colorSchemeSelector: "class" },
+  colorSchemes: {
+    light: {
+      palette: {
+        primary: { main: brand.blue, light: brand.blueLight, dark: brand.blueDark },
+        secondary: { main: brand.violet },
+        success: { main: "#12A150" },
+        warning: { main: "#E8A10C" },
+        error: { main: "#E5484D" },
+        info: { main: "#0EA5E9" },
+        background: { default: "#F5F7FB", paper: "#FFFFFF" },
+        text: { primary: brand.ink, secondary: "#5B6478" },
+        divider: "#E6E9F0",
+      },
     },
-    secondary: {
-      main: "#6c757d", // A neutral gray
-    },
-    error: {
-      main: "#dc3545",
-    },
-    success: {
-      main: "#28a745",
-    },
-    warning: {
-      main: "#ffc107",
-    },
-    info: {
-      main: "#17a2b8",
-    },
-    background: {
-      default: "#f0f2f5", // Light gray background
-      paper: "#ffffff", // White for cards, etc.
+    dark: {
+      palette: {
+        primary: { main: "#6E8CFF", light: "#9AB0FF", dark: brand.blue },
+        secondary: { main: "#A68BFF" },
+        success: { main: "#3DD68C" },
+        warning: { main: "#F5B83D" },
+        error: { main: "#FF6369" },
+        info: { main: "#38BDF8" },
+        background: { default: "#090D18", paper: "#111727" },
+        text: { primary: "#EDF0F7", secondary: "#9AA3B8" },
+        divider: "#1F2638",
+      },
     },
   },
+  shape: { borderRadius: 12 },
   typography: {
-    fontFamily: ['"Roboto"', "sans-serif"].join(","),
-    h1: {
-      fontSize: "2.5rem",
-      fontWeight: 700,
-      "@media (min-width:600px)": {
-        fontSize: "3.5rem",
-      },
-    },
-    h2: {
-      fontSize: "2rem",
-      fontWeight: 600,
-      "@media (min-width:600px)": {
-        fontSize: "2.8rem",
-      },
-    },
-    // You can define other typography variants here
+    fontFamily: "var(--font-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    h1: { fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.05 },
+    h2: { fontWeight: 800, letterSpacing: "-0.025em", lineHeight: 1.1 },
+    h3: { fontWeight: 800, letterSpacing: "-0.02em" },
+    h4: { fontWeight: 750, letterSpacing: "-0.015em" },
+    h5: { fontWeight: 700, letterSpacing: "-0.01em" },
+    h6: { fontWeight: 700 },
+    subtitle1: { fontWeight: 600 },
+    subtitle2: { fontWeight: 600 },
+    button: { fontWeight: 650, textTransform: "none", letterSpacing: 0 },
+    overline: { fontWeight: 700, letterSpacing: "0.12em" },
   },
   components: {
-    MuiButton: {
+    // Buttons and links with an href navigate client-side through next/link
+    MuiButtonBase: { defaultProps: { LinkComponent: NextLink } },
+    MuiLink: { defaultProps: { component: NextLink } },
+    MuiCssBaseline: {
       styleOverrides: {
-        root: {
-          borderRadius: 8,
-          textTransform: "none", // Prevent uppercase by default
-        },
+        body: { WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
+        "::selection": { background: alpha(brand.blue, 0.2) },
       },
     },
-    MuiAppBar: {
+    MuiButton: {
+      defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: {
-          boxShadow: "none", // Remove shadow from app bar
-        },
+        root: { borderRadius: 10, paddingInline: 18 },
+        sizeLarge: { paddingBlock: 12, paddingInline: 26, fontSize: "1rem" },
+      },
+    },
+    MuiPaper: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        root: ({ theme }) => ({ backgroundImage: "none", borderColor: theme.vars.palette.divider }),
       },
     },
     MuiCard: {
+      defaultProps: { variant: "outlined" },
+      styleOverrides: { root: { borderRadius: 16 } },
+    },
+    MuiChip: {
+      styleOverrides: { root: { fontWeight: 600 } },
+    },
+    MuiTextField: {
+      defaultProps: { variant: "outlined" },
+    },
+    MuiOutlinedInput: {
       styleOverrides: {
-        root: {
-          borderRadius: 12,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-        },
+        root: ({ theme }) => ({
+          borderRadius: 10,
+          backgroundColor: theme.vars.palette.background.paper,
+          transition: "box-shadow 0.2s",
+          "&.Mui-focused": {
+            boxShadow: `0 0 0 4px rgba(${theme.vars.palette.primary.mainChannel} / 0.15)`,
+          },
+        }),
       },
+    },
+    MuiTooltip: {
+      defaultProps: { arrow: true },
+      styleOverrides: { tooltip: { fontSize: "0.8rem", borderRadius: 8 } },
+    },
+    MuiDialog: {
+      styleOverrides: { paper: { borderRadius: 20 } },
+    },
+    MuiAlert: {
+      styleOverrides: { root: { borderRadius: 12 } },
+    },
+    MuiAppBar: {
+      defaultProps: { elevation: 0, color: "transparent" },
     },
   },
 });

@@ -3,3 +3,5 @@
 package-lock.json
 ui/public
 .refact
+ui/.next
+ui/next-env.d.ts

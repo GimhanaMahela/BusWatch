@@ -1,18 +1,17 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import { errorMessage } from "../api/apiClient";
-import { getAdminProfile, loginAdmin } from "../api/authApi";
-import { AuthContext } from "./authContext";
+"use client";
 
-// The API client reads the token from localStorage on every request
-const storeToken = (token: string | null) => {
-  if (token) localStorage.setItem("token", token);
-  else localStorage.removeItem("token");
-};
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { errorMessage } from "@/api/apiClient";
+import { getAdminProfile, loginAdmin } from "@/api/authApi";
+import useIsClient from "@/hooks/useIsClient";
+import { tokenStore } from "@/lib/tokenStore";
+import { AuthContext } from "./authContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const isClient = useIsClient();
+  const token = useSyncExternalStore(tokenStore.subscribe, tokenStore.get, tokenStore.getServer);
   const [loggingIn, setLoggingIn] = useState(false);
 
   // Profile of the signed-in admin; an invalid or expired token clears itself
@@ -22,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         return await getAdminProfile();
       } catch (error) {
-        storeToken(null);
+        tokenStore.set(null);
         throw error;
       }
     },
@@ -37,8 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoggingIn(true);
     try {
       const { token: receivedToken } = await loginAdmin(email, password);
-      storeToken(receivedToken);
-      setToken(receivedToken); // the profile query then loads the admin
+      tokenStore.set(receivedToken); // the profile query then loads the admin
       return { success: true };
     } catch (err) {
       return { success: false, message: errorMessage(err, "Login failed") };
@@ -48,8 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    storeToken(null);
-    setToken(null);
+    tokenStore.set(null);
     queryClient.clear(); // drop cached admin data
   };
 
@@ -58,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         token,
         isAuthenticated: admin !== null,
-        loading: loggingIn || (!!token && profile.isPending),
+        loading: !isClient || loggingIn || (!!token && profile.isPending),
         admin,
         login,
         logout,

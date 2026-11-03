@@ -1,3 +1,5 @@
+"use client";
+
 import { Box, Tooltip, Typography } from "@mui/material";
 
 export interface BarRow {
@@ -14,7 +16,7 @@ interface HorizontalBarListProps {
 }
 
 const BAR_COLOR = "primary.main";
-const BAR_HOVER_COLOR = "primary.dark";
+const BAR_HOVER_COLOR = "secondary.main";
 
 // Horizontal bars: label | bar | value. The whole row is the hover/click target.
 function HorizontalBarList({
@@ -61,16 +63,24 @@ function HorizontalBarList({
             >
               {row.label}
             </Typography>
-            <Box sx={{ height: 14, display: "flex", alignItems: "center" }}>
+            <Box
+              sx={{
+                height: 10,
+                display: "flex",
+                alignItems: "center",
+                bgcolor: "action.hover",
+                borderRadius: "0 5px 5px 0",
+              }}
+            >
               <Box
                 className="bar"
                 sx={{
-                  height: 14,
+                  height: 10,
                   width: `${(row.value / max) * 100}%`,
                   minWidth: row.value > 0 ? 4 : 0,
                   bgcolor: BAR_COLOR,
                   // Rounded data end only; flat edge on the baseline
-                  borderRadius: "0 4px 4px 0",
+                  borderRadius: "0 5px 5px 0",
                   transition: "background-color 0.15s",
                 }}
               />

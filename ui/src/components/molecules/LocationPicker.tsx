@@ -1,9 +1,11 @@
+"use client";
+
 import { useState } from "react";
 import { Box, Button, Typography, CircularProgress } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 
-const MAPS_API_KEY = import.meta.env.VITE_MAPS_API_KEY ?? "";
+const MAPS_API_KEY = process.env.NEXT_PUBLIC_MAPS_API_KEY ?? "";
 const hasMapsKey = Boolean(MAPS_API_KEY) && MAPS_API_KEY !== "YOUR_Maps_API_KEY";
 
 export interface LatLng {
@@ -39,7 +41,7 @@ function MapPin({ value, onChange }: LocationPickerProps) {
 
   return (
     <GoogleMap
-      mapContainerStyle={{ width: "100%", height: 280, borderRadius: 8 }}
+      mapContainerStyle={{ width: "100%", height: 300, borderRadius: 16 }}
       center={value || SRI_LANKA_CENTER}
       zoom={value ? 15 : 7}
       onClick={handlePick}
@@ -83,7 +85,7 @@ function LocationPicker({ value, onChange }: LocationPickerProps) {
   };
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", mb: 1 }}>
         <Button
           variant="outlined"

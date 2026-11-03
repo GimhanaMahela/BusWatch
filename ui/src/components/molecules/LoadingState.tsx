@@ -7,7 +7,7 @@ interface LoadingStateProps {
 }
 
 /** Centred spinner with a message, for whole-page or whole-section loading. */
-function LoadingState({ message = "Loading...", hint, minHeight = "70vh" }: LoadingStateProps) {
+function LoadingState({ message = "Loading...", hint, minHeight = "60vh" }: LoadingStateProps) {
   return (
     <Box
       role="status"
@@ -16,15 +16,16 @@ function LoadingState({ message = "Loading...", hint, minHeight = "70vh" }: Load
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
+        gap: 1.5,
         minHeight,
       }}
     >
-      <CircularProgress size={60} sx={{ mb: 2 }} />
-      <Typography variant="h6" color="primary">
+      <CircularProgress size={40} thickness={4.5} />
+      <Typography variant="subtitle1" color="text.secondary">
         {message}
       </Typography>
       {hint && (
-        <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
+        <Typography variant="body2" color="text.disabled">
           {hint}
         </Typography>
       )}

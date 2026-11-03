@@ -1,25 +1,31 @@
 # syntax=docker/dockerfile:1
 # Build from the repo root: docker build -f ui/Dockerfile .
 
-# --- Build: type-check and bundle with Vite ---
+# --- Build: type-check and bundle with Next.js (standalone server output) ---
 FROM node:24-alpine AS build
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY ui ./ui
 
-# Vite bakes VITE_* variables in at build time. Empty VITE_BACKEND_URL = same-origin /api,
-# which nginx below forwards to the API container.
-ARG VITE_BACKEND_URL=
-ARG VITE_MAPS_API_KEY=
-ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
-ENV VITE_MAPS_API_KEY=$VITE_MAPS_API_KEY
+# Next bakes NEXT_PUBLIC_* variables and the /api rewrite target in at build time.
+# Empty NEXT_PUBLIC_API_URL = same-origin /api, which Next forwards to API_UPSTREAM.
+ARG NEXT_PUBLIC_API_URL=
+ARG NEXT_PUBLIC_MAPS_API_KEY=
+ARG API_UPSTREAM=http://api:5000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_MAPS_API_KEY=$NEXT_PUBLIC_MAPS_API_KEY \
+    API_UPSTREAM=$API_UPSTREAM
 RUN npm run build:ui
 
-# --- Runtime: static files + /api reverse proxy via nginx ---
-FROM nginx:1.29-alpine AS runtime
-COPY ui/nginx.conf /etc/nginx/templates/default.conf.template
-COPY --from=build /app/ui/dist /usr/share/nginx/html
-# Where nginx forwards /api (the API service name in docker-compose)
-ENV API_UPSTREAM=http://api:5000
-EXPOSE 80
+# --- Runtime: the self-contained Next server only ---
+FROM node:24-alpine AS runtime
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+WORKDIR /app
+COPY --from=build --chown=node:node /app/ui/.next/standalone ./
+COPY --from=build --chown=node:node /app/ui/.next/static ./ui/.next/static
+COPY --from=build --chown=node:node /app/ui/public ./ui/public
+USER node
+EXPOSE 3000
+CMD ["node", "ui/server.js"]

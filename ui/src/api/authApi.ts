@@ -1,5 +1,5 @@
-import type { Admin, AdminRole } from "../types/admin";
-import apiClient, { call } from "./apiClient";
+import type { Admin, AdminRole } from "@/types/admin";
+import apiClient, { call } from "@/api/apiClient";
 
 export const loginAdmin = (email: string, password: string) =>
   call<{ token: string }>(apiClient.post("/auth/login", { email, password }));

@@ -1,5 +1,7 @@
+"use client";
+
 import { useContext } from "react";
-import { AuthContext, type AuthContextValue } from "../context/authContext";
+import { AuthContext, type AuthContextValue } from "@/context/authContext";
 
 /** Current admin session: { admin, isAuthenticated, loading, login, logout, ... } */
 export default function useAuth(): AuthContextValue {
