@@ -47,6 +47,7 @@ export interface Report {
   outcomeRating?: number | null;
   outcomeFeedback?: string | null;
   ratedAt?: string | null;
+  hiddenFromPublic?: boolean;
 }
 
 /** What the public tracking endpoint returns */

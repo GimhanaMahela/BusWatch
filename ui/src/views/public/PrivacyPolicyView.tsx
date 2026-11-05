@@ -57,6 +57,21 @@ const SECTIONS: ContentSection[] = [
           sent. If you do not accept cookies, you may not be able to use some portions of our
           Service.
         </p>
+        <h3>Public statistics</h3>
+        <p>
+          Our impact page and the bus and route scorecards show totals only: how many reports were
+          received and resolved, by category, by month and by area. Only reports our team has
+          checked are counted, and a bus or route is shown only once it has several of them. Map
+          areas cover about 5 km and need several reports before they appear. Your name, email,
+          receipt ID, description, photos and the exact time or place of your report are never
+          published. Stories about resolved cases are written by our team without passenger details.
+        </p>
+        <h3>Security check</h3>
+        <p>
+          To keep automated spam out of public figures, report submissions may pass through
+          Cloudflare Turnstile, which checks that a person is sending them. Cloudflare processes
+          technical data about your browser for this purpose only.
+        </p>
         <h3>Data kept on your device</h3>
         <p>
           If you install BusWatch or lose your connection while writing a report, the unfinished

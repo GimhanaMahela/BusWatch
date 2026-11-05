@@ -9,11 +9,14 @@ import {
   getReportById,
   getReportStats,
   rateOutcome,
+  setReportVisibility,
   trackReport,
   updateReportStatus,
 } from "@/api/reportApi";
 import type { ReportStatus } from "@/constants/reportConstants";
+import { createStory, deleteStory, listStories, updateStory } from "@/api/storyApi";
 import type { AdminRole } from "@/types/admin";
+import type { StoryInput } from "@/types/public";
 import type { Report, ReportListParams } from "@/types/report";
 
 /** Query keys in one place so mutations can invalidate the right caches */
@@ -24,6 +27,7 @@ export const queryKeys = {
   stats: ["reports", "stats"] as const,
   tracking: (receiptId: string) => ["tracking", receiptId.trim().toUpperCase()] as const,
   admins: ["admins"] as const,
+  stories: ["stories"] as const,
 };
 
 export const useReportList = (params: ReportListParams) =>
@@ -83,6 +87,36 @@ export const useAddReportNote = (id: string) => {
   return useMutation({
     mutationFn: (text: string) => addReportNote(id, text),
     onSuccess: onUpdated,
+  });
+};
+
+export const useSetReportVisibility = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: (hiddenFromPublic: boolean) => setReportVisibility(id, hiddenFromPublic),
+    onSuccess: onUpdated,
+  });
+};
+
+// ---------------------------------------------------------------- Resolved case stories
+
+export const useStories = () => useQuery({ queryKey: queryKeys.stories, queryFn: listStories });
+
+/** Creates a story, or updates one when `id` is given. */
+export const useSaveStory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id?: string; input: Partial<StoryInput> }) =>
+      id ? updateStory(id, input) : createStory(input as StoryInput),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+  });
+};
+
+export const useDeleteStory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteStory,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
   });
 };
 

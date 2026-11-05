@@ -26,6 +26,7 @@ const NAV_ITEMS = [
   { key: "home", href: "/" },
   { key: "track", href: "/track" },
   { key: "commend", href: "/commend-a-driver" },
+  { key: "impact", href: "/impact" },
   { key: "about", href: "/about-us" },
 ] as const;
 

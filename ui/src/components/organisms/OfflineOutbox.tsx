@@ -19,6 +19,8 @@ type Notice = { kind: "sent"; receiptId: string } | { kind: "failed"; message: s
 /** A rejection that will never succeed on retry (bad data, not a lost connection or busy server). */
 const isPermanentFailure = (error: ApiError) =>
   error.status !== undefined &&
+  // A failed security check is worth retrying with a fresh token, not a reason to drop the report
+  !error.code?.startsWith("captcha_") &&
   error.status >= 400 &&
   error.status < 500 &&
   error.status !== 408 &&

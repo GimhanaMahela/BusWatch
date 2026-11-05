@@ -26,6 +26,9 @@ const EnvSchema = z.object({
   EMAIL_SERVICE_PORT: z.coerce.number().int().positive().default(587),
   EMAIL_SERVICE_USER: optional(z.string()),
   EMAIL_SERVICE_PASS: optional(z.string()),
+  // Cloudflare Turnstile CAPTCHA on public submissions; skipped when unset (development, tests)
+  TURNSTILE_SECRET_KEY: optional(z.string()),
+
   EMAIL_ALLOW_SELF_SIGNED: z
     .enum(["true", "false"])
     .default("false")

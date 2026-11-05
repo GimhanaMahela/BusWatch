@@ -12,6 +12,7 @@ import {
   listReports,
   receiptIdExists,
   setOutcomeRating,
+  setReportHiddenFromPublic,
   setReportPdfUrl,
   updateReportStatus as updateReportStatusRow,
   type ReportWithRelations,
@@ -20,6 +21,8 @@ import { incrementMetric } from "../repositories/metric.repository.js";
 import { sendReportReceiptEmail, sendStatusUpdateEmail } from "../services/email.service.js";
 import { generatePdfReceipt } from "../services/pdf-receipt.service.js";
 import { generateReceiptId } from "../utils/receipt-id.js";
+import { invalidateCache } from "../utils/ttl-cache.js";
+import type { VisibilityInput } from "../validators/story.validator.js";
 import {
   listReportsQuerySchema,
   type AddNoteInput,
@@ -312,6 +315,21 @@ export const addNote = async (req: Request<IdParams, object, AddNoteInput>, res:
     return;
   }
   res.status(201).json(await findReportById(req.params.id));
+};
+
+// @desc    Include or exclude a report from public statistics (Admin only)
+// @route   PUT /api/reports/:id/visibility
+// @access  Private (Admin)
+export const setVisibility = async (
+  req: Request<IdParams, object, VisibilityInput>,
+  res: Response,
+) => {
+  if (!(await setReportHiddenFromPublic(req.params.id, req.body.hiddenFromPublic))) {
+    res.status(404).json({ msg: "Report not found" });
+    return;
+  }
+  invalidateCache("public:");
+  res.json(await findReportById(req.params.id));
 };
 
 // @desc    Delete a report (Admin only)

@@ -1,5 +1,6 @@
 "use client";
 
+import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import GroupRoundedIcon from "@mui/icons-material/GroupRounded";
@@ -43,6 +44,12 @@ const NAV_ITEMS = [
     href: "/admin/analytics",
     icon: <BarChartRoundedIcon />,
     match: ["/admin/analytics"],
+  },
+  {
+    label: "Stories",
+    href: "/admin/stories",
+    icon: <AutoStoriesRoundedIcon />,
+    match: ["/admin/stories"],
   },
   {
     label: "QR stickers",

@@ -1,11 +1,13 @@
 import { relations } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -73,6 +75,8 @@ export const reports = pgTable(
     outcomeRating: smallint(),
     outcomeFeedback: text(),
     ratedAt: timestamptz(),
+    // An admin can keep a disputed report out of public totals, maps and scorecards
+    hiddenFromPublic: boolean().notNull().default(false),
   },
   (t) => [
     index().on(t.reportedAt.desc()),
@@ -113,6 +117,36 @@ export const reportNotes = pgTable(
   (t) => [index().on(t.reportId, t.createdAt)],
 );
 
+export interface StoryTranslation {
+  title: string;
+  body: string;
+}
+export type StoryTranslations = Partial<Record<"si" | "ta", StoryTranslation>>;
+
+/**
+ * "Resolved case stories": short, anonymised write-ups admins choose to publish on /impact,
+ * e.g. "Route 08 overcharging: operator issued refunds." Never shows passenger details.
+ */
+export const impactStories = pgTable(
+  "impact_stories",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    // The case it is based on (admins only); the story survives if the report is deleted
+    reportId: uuid().references(() => reports.id, { onDelete: "set null" }),
+    category: reportCategory(),
+    routeNumber: text(),
+    title: text().notNull(), // English
+    body: text().notNull(),
+    translations: jsonb().$type<StoryTranslations>().notNull().default({}),
+    published: boolean().notNull().default(false),
+    publishedAt: timestamptz(),
+    createdBy: text(),
+    createdAt: timestamptz().notNull().defaultNow(),
+    updatedAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [index().on(t.published, t.publishedAt.desc())],
+);
+
 /** Anonymous daily counters for the Phase 1 success metrics (no personal data). */
 export const dailyMetrics = pgTable(
   "daily_metrics",
@@ -142,3 +176,5 @@ export type ReportRow = typeof reports.$inferSelect;
 export type NewReportRow = typeof reports.$inferInsert;
 export type StatusChangeRow = typeof reportStatusChanges.$inferSelect;
 export type NoteRow = typeof reportNotes.$inferSelect;
+export type StoryRow = typeof impactStories.$inferSelect;
+export type NewStoryRow = typeof impactStories.$inferInsert;

@@ -9,7 +9,9 @@ export type MetricEvent =
   | "tracking_return_view"
   | "report_shared"
   | "offline_report_queued"
-  | "app_installed";
+  | "app_installed"
+  | "impact_view"
+  | "scorecard_view";
 
 /**
  * Counts an anonymous usage event for the success metrics (a daily total per event; nothing

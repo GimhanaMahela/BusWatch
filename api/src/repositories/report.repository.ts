@@ -168,6 +168,16 @@ export const updateReportStatus = async (
     return { previousStatus: current.status };
   });
 
+/** Keeps a report in or out of public totals, maps and scorecards. Returns false if not found. */
+export const setReportHiddenFromPublic = async (id: string, hiddenFromPublic: boolean) => {
+  const updated = await db
+    .update(reports)
+    .set({ hiddenFromPublic })
+    .where(eq(reports.id, id))
+    .returning({ id: reports.id });
+  return updated.length > 0;
+};
+
 /** Returns false when the report does not exist. */
 export const addReportNote = async (id: string, text: string, author?: string) => {
   if (!(await db.$count(reports, eq(reports.id, id)))) return false;

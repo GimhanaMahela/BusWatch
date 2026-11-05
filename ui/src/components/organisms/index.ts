@@ -6,4 +6,5 @@ export { default as OutcomeRating } from "./OutcomeRating";
 export { default as QueuedPanel } from "./QueuedPanel";
 export { default as SiteFooter } from "./SiteFooter";
 export { default as SiteHeader } from "./SiteHeader";
+export { default as StoryEditorDialog, type StoryDraft } from "./StoryEditorDialog";
 export { default as SubmittedPanel, type Receipt } from "./SubmittedPanel";

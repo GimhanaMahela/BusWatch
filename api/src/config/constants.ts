@@ -69,6 +69,31 @@ export const RATEABLE_STATUSES = [
   "rejected",
 ] as const satisfies readonly ReportStatus[];
 
+// ---------------------------------------------------------------- Public results (Phase 2)
+
+/**
+ * Only reports an admin has checked count in public: pending ones are unverified and rejected
+ * ones were found not to stand. Admins can also hide a single report (hiddenFromPublic).
+ */
+export const PUBLIC_STATUSES = [
+  "reviewed",
+  "escalated",
+  "resolved",
+] as const satisfies readonly ReportStatus[];
+
+/**
+ * Fairness rule: a bus or route gets a public scorecard only with at least this many checked
+ * reports, so one angry passenger can't damage an operator's reputation.
+ */
+export const MIN_PUBLIC_REPORTS = 3;
+
+/** Heatmap cells are about 5.5 km wide and only shown with at least this many reports. */
+export const HEATMAP_CELL_DEGREES = 0.05;
+export const MIN_HEATMAP_REPORTS = 3;
+
+/** Generous box around Sri Lanka; map pins outside it are ignored on public maps. */
+export const SRI_LANKA_BOUNDS = { minLat: 5.5, maxLat: 10.2, minLng: 79.3, maxLng: 82.2 } as const;
+
 /**
  * Anonymous usage counters (counts per day only, nothing about the person).
  * They feed the Phase 1 success metrics on the admin analytics page.
@@ -84,6 +109,8 @@ export const METRIC_EVENTS = [
   "report_shared",
   "offline_report_queued",
   "app_installed",
+  "impact_view",
+  "scorecard_view",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -97,6 +124,8 @@ export const CLIENT_METRIC_EVENTS = [
   "report_shared",
   "offline_report_queued",
   "app_installed",
+  "impact_view",
+  "scorecard_view",
 ] as const satisfies readonly MetricEvent[];
 
 export const ADMIN_ROLES = ["superadmin", "admin"] as const;

@@ -9,8 +9,9 @@ import type {
 } from "@/types/report";
 import type { ReportStatus } from "@/constants/reportConstants";
 import apiClient, { call } from "@/api/apiClient";
+import { getTurnstileToken } from "@/lib/turnstile";
 
-export const submitReport = (
+export const submitReport = async (
   fields: SubmitReportFields,
   images: File[] = [],
   videos: File[] = [],
@@ -23,6 +24,10 @@ export const submitReport = (
   }
   images.forEach((image) => formData.append("images", image));
   videos.forEach((video) => formData.append("videos", video));
+
+  // CAPTCHA token, fetched at send time (also for reports queued while offline)
+  const captcha = await getTurnstileToken();
+  if (captcha) formData.append("cf-turnstile-response", captcha);
 
   return call<SubmitReportResponse>(apiClient.post("/reports", formData));
 };
@@ -65,3 +70,7 @@ export const rateOutcome = (receiptId: string, rating: number, feedback = "") =>
       feedback,
     }),
   );
+
+/** Admin: keep a report in or out of public totals, maps and scorecards */
+export const setReportVisibility = (id: string, hiddenFromPublic: boolean) =>
+  call<Report>(apiClient.put(`/reports/${id}/visibility`, { hiddenFromPublic }));

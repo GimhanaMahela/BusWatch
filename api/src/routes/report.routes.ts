@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as reportController from "../controllers/report.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { rateLimiter, submitLimiter, trackLimiter } from "../middleware/rate-limit.middleware.js";
+import { verifyTurnstile } from "../middleware/turnstile.middleware.js";
 import { reportMediaUpload } from "../middleware/upload.middleware.js";
 import { validateBody, validateUuidParam } from "../middleware/validate.middleware.js";
 import {
@@ -10,6 +11,7 @@ import {
   submitReportSchema,
   updateStatusSchema,
 } from "../validators/report.validator.js";
+import { visibilitySchema } from "../validators/story.validator.js";
 
 const router = Router();
 const validId = validateUuidParam("id");
@@ -19,6 +21,7 @@ router.post(
   "/",
   submitLimiter,
   reportMediaUpload,
+  verifyTurnstile,
   validateBody(submitReportSchema),
   reportController.submitReport,
 );
@@ -48,6 +51,13 @@ router.post(
   validId,
   validateBody(addNoteSchema),
   reportController.addNote,
+);
+router.put(
+  "/:id/visibility",
+  requireAuth,
+  validId,
+  validateBody(visibilitySchema),
+  reportController.setVisibility,
 );
 router.delete("/:id", requireAuth, validId, reportController.deleteReport);
 

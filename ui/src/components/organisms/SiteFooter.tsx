@@ -15,6 +15,7 @@ const COLUMNS = [
   {
     title: "buswatch",
     links: [
+      { key: "impact", href: "/impact" },
       { key: "about", href: "/about-us" },
       { key: "adminSignIn", href: "/admin/login" },
     ],

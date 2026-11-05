@@ -161,6 +161,19 @@ browser is back online. The worker only registers in production builds.
 **Metrics.** `trackEvent()` (`api/metricsApi.ts`) counts anonymous events (form started, tracking
 visit, QR scan, share, ...) as daily totals in `daily_metrics`. Submissions are counted by the API.
 
+**Public results.** `/api/public/*` (`public.repository.ts`) returns aggregates only, and every query
+applies the same rules: a report counts once an admin has checked it (`PUBLIC_STATUSES`: reviewed,
+escalated, resolved) and not hidden it (`hiddenFromPublic`); buses and routes need `MIN_PUBLIC_REPORTS`
+checked reports for a scorecard; heatmap cells need `MIN_HEATMAP_REPORTS`. Responses are cached in
+memory for five minutes (`utils/ttl-cache.ts`, cleared when admins change stories or visibility) and
+the Next pages cache their fetches for the same time (`lib/serverApi.ts`). Never add receipt IDs,
+descriptions, contact details or exact times to these endpoints. The heatmap is plain SVG over a
+Natural Earth outline (`constants/sriLankaOutline.ts`), so no map key or third-party tracking is needed.
+
+**CAPTCHA.** `verifyTurnstile` runs on report submission when `TURNSTILE_SECRET_KEY` is set. The browser
+fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
+offline outbox; a failed check keeps the report in the outbox instead of dropping it.
+
 ## Cross-cutting conventions
 
 - Status, category, type and language enums in `api/src/config/constants.ts` must match

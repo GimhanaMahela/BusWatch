@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 // The monorepo has one .env at the repo root, shared with the API.
 // Next only exposes NEXT_PUBLIC_* variables to the browser, so API secrets stay server-side.
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-loadEnvConfig(repoRoot);
+const { parsedEnv } = loadEnvConfig(repoRoot);
 
 // Where /api requests are forwarded: the API container in Docker, the local API in development.
+// The API port comes from the .env file itself: `next dev/start --port 3000` sets process.env.PORT
+// to the UI's own port, which would make Next proxy /api back to itself in a loop.
 const apiUpstream = (
-  process.env.API_UPSTREAM || `http://localhost:${process.env.PORT || 5000}`
+  process.env.API_UPSTREAM || `http://localhost:${parsedEnv?.PORT || 5000}`
 ).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {

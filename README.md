@@ -17,6 +17,20 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   (linked from the resolution email).
 - **Share a tracking link**: phone share sheet or copy, with a preview image showing the current status.
 
+**Public results**
+
+- **Impact page** (`/impact`): reports received and resolved, resolution rate, typical time to resolve,
+  monthly trend, categories, passenger satisfaction and commendations. Refreshed every few minutes.
+- **Incident heatmap**: where checked reports cluster, as ~5 km areas on an outline of Sri Lanka. Areas
+  with fewer than 3 reports are not shown; no individual points or times.
+- **Bus and route scorecards** (`/bus/NB-1234`, `/route/08`): published only once a bus or route has at
+  least 3 reports checked by an admin.
+- **Resolved case stories**: anonymised write-ups admins draft and publish from **Stories** (optionally
+  in Sinhala and Tamil).
+- **Fairness and abuse protection**: only reports an admin moved past _pending_ count publicly (rejected
+  ones never do), admins can exclude a disputed report, and submissions pass Cloudflare Turnstile when
+  `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` are set.
+
 The admin **Analytics** page tracks the Phase 1 success metrics: form completion rate, return visits to
 tracking, average outcome rating, reports from QR codes and time to first response (anonymous daily
 counts, no personal data).
