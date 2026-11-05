@@ -16,15 +16,17 @@ import SpeedRoundedIcon from "@mui/icons-material/SpeedRounded";
 import SentimentVeryDissatisfiedRoundedIcon from "@mui/icons-material/SentimentVeryDissatisfiedRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
+import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 import { Box, Button, Card, Container, Grid, Typography } from "@mui/material";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { GradientButton } from "@/components/atoms";
 import { ReceiptSearchForm } from "@/components/molecules";
-import { CATEGORIES, type ReportCategory } from "@/constants/reportConstants";
+import { CATEGORIES, type ComplaintCategory } from "@/constants/reportConstants";
 import busHero from "../../../public/bus-hero.jpg";
 
-const CATEGORY_ICONS: Record<ReportCategory, ReactNode> = {
+const CATEGORY_ICONS: Record<ComplaintCategory, ReactNode> = {
   reckless_driving: <SpeedRoundedIcon />,
   overcharging: <LocalAtmRoundedIcon />,
   no_ticket: <ConfirmationNumberRoundedIcon />,
@@ -38,24 +40,12 @@ const CATEGORY_ICONS: Record<ReportCategory, ReactNode> = {
 };
 
 const STEPS = [
-  {
-    icon: <EditNoteRoundedIcon />,
-    title: "Report in two minutes",
-    text: "Tell us the bus, the route and what happened. Add photos, video and a map pin if you have them.",
-  },
-  {
-    icon: <ReceiptLongRoundedIcon />,
-    title: "Get your receipt",
-    text: "You receive a receipt ID straight away, plus a PDF copy by email if you leave your address.",
-  },
-  {
-    icon: <TimelineRoundedIcon />,
-    title: "Follow every step",
-    text: "Our team reviews it, escalates it to the operator or authorities, and you see each update.",
-  },
-];
+  { icon: <EditNoteRoundedIcon />, key: "step1" },
+  { icon: <ReceiptLongRoundedIcon />, key: "step2" },
+  { icon: <TimelineRoundedIcon />, key: "step3" },
+] as const;
 
-const PROMISES = ["No account needed", "Email is optional", "Photo & video evidence"];
+const PROMISES = ["promiseAccount", "promiseEmail", "promiseEvidence", "promiseLanguages"] as const;
 
 const iconTile = (icon: ReactNode, size = 44) => (
   <Box
@@ -76,7 +66,8 @@ const iconTile = (icon: ReactNode, size = 44) => (
 
 // Decorative card on the hero photo showing what a tracked report looks like
 function ExampleReceipt() {
-  const steps = ["Received", "Reviewed", "Escalated", "Resolved"];
+  const t = useTranslations("home");
+  const steps = [t("stepReceived"), t("stepReviewed"), t("stepEscalated"), t("stepResolved")];
   return (
     <Card
       aria-hidden
@@ -94,10 +85,10 @@ function ExampleReceipt() {
     >
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-          Example receipt
+          {t("exampleReceipt")}
         </Typography>
         <Typography variant="caption" sx={{ color: "success.main", fontWeight: 700 }}>
-          ● Resolved
+          ● {t("exampleResolved")}
         </Typography>
       </Box>
       <Typography
@@ -125,6 +116,8 @@ function ExampleReceipt() {
 }
 
 function HomeView() {
+  const t = useTranslations("home");
+  const tc = useTranslations("categories");
   return (
     <>
       {/* Hero */}
@@ -155,14 +148,14 @@ function HomeView() {
               >
                 <CampaignRoundedIcon sx={{ fontSize: 18, color: "primary.main" }} />
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  Passenger reporting for Sri Lanka
+                  {t("badge")}
                 </Typography>
               </Box>
               <Typography
                 variant="h1"
                 sx={{ fontSize: { xs: "2.6rem", sm: "3.4rem", md: "4rem" } }}
               >
-                Every journey deserves a{" "}
+                {t("titleStart")}{" "}
                 <Box
                   component="span"
                   sx={{
@@ -172,15 +165,14 @@ function HomeView() {
                     color: "transparent",
                   }}
                 >
-                  safe ride.
+                  {t("titleHighlight")}
                 </Box>
               </Typography>
               <Typography
                 color="text.secondary"
                 sx={{ mt: 3, fontSize: { xs: "1.05rem", md: "1.2rem" }, maxWidth: 520 }}
               >
-                Reckless driving, overcharging, harassment? Report it in minutes with photos and a
-                map pin, then track what happens next with your receipt ID.
+                {t("subtitle")}
               </Typography>
               <Box sx={{ display: "flex", gap: 1.5, mt: 4, flexWrap: "wrap" }}>
                 <GradientButton
@@ -188,7 +180,7 @@ function HomeView() {
                   size="large"
                   endIcon={<ArrowForwardRoundedIcon />}
                 >
-                  Report an incident
+                  {t("reportCta")}
                 </GradientButton>
                 <Button
                   href="/track"
@@ -197,7 +189,7 @@ function HomeView() {
                   color="inherit"
                   sx={{ borderColor: "divider" }}
                 >
-                  Track a report
+                  {t("trackCta")}
                 </Button>
               </Box>
               <Box
@@ -220,7 +212,7 @@ function HomeView() {
                   >
                     <CheckCircleRoundedIcon sx={{ fontSize: 18, color: "success.main" }} />
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      {p}
+                      {t(p)}
                     </Typography>
                   </Box>
                 ))}
@@ -239,7 +231,7 @@ function HomeView() {
                 >
                   <Image
                     src={busHero}
-                    alt="Aerial view of buses and traffic at a busy city intersection"
+                    alt={t("heroAlt")}
                     fill
                     priority
                     placeholder="blur"
@@ -267,10 +259,10 @@ function HomeView() {
         >
           <Box>
             <Typography variant="h5" component="h2">
-              Already reported something?
+              {t("quickTrackTitle")}
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-              Enter your receipt ID to see where it stands.
+              {t("quickTrackText")}
             </Typography>
           </Box>
           <ReceiptSearchForm />
@@ -280,14 +272,14 @@ function HomeView() {
       {/* How it works */}
       <Container maxWidth="lg" component="section" sx={{ py: { xs: 8, md: 12 } }}>
         <Typography variant="overline" color="primary" component="p">
-          How it works
+          {t("howEyebrow")}
         </Typography>
         <Typography variant="h2" sx={{ fontSize: { xs: "2rem", md: "2.6rem" }, maxWidth: 640 }}>
-          From what you saw to what was done about it.
+          {t("howTitle")}
         </Typography>
         <Grid container spacing={3} sx={{ mt: 4 }}>
           {STEPS.map((step, index) => (
-            <Grid key={step.title} size={{ xs: 12, md: 4 }}>
+            <Grid key={step.key} size={{ xs: 12, md: 4 }}>
               <Card sx={{ p: 3.5, height: "100%", position: "relative", overflow: "hidden" }}>
                 <Typography
                   aria-hidden
@@ -305,10 +297,10 @@ function HomeView() {
                 </Typography>
                 {iconTile(step.icon, 48)}
                 <Typography variant="h6" component="h3" sx={{ mt: 2.5 }}>
-                  {step.title}
+                  {t(`${step.key}Title`)}
                 </Typography>
                 <Typography color="text.secondary" sx={{ mt: 1 }}>
-                  {step.text}
+                  {t(`${step.key}Text`)}
                 </Typography>
               </Card>
             </Grid>
@@ -325,14 +317,13 @@ function HomeView() {
           <Grid container spacing={6}>
             <Grid size={{ xs: 12, md: 4 }}>
               <Typography variant="overline" color="primary" component="p">
-                What you can report
+                {t("categoriesEyebrow")}
               </Typography>
               <Typography variant="h2" sx={{ fontSize: { xs: "2rem", md: "2.4rem" } }}>
-                If it made your ride unsafe or unfair, it counts.
+                {t("categoriesTitle")}
               </Typography>
               <Typography color="text.secondary" sx={{ mt: 2 }}>
-                Every report is categorised and routed to the people who can act on it. Repeat
-                offenders are flagged automatically.
+                {t("categoriesText")}
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, md: 8 }}>
@@ -358,7 +349,7 @@ function HomeView() {
                     }}
                   >
                     {iconTile(CATEGORY_ICONS[c.value], 40)}
-                    <Typography sx={{ fontWeight: 600 }}>{c.label}</Typography>
+                    <Typography sx={{ fontWeight: 600 }}>{tc(c.value)}</Typography>
                   </Box>
                 ))}
               </Box>
@@ -366,6 +357,57 @@ function HomeView() {
           </Grid>
         </Container>
       </Box>
+
+      {/* Commend a driver */}
+      <Container maxWidth="lg" sx={{ pt: { xs: 8, md: 12 } }}>
+        <Card
+          sx={{
+            p: { xs: 3, md: 5 },
+            display: "grid",
+            gridTemplateColumns: { md: "auto 1fr auto" },
+            gap: { xs: 2.5, md: 4 },
+            alignItems: "center",
+            borderColor: "rgba(var(--mui-palette-success-mainChannel) / 0.35)",
+            background:
+              "linear-gradient(120deg, rgba(var(--mui-palette-success-mainChannel) / 0.08) 0%, transparent 60%)",
+          }}
+        >
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: 4,
+              display: "grid",
+              placeItems: "center",
+              color: "success.main",
+              bgcolor: "rgba(var(--mui-palette-success-mainChannel) / 0.14)",
+            }}
+          >
+            <ThumbUpAltRoundedIcon sx={{ fontSize: 32 }} />
+          </Box>
+          <Box>
+            <Typography variant="overline" sx={{ color: "success.main" }} component="p">
+              {t("commendEyebrow")}
+            </Typography>
+            <Typography variant="h4" component="h2">
+              {t("commendTitle")}
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 620 }}>
+              {t("commendText")}
+            </Typography>
+          </Box>
+          <Button
+            href="/commend-a-driver"
+            size="large"
+            variant="contained"
+            color="success"
+            endIcon={<ArrowForwardRoundedIcon />}
+            sx={{ justifySelf: { md: "end" } }}
+          >
+            {t("commendCta")}
+          </Button>
+        </Card>
+      </Container>
 
       {/* Closing call to action */}
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
@@ -394,10 +436,10 @@ function HomeView() {
             variant="h2"
             sx={{ fontSize: { xs: "1.9rem", md: "2.6rem" }, mt: 2, maxWidth: 620 }}
           >
-            Your report is evidence. Let&apos;s make it count.
+            {t("closingTitle")}
           </Typography>
           <Typography sx={{ mt: 2, opacity: 0.85, maxWidth: 520, fontSize: "1.05rem" }}>
-            Patterns across reports show operators and authorities exactly where things go wrong.
+            {t("closingText")}
           </Typography>
           <Button
             href="/submit-report"
@@ -411,7 +453,7 @@ function HomeView() {
               "&:hover": { bgcolor: "grey.100" },
             }}
           >
-            Start a report
+            {t("closingCta")}
           </Button>
         </Box>
       </Container>

@@ -1,13 +1,39 @@
 {
+  "id": "/",
   "short_name": "BusWatch",
   "name": "BusWatch: report and track bus incidents",
+  "description": "Report bus incidents in Sri Lanka, commend good drivers and track what happens next. Works with a weak signal.",
+  "lang": "en",
   "icons": [
-    { "src": "favicon.ico", "sizes": "64x64 32x32 24x24 16x16", "type": "image/x-icon" },
-    { "src": "logo192.png", "type": "image/png", "sizes": "192x192" },
-    { "src": "logo512.png", "type": "image/png", "sizes": "512x512" }
+    { "src": "/favicon.ico", "sizes": "64x64 32x32 24x24 16x16", "type": "image/x-icon" },
+    { "src": "/logo192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/logo512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" }
   ],
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#2457F5",
-  "background_color": "#F5F7FB"
+  "background_color": "#F5F7FB",
+  "categories": ["travel", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Report an incident",
+      "short_name": "Report",
+      "url": "/submit-report",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Commend a driver",
+      "short_name": "Commend",
+      "url": "/commend-a-driver",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Track a report",
+      "short_name": "Track",
+      "url": "/track",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    }
+  ]
 }

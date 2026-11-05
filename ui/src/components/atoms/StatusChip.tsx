@@ -4,11 +4,19 @@ import { statusColor, statusLabel } from "@/constants/reportConstants";
 interface StatusChipProps extends Omit<ChipProps, "label" | "color"> {
   status: string;
   uppercase?: boolean;
+  /** Translated label (public pages); admin screens use the English default */
+  label?: string;
 }
 
 /** Tinted chip with a status dot for a report status. */
-function StatusChip({ status, uppercase = false, sx, ...chipProps }: StatusChipProps) {
-  const label = statusLabel(status);
+function StatusChip({
+  status,
+  uppercase = false,
+  label: labelOverride,
+  sx,
+  ...chipProps
+}: StatusChipProps) {
+  const label = labelOverride ?? statusLabel(status);
   const color = statusColor(status);
   return (
     <Chip

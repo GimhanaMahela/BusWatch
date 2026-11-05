@@ -1,7 +1,9 @@
 import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Noto_Sans_Sinhala, Noto_Sans_Tamil, Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import Providers from "./providers";
 
@@ -11,14 +13,41 @@ const sans = Plus_Jakarta_Sans({
   variable: "--font-sans",
 });
 
-export const metadata: Metadata = {
-  title: { default: "BusWatch: report and track bus incidents", template: "%s · BusWatch" },
-  description:
-    "Report reckless driving, overcharging and other public transport incidents in Sri Lanka, then track what happens next.",
-  applicationName: "BusWatch",
-  manifest: "/manifest.json",
-  icons: { icon: "/favicon.ico", apple: "/logo192.png" },
-};
+// Plus Jakarta Sans has no Sinhala or Tamil glyphs; the browser falls back to these per character
+const sinhala = Noto_Sans_Sinhala({
+  subsets: ["sinhala"],
+  display: "swap",
+  variable: "--font-sinhala",
+  preload: false,
+});
+const tamil = Noto_Sans_Tamil({
+  subsets: ["tamil"],
+  display: "swap",
+  variable: "--font-tamil",
+  preload: false,
+});
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  const siteUrl = process.env.FRONTEND_URL;
+  return {
+    // Absolute URLs for share previews; Next falls back to the deployment URL when unset
+    metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+    title: { default: t("title"), template: "%s · BusWatch" },
+    description: t("description"),
+    applicationName: "BusWatch",
+    manifest: "/manifest.json",
+    icons: { icon: "/favicon.ico", apple: "/logo192.png" },
+    appleWebApp: { capable: true, title: "BusWatch", statusBarStyle: "default" },
+    openGraph: {
+      siteName: "BusWatch",
+      type: "website",
+      title: t("title"),
+      description: t("description"),
+    },
+    twitter: { card: "summary_large_image" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -27,14 +56,21 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale();
   return (
-    <html lang="en" className={sans.variable} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={`${sans.variable} ${sinhala.variable} ${tamil.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         {/* Applies the saved light/dark choice before first paint (no flash) */}
         <InitColorSchemeScript attribute="class" />
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <Providers>{children}</Providers>
+          <NextIntlClientProvider>
+            <Providers>{children}</Providers>
+          </NextIntlClientProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

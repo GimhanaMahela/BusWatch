@@ -17,20 +17,24 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { BrandMark, ColorModeToggle, GradientButton } from "@/components/atoms";
+import { BrandMark, ColorModeToggle, GradientButton, LanguageSwitcher } from "@/components/atoms";
+import { InstallAppButton } from "@/components/molecules";
 
 const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "Track a report", href: "/track" },
-  { label: "About", href: "/about-us" },
-];
+  { key: "home", href: "/" },
+  { key: "track", href: "/track" },
+  { key: "commend", href: "/commend-a-driver" },
+  { key: "about", href: "/about-us" },
+] as const;
 
 const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);
 
 /** Sticky, translucent top bar for the public site. */
 function SiteHeader() {
+  const t = useTranslations("header");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -51,7 +55,7 @@ function SiteHeader() {
           <Box
             component={Link}
             href="/"
-            aria-label="BusWatch home"
+            aria-label={t("homeLink")}
             sx={{ display: "flex", textDecoration: "none" }}
           >
             <BrandMark />
@@ -59,8 +63,8 @@ function SiteHeader() {
 
           <Box
             component="nav"
-            aria-label="Main"
-            sx={{ display: { xs: "none", md: "flex" }, gap: 0.5, ml: 4 }}
+            aria-label={t("mainNav")}
+            sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 4 }}
           >
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.href);
@@ -70,13 +74,14 @@ function SiteHeader() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   sx={{
+                    whiteSpace: "nowrap",
                     color: active ? "text.primary" : "text.secondary",
                     fontWeight: active ? 700 : 600,
                     bgcolor: active ? "action.selected" : "transparent",
                     "&:hover": { color: "text.primary", bgcolor: "action.hover" },
                   }}
                 >
-                  {item.label}
+                  {t(item.key)}
                 </Button>
               );
             })}
@@ -85,24 +90,29 @@ function SiteHeader() {
           <Box sx={{ flex: 1 }} />
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <LanguageSwitcher />
             <ColorModeToggle />
             <Button
               href="/admin/login"
               color="inherit"
-              sx={{ display: { xs: "none", md: "inline-flex" }, color: "text.secondary" }}
+              sx={{
+                display: { xs: "none", lg: "inline-flex" },
+                color: "text.secondary",
+                whiteSpace: "nowrap",
+              }}
             >
-              Admin
+              {t("admin")}
             </Button>
             <GradientButton
               href="/submit-report"
-              sx={{ display: { xs: "none", sm: "inline-flex" } }}
+              sx={{ display: { xs: "none", sm: "inline-flex" }, whiteSpace: "nowrap" }}
             >
-              Report an incident
+              {t("report")}
             </GradientButton>
             <IconButton
-              aria-label="Open menu"
+              aria-label={t("openMenu")}
               onClick={() => setOpen(true)}
-              sx={{ display: { md: "none" }, border: 1, borderColor: "divider", borderRadius: 2.5 }}
+              sx={{ display: { lg: "none" }, border: 1, borderColor: "divider", borderRadius: 2.5 }}
             >
               <MenuRoundedIcon fontSize="small" />
             </IconButton>
@@ -118,12 +128,12 @@ function SiteHeader() {
       >
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
           <BrandMark size={32} />
-          <IconButton aria-label="Close menu" onClick={() => setOpen(false)}>
+          <IconButton aria-label={t("closeMenu")} onClick={() => setOpen(false)}>
             <CloseRoundedIcon />
           </IconButton>
         </Box>
         <List onClick={() => setOpen(false)}>
-          {[...NAV_ITEMS, { label: "Admin sign in", href: "/admin/login" }].map((item) => (
+          {[...NAV_ITEMS, { key: "adminSignIn", href: "/admin/login" } as const].map((item) => (
             <ListItemButton
               key={item.href}
               component={Link}
@@ -132,7 +142,7 @@ function SiteHeader() {
               sx={{ borderRadius: 2, mb: 0.5 }}
             >
               <ListItemText
-                primary={item.label}
+                primary={t(item.key)}
                 slotProps={{ primary: { sx: { fontWeight: 600 } } }}
               />
             </ListItemButton>
@@ -140,8 +150,9 @@ function SiteHeader() {
         </List>
         <Divider sx={{ my: 2 }} />
         <GradientButton href="/submit-report" fullWidth size="large" onClick={() => setOpen(false)}>
-          Report an incident
+          {t("report")}
         </GradientButton>
+        <InstallAppButton fullWidth size="large" sx={{ mt: 1.5 }} />
       </Drawer>
     </AppBar>
   );

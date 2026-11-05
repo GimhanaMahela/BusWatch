@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import type { ReactNode } from "react";
-import { SiteFooter, SiteHeader } from "@/components/organisms";
+import { OfflineOutbox, SiteFooter, SiteHeader } from "@/components/organisms";
 
 /** Chrome for public pages: sticky header, page content, footer. */
 function PublicLayout({ children }: { children: ReactNode }) {
@@ -11,6 +11,7 @@ function PublicLayout({ children }: { children: ReactNode }) {
         {children}
       </Box>
       <SiteFooter />
+      <OfflineOutbox />
     </Box>
   );
 }

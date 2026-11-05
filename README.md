@@ -4,6 +4,23 @@ Passengers report public transport incidents (reckless driving, overcharging, ha
 photos, videos and a map pin, get a receipt ID, and track what happens to their report. Admins
 review, escalate and resolve reports, keep internal notes, and see analytics such as repeat-offender buses.
 
+**Passenger features**
+
+- **English, සිංහල and தமிழ்**: switch in the header (remembered in a cookie). Receipts, PDF and status
+  emails follow the language the report was written in.
+- **QR sticker per bus**: admins print stickers from **QR stickers**; scanning `/r/<bus>` opens the form
+  with the bus number filled in, and the report is counted as "from a QR code".
+- **Works with a weak signal**: installable app (manifest + service worker). Unfinished forms, photos
+  included, are kept on the phone; reports sent while offline wait in an outbox and go out automatically.
+- **Commend a driver** (`/commend-a-driver`): a one-step form for praise, kept out of complaint statistics.
+- **Rate the outcome**: once a complaint is closed, the passenger rates it 1–5 on the tracking page
+  (linked from the resolution email).
+- **Share a tracking link**: phone share sheet or copy, with a preview image showing the current status.
+
+The admin **Analytics** page tracks the Phase 1 success metrics: form completion rate, return visits to
+tracking, average outcome rating, reports from QR codes and time to first response (anonymous daily
+counts, no personal data).
+
 | App           | What it is                                  |
 | ------------- | ------------------------------------------- |
 | [`api/`](api) | REST API: TypeScript, Express 5, PostgreSQL |

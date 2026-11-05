@@ -1,4 +1,6 @@
-import { Box, Card, Container, Link as MuiLink, Typography } from "@mui/material";
+import TranslateRoundedIcon from "@mui/icons-material/TranslateRounded";
+import { Alert, Box, Card, Container, Link as MuiLink, Typography } from "@mui/material";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import HeroBand from "./HeroBand";
 
@@ -15,11 +17,20 @@ interface ContentPageTemplateProps {
   sections: ContentSection[];
 }
 
-/** Long-form text page (policies, terms): hero, sticky table of contents and sections. */
+/**
+ * Long-form text page (policies, terms): hero, sticky table of contents and sections.
+ * The legal text itself is English; other languages get a note saying so.
+ */
 function ContentPageTemplate({ title, updated, intro, sections }: ContentPageTemplateProps) {
+  const t = useTranslations("legal");
+  const locale = useLocale();
   return (
     <>
-      <HeroBand eyebrow="Legal" title={title} subtitle={updated && `Last updated ${updated}`} />
+      <HeroBand
+        eyebrow={t("eyebrow")}
+        title={title}
+        subtitle={updated && t("updated", { date: updated })}
+      />
       <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
         <Box
           sx={{ display: "grid", gridTemplateColumns: { md: "240px 1fr" }, gap: { xs: 4, md: 6 } }}
@@ -31,7 +42,7 @@ function ContentPageTemplate({ title, updated, intro, sections }: ContentPageTem
           >
             <Box sx={{ position: "sticky", top: 100 }}>
               <Typography variant="overline" color="text.secondary">
-                On this page
+                {t("onThisPage")}
               </Typography>
               <Box
                 component="ol"
@@ -71,12 +82,22 @@ function ContentPageTemplate({ title, updated, intro, sections }: ContentPageTem
               "& strong": { color: "text.primary" },
             }}
           >
-            {intro && <Box sx={{ mb: 5 }}>{intro}</Box>}
+            {locale !== "en" && (
+              <Alert severity="info" icon={<TranslateRoundedIcon />} sx={{ mb: 4 }}>
+                {t("englishOnly")}
+              </Alert>
+            )}
+            {intro && (
+              <Box sx={{ mb: 5 }} lang="en">
+                {intro}
+              </Box>
+            )}
             {sections.map((s) => (
               <Box
                 component="section"
                 key={s.id}
                 id={s.id}
+                lang="en"
                 sx={{ scrollMarginTop: 96, "&:not(:first-of-type)": { mt: 5 } }}
               >
                 <Typography variant="h5" component="h2" sx={{ mb: 2 }}>

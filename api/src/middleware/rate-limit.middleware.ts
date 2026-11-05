@@ -20,3 +20,6 @@ export const submitLimiter = limiter(
 );
 export const loginLimiter = limiter(15, 10, "Too many login attempts. Please try again later.");
 export const trackLimiter = limiter(15, 60, "Too many lookups. Please try again later.");
+export const rateLimiter = limiter(15, 20, "Too many ratings. Please try again later.");
+// Generous: one page view sends at most a couple of events
+export const metricsLimiter = limiter(15, 300, "Too many requests. Please try again later.");

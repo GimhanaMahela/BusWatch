@@ -11,7 +11,7 @@ export { db };
 /** Empties every table before each test (the PGlite database itself is per test file). */
 export const useTestDatabase = () => {
   beforeEach(async () => {
-    await db.execute(sql`TRUNCATE admins, reports RESTART IDENTITY CASCADE`);
+    await db.execute(sql`TRUNCATE admins, reports, daily_metrics RESTART IDENTITY CASCADE`);
   });
 };
 

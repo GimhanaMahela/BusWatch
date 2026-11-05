@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 import SubmitReportView from "@/views/public/SubmitReportView";
 
-export const metadata: Metadata = {
-  title: "Report an incident",
-  description:
-    "Report a bus incident with photos, video and a map pin. You get a receipt ID to track it.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return { title: t("submitTitle"), description: t("submitDescription") };
+}
 
 export default function SubmitReportPage() {
-  return <SubmitReportView />;
+  // The form reads ?bus=&route=&src=qr from the QR sticker link
+  return (
+    <Suspense>
+      <SubmitReportView />
+    </Suspense>
+  );
 }

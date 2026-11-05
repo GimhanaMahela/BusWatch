@@ -1,4 +1,9 @@
-import type { ReportCategory, ReportStatus } from "@/constants/reportConstants";
+import type {
+  Language,
+  ReportCategory,
+  ReportStatus,
+  ReportType,
+} from "@/constants/reportConstants";
 
 export interface StatusChange {
   status: ReportStatus;
@@ -18,11 +23,12 @@ export interface InternalNote {
 export interface Report {
   id: string;
   receiptId: string;
+  type: ReportType;
   busNumber: string;
   routeNumber: string;
   busName?: string | null;
   category: ReportCategory;
-  location: string;
+  location: string | null;
   latitude?: number | null;
   longitude?: number | null;
   description: string;
@@ -31,38 +37,52 @@ export interface Report {
   incidentAt?: string;
   reportedAt: string;
   passengerEmail?: string;
+  language: Language;
+  source: "web" | "qr";
   status: ReportStatus;
   statusHistory?: StatusChange[];
   notes?: InternalNote[];
   resolvedAt?: string;
   pdfUrl?: string;
+  outcomeRating?: number | null;
+  outcomeFeedback?: string | null;
+  ratedAt?: string | null;
 }
 
 /** What the public tracking endpoint returns */
 export interface PublicReport {
   receiptId: string;
+  type: ReportType;
   status: ReportStatus;
   category: ReportCategory;
   busNumber: string;
   routeNumber: string;
-  location: string;
+  location: string | null;
   incidentAt?: string;
   reportedAt: string;
   resolvedAt?: string;
   timeline: { status: ReportStatus; note?: string; changedAt: string }[];
+  /** True once a complaint is closed: the passenger may rate how it was handled */
+  canRate: boolean;
+  rating: number | null;
+  feedback: string | null;
+  ratedAt: string | null;
 }
 
 export interface SubmitReportFields {
+  type?: ReportType;
   busNumber: string;
   routeNumber: string;
   busName?: string;
   category: ReportCategory | "";
   incidentAt?: string;
-  location: string;
+  location?: string;
   latitude?: number | "";
   longitude?: number | "";
   description: string;
   passengerEmail?: string;
+  language?: Language;
+  source?: "web" | "qr";
   website?: string;
 }
 
@@ -79,6 +99,7 @@ export interface ReportListParams {
   limit?: number | string;
   status?: string;
   category?: string;
+  type?: ReportType;
   q?: string;
   from?: string;
   to?: string;
@@ -103,4 +124,44 @@ export interface ReportStats {
   repeatOffenders: { busNumber: string; count: number; lastReportedAt: string }[];
   avgResolutionHours: number | null;
   resolvedWithTiming: number;
+  commendations: CommendationStats;
+  engagement: EngagementStats;
+}
+
+export interface CommendationStats {
+  total: number;
+  last30Days: number;
+  open: number;
+  byStatus: Record<ReportStatus, number>;
+  byCategory: { category: ReportCategory; count: number }[];
+  topBuses: { busNumber: string; busName?: string | null; count: number }[];
+}
+
+/** Phase 1 success metrics over the last `periodDays` days */
+export interface EngagementStats {
+  periodDays: number;
+  formStarts: number;
+  formSubmits: number;
+  formCompletionRate: number | null;
+  trackingViews: number;
+  trackingReturnViews: number;
+  qrScans: number;
+  qrReports: number;
+  webReports: number;
+  shares: number;
+  offlineQueued: number;
+  appInstalls: number;
+  avgFirstResponseHours: number | null;
+  respondedReports: number;
+  avgRating: number | null;
+  ratingsCount: number;
+  ratingDistribution: { rating: number; count: number }[];
+  recentFeedback: {
+    id: string;
+    receiptId: string;
+    rating: number;
+    feedback: string;
+    ratedAt: string;
+  }[];
+  byLanguage: Record<Language, number>;
 }

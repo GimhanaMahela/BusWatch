@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import cloudinary from "../config/cloudinary.js";
-import type { ReportStatus } from "../config/constants.js";
+import { RATEABLE_STATUSES, type ReportStatus, type ReportType } from "../config/constants.js";
 import type { UploadedMedia } from "../middleware/upload.middleware.js";
 import {
   addReportNote,
@@ -11,16 +11,19 @@ import {
   getReportStats,
   listReports,
   receiptIdExists,
+  setOutcomeRating,
   setReportPdfUrl,
   updateReportStatus as updateReportStatusRow,
   type ReportWithRelations,
 } from "../repositories/report.repository.js";
+import { incrementMetric } from "../repositories/metric.repository.js";
 import { sendReportReceiptEmail, sendStatusUpdateEmail } from "../services/email.service.js";
 import { generatePdfReceipt } from "../services/pdf-receipt.service.js";
 import { generateReceiptId } from "../utils/receipt-id.js";
 import {
   listReportsQuerySchema,
   type AddNoteInput,
+  type RateOutcomeInput,
   type SubmitReportInput,
   type UpdateStatusInput,
 } from "../validators/report.validator.js";
@@ -50,6 +53,15 @@ export interface PublicTimelineEntry {
   changedAt: Date;
 }
 
+const canRate = (type: ReportType, status: ReportStatus) =>
+  type === "complaint" && (RATEABLE_STATUSES as readonly ReportStatus[]).includes(status);
+
+/** Counters must never break a request: log and carry on. */
+const countEvent = (event: Parameters<typeof incrementMetric>[0]) =>
+  incrementMetric(event).catch((error: unknown) =>
+    console.error(`Failed to count ${event}:`, error instanceof Error ? error.message : error),
+  );
+
 /** What a passenger may see about their own report: no media, email or internal notes. */
 const toPublicView = (report: ReportWithRelations) => {
   const timeline: PublicTimelineEntry[] = report.statusHistory.map(
@@ -58,6 +70,7 @@ const toPublicView = (report: ReportWithRelations) => {
 
   return {
     receiptId: report.receiptId,
+    type: report.type,
     status: report.status,
     category: report.category,
     busNumber: report.busNumber,
@@ -67,6 +80,10 @@ const toPublicView = (report: ReportWithRelations) => {
     reportedAt: report.reportedAt,
     resolvedAt: report.resolvedAt,
     timeline,
+    canRate: canRate(report.type, report.status),
+    rating: report.outcomeRating,
+    feedback: report.outcomeFeedback,
+    ratedAt: report.ratedAt,
   };
 };
 
@@ -89,8 +106,9 @@ export const submitReport = async (
 
   const saved = await createReport(
     { ...fields, busNumber: busNumber.toUpperCase(), images, videos, receiptId },
-    "Report received.",
+    fields.type === "commendation" ? "Commendation received." : "Report received.",
   );
+  await countEvent(saved.type === "commendation" ? "commendation_submitted" : "report_submitted");
 
   // Everything below is best-effort: the report is already saved, so a PDF or
   // email failure must not turn into an error response (the passenger would resubmit).
@@ -118,7 +136,13 @@ export const submitReport = async (
   let emailSent = false;
   if (saved.passengerEmail && pdfBuffer) {
     try {
-      emailSent = await sendReportReceiptEmail(saved.passengerEmail, pdfBuffer, receiptId);
+      emailSent = await sendReportReceiptEmail({
+        toEmail: saved.passengerEmail,
+        receiptPdfBuffer: pdfBuffer,
+        receiptId,
+        type: saved.type,
+        language: saved.language,
+      });
     } catch (emailError) {
       console.error(
         "Failed to send receipt email:",
@@ -149,6 +173,28 @@ export const trackReport = async (req: Request<ReceiptParams>, res: Response) =>
   res.json(toPublicView(report));
 };
 
+// @desc    Rate how a closed report was handled (1–5, optional comment)
+// @route   POST /api/reports/track/:receiptId/rating
+// @access  Public (the receipt ID is the passenger's key)
+export const rateOutcome = async (
+  req: Request<ReceiptParams, object, RateOutcomeInput>,
+  res: Response,
+) => {
+  const report = await findReportByReceiptId(req.params.receiptId);
+  if (!report) {
+    res.status(404).json({ msg: "No report found with this Receipt ID." });
+    return;
+  }
+  if (!canRate(report.type, report.status)) {
+    res.status(409).json({ msg: "You can rate the outcome once your report has been closed." });
+    return;
+  }
+  await setOutcomeRating(report.id, req.body.rating, req.body.feedback);
+  const updated = await findReportById(report.id);
+  if (!updated) throw new Error("Report disappeared while saving a rating");
+  res.json(toPublicView(updated));
+};
+
 const parseDate = (value?: string): Date | null => {
   if (!value) return null;
   const date = new Date(value);
@@ -159,7 +205,9 @@ const parseDate = (value?: string): Date | null => {
 // @route   GET /api/reports?page&limit&status&category&q&from&to
 // @access  Private (Admin)
 export const getAllReports = async (req: Request, res: Response) => {
-  const { page, limit, status, category, q, from, to } = listReportsQuerySchema.parse(req.query);
+  const { page, limit, status, category, type, q, from, to } = listReportsQuerySchema.parse(
+    req.query,
+  );
 
   const toDate = parseDate(to);
   // Make "to" inclusive of the whole day when only a date is given
@@ -170,6 +218,7 @@ export const getAllReports = async (req: Request, res: Response) => {
     limit,
     status,
     category,
+    type,
     q: q || undefined,
     from: parseDate(from),
     to: toDate,
@@ -235,12 +284,14 @@ export const updateReportStatus = async (
   let emailSent = false;
   if (notifyPassenger && report.passengerEmail) {
     try {
-      emailSent = await sendStatusUpdateEmail(
-        report.passengerEmail,
-        report.receiptId,
+      emailSent = await sendStatusUpdateEmail({
+        toEmail: report.passengerEmail,
+        receiptId: report.receiptId,
         status,
         note,
-      );
+        type: report.type,
+        language: report.language,
+      });
     } catch (emailError) {
       console.error(
         "Failed to send status update email:",

@@ -56,3 +56,12 @@ export const addReportNote = (id: string, text: string) =>
 
 export const deleteReport = (id: string) =>
   call<{ msg: string }>(apiClient.delete(`/reports/${id}`));
+
+/** Public: the passenger rates how their closed report was handled */
+export const rateOutcome = (receiptId: string, rating: number, feedback = "") =>
+  call<PublicReport>(
+    apiClient.post(`/reports/track/${encodeURIComponent(receiptId.trim())}/rating`, {
+      rating,
+      feedback,
+    }),
+  );
