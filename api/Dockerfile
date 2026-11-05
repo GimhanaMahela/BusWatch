@@ -18,6 +18,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/api/dist ./api/dist
 COPY api/drizzle ./api/drizzle
+# Sinhala and Tamil fonts for PDF receipts
+COPY api/assets ./api/assets
 USER node
 EXPOSE 5000
 # Apply pending database migrations, then start the API

@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { REPORT_CATEGORIES, REPORT_STATUSES } from "../config/constants.js";
+import {
+  CATEGORIES_BY_TYPE,
+  LANGUAGES,
+  REPORT_CATEGORIES,
+  REPORT_SOURCES,
+  REPORT_STATUSES,
+  REPORT_TYPES,
+} from "../config/constants.js";
 
 // Multipart forms send every field as a string; blank means "not provided"
 const blankToUndefined = (value: unknown) =>
@@ -21,14 +28,22 @@ const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 export const submitReportSchema = z
   .object({
-    busNumber: requiredText("Bus Number"),
-    routeNumber: requiredText("Route Number"),
+    type: z.preprocess(
+      blankToUndefined,
+      z.enum(REPORT_TYPES, { error: "Invalid report type." }).default("complaint"),
+    ),
+    busNumber: requiredText("Bus Number").max(20, "Bus Number must be 20 characters or fewer."),
+    routeNumber: requiredText("Route Number").max(
+      60,
+      "Route Number must be 60 characters or fewer.",
+    ),
     busName: optionalText,
     category: z.preprocess(
       blankToUndefined,
       z.enum(REPORT_CATEGORIES, { error: "Invalid incident category." }).default("other"),
     ),
-    location: requiredText("Location"),
+    // Required for complaints (checked below); optional when commending a driver
+    location: optionalText,
     description: requiredText("Description").max(
       5000,
       "Description must be 5000 characters or fewer.",
@@ -48,6 +63,10 @@ export const submitReportSchema = z
     ),
     latitude: optionalNumber(-90, 90),
     longitude: optionalNumber(-180, 180),
+    // The passenger's site language: their receipt and later emails use it
+    language: z.preprocess(blankToUndefined, z.enum(LANGUAGES).catch("en").default("en")),
+    // "qr" when the form was opened from the QR sticker inside the bus
+    source: z.preprocess(blankToUndefined, z.enum(REPORT_SOURCES).catch("web").default("web")),
     // Honeypot: hidden from people, filled in by bots
     website: z.preprocess(
       blankToUndefined,
@@ -57,6 +76,14 @@ export const submitReportSchema = z
   .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
     error: "Invalid map coordinates.",
     path: ["latitude"],
+  })
+  .refine((data) => data.type === "commendation" || data.location !== undefined, {
+    error: "Location is required.",
+    path: ["location"],
+  })
+  .refine((data) => CATEGORIES_BY_TYPE[data.type].includes(data.category), {
+    error: "Invalid incident category.",
+    path: ["category"],
   });
 
 export type SubmitReportInput = z.infer<typeof submitReportSchema>;
@@ -69,6 +96,7 @@ export const listReportsQuerySchema = z.object({
     .optional()
     .catch(undefined),
   category: z.enum(REPORT_CATEGORIES).optional().catch(undefined),
+  type: z.enum(REPORT_TYPES).optional().catch(undefined),
   q: z.string().trim().optional().catch(undefined),
   from: z.string().optional().catch(undefined),
   to: z.string().optional().catch(undefined),
@@ -98,3 +126,19 @@ export const addNoteSchema = z.object({
 });
 
 export type AddNoteInput = z.infer<typeof addNoteSchema>;
+
+export const rateOutcomeSchema = z.object({
+  rating: z.coerce
+    .number({ error: "Choose a rating from 1 to 5." })
+    .int("Choose a rating from 1 to 5.")
+    .min(1, "Choose a rating from 1 to 5.")
+    .max(5, "Choose a rating from 1 to 5."),
+  feedback: z
+    .string()
+    .trim()
+    .max(1000, "Feedback must be 1000 characters or fewer.")
+    .optional()
+    .transform((feedback) => feedback || undefined),
+});
+
+export type RateOutcomeInput = z.infer<typeof rateOutcomeSchema>;

@@ -11,6 +11,9 @@ import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
 import PlayCircleRoundedIcon from "@mui/icons-material/PlayCircleRounded";
 import PublishedWithChangesRoundedIcon from "@mui/icons-material/PublishedWithChangesRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import StickyNote2RoundedIcon from "@mui/icons-material/StickyNote2Rounded";
 import {
@@ -19,11 +22,13 @@ import {
   Box,
   Button,
   Checkbox,
+  Chip,
   Dialog,
   FormControlLabel,
   Grid,
   IconButton,
   MenuItem,
+  Rating,
   TextField,
   Tooltip,
   Typography,
@@ -32,7 +37,13 @@ import { useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
-import { STATUSES, categoryLabel, type ReportStatus } from "@/constants/reportConstants";
+import {
+  STATUSES,
+  categoryLabel,
+  languageLabel,
+  type ReportStatus,
+} from "@/constants/reportConstants";
+import { busQuery } from "@/lib/busNumber";
 import useAuth from "@/hooks/useAuth";
 import { useAddReportNote, useReport, useUpdateReportStatus } from "@/hooks/useReportQueries";
 import { formatDateTime, timeAgo } from "@/lib/format";
@@ -260,6 +271,7 @@ function ReportDetailsView({ id }: { id: string }) {
     ...report.videos.map((url) => ({ kind: "video" as const, url })),
   ];
   const hasPin = report.latitude != null && report.longitude != null;
+  const commendation = report.type === "commendation";
 
   return (
     <>
@@ -295,6 +307,23 @@ function ReportDetailsView({ id }: { id: string }) {
           </Tooltip>
         </Box>
         <StatusChip status={report.status} />
+        {commendation && (
+          <Chip
+            icon={<ThumbUpAltRoundedIcon />}
+            label="Commendation"
+            color="success"
+            variant="outlined"
+            size="small"
+          />
+        )}
+        {report.source === "qr" && (
+          <Chip
+            icon={<QrCode2RoundedIcon />}
+            label="From QR sticker"
+            variant="outlined"
+            size="small"
+          />
+        )}
       </Box>
       <Typography color="text.secondary" sx={{ mb: 4 }}>
         {categoryLabel(report.category)} · reported {timeAgo(report.reportedAt)}
@@ -302,7 +331,51 @@ function ReportDetailsView({ id }: { id: string }) {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }} sx={{ display: "grid", gap: 3, alignContent: "start" }}>
-          <SectionPanel title="Incident" icon={<DescriptionRoundedIcon fontSize="small" />}>
+          {report.outcomeRating != null && (
+            <SectionPanel
+              title="Passenger's rating of the outcome"
+              subtitle={report.ratedAt ? `Rated ${timeAgo(report.ratedAt)}` : undefined}
+              icon={<StarRoundedIcon fontSize="small" />}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Rating value={report.outcomeRating} readOnly />
+                <Typography sx={{ fontWeight: 700 }}>{report.outcomeRating} / 5</Typography>
+              </Box>
+              {report.outcomeFeedback && (
+                <Typography
+                  sx={{
+                    mt: 1.5,
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: "action.hover",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {report.outcomeFeedback}
+                </Typography>
+              )}
+            </SectionPanel>
+          )}
+
+          <SectionPanel
+            title={commendation ? "Commendation" : "Incident"}
+            icon={
+              commendation ? (
+                <ThumbUpAltRoundedIcon fontSize="small" />
+              ) : (
+                <DescriptionRoundedIcon fontSize="small" />
+              )
+            }
+            action={
+              <Button
+                size="small"
+                startIcon={<QrCode2RoundedIcon />}
+                href={`/admin/qr-codes${busQuery(report.busNumber, report.routeNumber)}`}
+              >
+                Print QR sticker
+              </Button>
+            }
+          >
             <Typography sx={{ whiteSpace: "pre-line", lineHeight: 1.75 }}>
               {report.description}
             </Typography>
@@ -321,13 +394,17 @@ function ReportDetailsView({ id }: { id: string }) {
               <DetailRow label="Route">{report.routeNumber}</DetailRow>
               {report.busName && <DetailRow label="Bus name">{report.busName}</DetailRow>}
               <DetailRow label="Category">{categoryLabel(report.category)}</DetailRow>
-              <DetailRow label="Location">{report.location}</DetailRow>
+              <DetailRow label="Location">{report.location || "Not given"}</DetailRow>
               {report.incidentAt && (
                 <DetailRow label="Incident time">{formatDateTime(report.incidentAt)}</DetailRow>
               )}
               <DetailRow label="Reported">{formatDateTime(report.reportedAt)}</DetailRow>
               <DetailRow label="Passenger email">
                 {report.passengerEmail || "Not provided"}
+              </DetailRow>
+              <DetailRow label="Language">{languageLabel(report.language)}</DetailRow>
+              <DetailRow label="Sent from">
+                {report.source === "qr" ? "QR sticker in the bus" : "Website"}
               </DetailRow>
             </Box>
             {hasPin && (

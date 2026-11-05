@@ -45,7 +45,8 @@ const theme = createTheme({
   },
   shape: { borderRadius: 12 },
   typography: {
-    fontFamily: "var(--font-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    fontFamily:
+      "var(--font-sans), var(--font-sinhala), var(--font-tamil), system-ui, -apple-system, 'Segoe UI', Roboto, 'Iskoola Pota', 'Latha', sans-serif",
     h1: { fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.05 },
     h2: { fontWeight: 800, letterSpacing: "-0.025em", lineHeight: 1.1 },
     h3: { fontWeight: 800, letterSpacing: "-0.02em" },
@@ -64,6 +65,9 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: { WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
+        // Sinhala and Tamil vowel signs sit above and below the line: tight headings clip them
+        "html:is(:lang(si), :lang(ta)) :is(h1, h2, h3, h4, h5, h6, .MuiTypography-h1, .MuiTypography-h2, .MuiTypography-h3, .MuiTypography-h4)":
+          { letterSpacing: 0, lineHeight: 1.35 },
         "::selection": { background: alpha(brand.blue, 0.2) },
       },
     },

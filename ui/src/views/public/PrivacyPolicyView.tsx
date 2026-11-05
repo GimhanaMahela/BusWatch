@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { ContentPageTemplate, type ContentSection } from "@/components/templates";
 
 const SECTIONS: ContentSection[] = [
@@ -19,8 +20,20 @@ const SECTIONS: ContentSection[] = [
         <ul>
           <li>Email address (optional, for report receipts)</li>
           <li>Location data (for incident reports)</li>
+          <li>The language you used the site in, so emails and receipts reach you in it</li>
+          <li>
+            Your rating of how a report was handled and any comment you add (optional, linked to
+            that report only)
+          </li>
           <li>Usage Data</li>
         </ul>
+        <h3>Anonymous usage counts</h3>
+        <p>
+          To learn whether BusWatch works for passengers, we count a few events per day, for example
+          how many report forms were started, how many tracking pages were opened, and how many
+          people arrived by scanning the QR sticker in a bus. These are daily totals only: they
+          contain no identifiers, no IP address and nothing about who you are.
+        </p>
         <h3>Usage data</h3>
         <p>
           We may also collect information about how the Service is accessed and used (&quot;Usage
@@ -36,9 +49,21 @@ const SECTIONS: ContentSection[] = [
           Service.
         </p>
         <p>
+          We set one cookie of our own, <strong>NEXT_LOCALE</strong>, which remembers the language
+          you chose (English, Sinhala or Tamil) for a year.
+        </p>
+        <p>
           You can instruct your browser to refuse all cookies or to indicate when a cookie is being
           sent. If you do not accept cookies, you may not be able to use some portions of our
           Service.
+        </p>
+        <h3>Data kept on your device</h3>
+        <p>
+          If you install BusWatch or lose your connection while writing a report, the unfinished
+          report (including any photos and videos you attached) is stored in your browser on your
+          own device until it is sent or you start over. We cannot see it until you send it. You can
+          remove it at any time by choosing &quot;Start over&quot; on the form or by clearing the
+          site data in your browser.
         </p>
       </>
     ),
@@ -178,10 +203,11 @@ const SECTIONS: ContentSection[] = [
 ];
 
 function PrivacyPolicyView() {
+  const t = useTranslations("meta");
   return (
     <ContentPageTemplate
-      title="Privacy policy"
-      updated="May 29, 2025"
+      title={t("privacyTitle")}
+      updated="November 5, 2026"
       intro={
         <p>
           BusWatch (&quot;us&quot;, &quot;we&quot;, or &quot;our&quot;) operates the BusWatch

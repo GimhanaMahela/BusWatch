@@ -3,14 +3,14 @@
 import AltRouteRoundedIcon from "@mui/icons-material/AltRouteRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import CloudOffRoundedIcon from "@mui/icons-material/CloudOffRounded";
 import CommuteRoundedIcon from "@mui/icons-material/CommuteRounded";
-import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DirectionsBusRoundedIcon from "@mui/icons-material/DirectionsBusRounded";
-import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import EmailRoundedIcon from "@mui/icons-material/EmailRounded";
+import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import {
   Alert,
@@ -20,7 +20,6 @@ import {
   Container,
   Divider,
   Grid,
-  IconButton,
   InputAdornment,
   LinearProgress,
   Snackbar,
@@ -28,28 +27,44 @@ import {
   StepLabel,
   Stepper,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import Link from "next/link";
-import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { toApiError } from "@/api/apiClient";
-import { submitReport } from "@/api/reportApi";
+import { trackEvent } from "@/api/metricsApi";
 import { GradientButton } from "@/components/atoms";
-import { DetailRow, LocationPicker, MediaDropzone } from "@/components/molecules";
+import { CategoryPicker, DetailRow, LocationPicker, MediaDropzone } from "@/components/molecules";
 import type { LatLng } from "@/components/molecules/LocationPicker";
-import { CATEGORIES, categoryLabel, type ReportCategory } from "@/constants/reportConstants";
+import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
+import { CATEGORIES, type ComplaintCategory, type Language } from "@/constants/reportConstants";
+import useFormDraft from "@/hooks/useFormDraft";
+import useOnlineStatus from "@/hooks/useOnlineStatus";
+import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
+import { submitOrQueue } from "@/lib/offlineSubmit";
+import { rememberReceipt } from "@/lib/trackingHistory";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // Must match the backend upload limit
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 2;
 const MAX_DESCRIPTION = 2000;
+const DRAFT_KEY = "submit-report";
 
 interface ReportForm {
   busNumber: string;
   routeNumber: string;
   busName: string;
-  category: ReportCategory | "";
+  category: ComplaintCategory | "";
   incidentAt: string;
   location: string;
   description: string;
@@ -69,18 +84,34 @@ const EMPTY_FORM: ReportForm = {
   website: "", // Honeypot: hidden from people, bots tend to fill it in
 };
 
-const STEPS = [
-  { label: "The bus", hint: "Which bus, and what kind of incident" },
-  { label: "What happened", hint: "When, where and the details" },
-  { label: "Evidence", hint: "Photos, videos and your email" },
-  { label: "Review", hint: "Check and send" },
-];
-
-interface Receipt {
-  receiptId: string;
-  pdfUrl: string | null;
-  emailSent: boolean;
+interface Draft {
+  form: ReportForm;
+  coords: LatLng | null;
+  images: File[];
+  videos: File[];
+  step: number;
+  source: "web" | "qr";
 }
+
+// A bus and route number alone (e.g. pre-filled from a QR code) isn't worth restoring later
+const isEmptyDraft = ({ form, images, videos, coords }: Draft) =>
+  !form.category &&
+  !form.description.trim() &&
+  !form.location.trim() &&
+  !form.incidentAt &&
+  !form.passengerEmail.trim() &&
+  !coords &&
+  images.length === 0 &&
+  videos.length === 0;
+
+const STEPS = [
+  { label: "stepBus", hint: "stepBusHint" },
+  { label: "stepIncident", hint: "stepIncidentHint" },
+  { label: "stepEvidence", hint: "stepEvidenceHint" },
+  { label: "stepReview", hint: "stepReviewHint" },
+] as const;
+
+type Result = { kind: "sent"; receipt: Receipt } | { kind: "queued" };
 
 // Value for <input type="datetime-local" max=...> in the user's local time
 const nowForDateTimeInput = () => {
@@ -93,111 +124,72 @@ const startIcon = (icon: ReactNode) => ({
   input: { startAdornment: <InputAdornment position="start">{icon}</InputAdornment> },
 });
 
-function SuccessPanel({ receipt, onReset }: { receipt: Receipt; onReset: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(receipt.receiptId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard unavailable; the ID is still on screen to copy by hand
-    }
-  };
-
-  return (
-    <Container maxWidth="sm" sx={{ py: { xs: 6, md: 10 } }}>
-      <Card sx={{ p: { xs: 3, sm: 5 }, textAlign: "center" }}>
-        <Box
-          sx={{
-            width: 72,
-            height: 72,
-            mx: "auto",
-            borderRadius: "50%",
-            display: "grid",
-            placeItems: "center",
-            color: "success.main",
-            bgcolor: "rgba(var(--mui-palette-success-mainChannel) / 0.12)",
-          }}
-        >
-          <TaskAltRoundedIcon sx={{ fontSize: 40 }} />
-        </Box>
-        <Typography variant="h4" component="h1" sx={{ mt: 3 }}>
-          Report received. Thank you.
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Save your receipt ID to check on your report later.
-          {receipt.emailSent && " We've also emailed you a copy."}
-        </Typography>
-
-        <Box
-          sx={{
-            mt: 4,
-            p: 2.5,
-            borderRadius: 4,
-            border: "2px dashed",
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 1,
-          }}
-        >
-          <Typography
-            sx={{
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              fontWeight: 800,
-              fontSize: { xs: "1.4rem", sm: "1.8rem" },
-              letterSpacing: 1,
-            }}
-          >
-            {receipt.receiptId}
-          </Typography>
-          <Tooltip title={copied ? "Copied!" : "Copy receipt ID"}>
-            <IconButton aria-label="Copy receipt ID" onClick={() => void copy()}>
-              {copied ? <CheckRoundedIcon color="success" /> : <ContentCopyRoundedIcon />}
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        <Box sx={{ display: "flex", gap: 1.5, mt: 4, justifyContent: "center", flexWrap: "wrap" }}>
-          <GradientButton href={`/track/${encodeURIComponent(receipt.receiptId)}`} size="large">
-            Track this report
-          </GradientButton>
-          {receipt.pdfUrl && (
-            <Button
-              variant="outlined"
-              size="large"
-              startIcon={<DownloadRoundedIcon />}
-              href={receipt.pdfUrl}
-              download={`BusWatch_Receipt_${receipt.receiptId}.pdf`}
-              target="_blank"
-              rel="noopener"
-            >
-              Receipt PDF
-            </Button>
-          )}
-        </Box>
-        <Button onClick={onReset} sx={{ mt: 2 }}>
-          Report another incident
-        </Button>
-      </Card>
-    </Container>
-  );
-}
-
 function SubmitReportView() {
+  const t = useTranslations("submit");
+  const tc = useTranslations("common");
+  const tCategory = useTranslations("categories");
+  const tMedia = useTranslations("media");
+  const locale = useLocale() as Language;
+  const online = useOnlineStatus();
+
+  // Opened from the QR sticker inside a bus (/r/NB-1234 → ?bus=NB-1234&src=qr)
+  const searchParams = useSearchParams();
+  const qrBus = parseBusNumber(searchParams.get("bus"));
+  const qrRoute = parseRoute(searchParams.get("route"));
+  const fromQr = searchParams.get("src") === "qr";
+  const prefilled = { ...EMPTY_FORM, busNumber: qrBus, routeNumber: qrRoute };
+
   const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formData, setFormData] = useState<ReportForm>(prefilled);
   const [coords, setCoords] = useState<LatLng | null>(null);
   const [images, setImages] = useState<File[]>([]);
   const [videos, setVideos] = useState<File[]>([]);
+  const [source, setSource] = useState<"web" | "qr">(fromQr ? "qr" : "web");
   const [categoryError, setCategoryError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+
+  // Success metrics: QR scans, and how many people start the form (vs. finish it)
+  const started = useRef(false);
+  const markStarted = () => {
+    if (started.current) return;
+    started.current = true;
+    trackEvent("report_form_started");
+  };
+  // Once per bus per session, so switching between the report and commend forms counts once
+  useEffect(() => {
+    if (fromQr && qrBus && isNewQrScan(qrBus)) trackEvent("qr_scan");
+  }, [fromQr, qrBus]);
+
+  const draft = useMemo<Draft>(
+    () => ({ form: formData, coords, images, videos, step, source }),
+    [formData, coords, images, videos, step, source],
+  );
+  const {
+    restoredAt,
+    discard,
+    dismissNotice: dismissDraftNotice,
+  } = useFormDraft<Draft>({
+    key: DRAFT_KEY,
+    value: draft,
+    isEmpty: isEmptyDraft,
+    onRestore: (saved) => {
+      // Scanning the sticker in a different bus starts a fresh report
+      if (qrBus && saved.form.busNumber && saved.form.busNumber !== qrBus) return false;
+      setFormData({ ...EMPTY_FORM, ...saved.form, busNumber: saved.form.busNumber || qrBus });
+      setCoords(saved.coords);
+      setImages(saved.images);
+      setVideos(saved.videos);
+      setStep(Math.min(Math.max(saved.step, 0), STEPS.length - 1));
+      setSource(fromQr ? "qr" : saved.source);
+      started.current = true; // a restored draft was already counted as started
+      return true;
+    },
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    markStarted();
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -210,30 +202,32 @@ function SubmitReportView() {
     setSubmitting(true);
     setErrorText("");
     try {
-      const data = await submitReport(
+      const outcome = await submitOrQueue(
         {
           ...formData,
+          type: "complaint",
           // datetime-local has no timezone; send an unambiguous ISO timestamp
           incidentAt: formData.incidentAt ? new Date(formData.incidentAt).toISOString() : "",
           latitude: coords ? coords.lat : "",
           longitude: coords ? coords.lng : "",
+          language: locale,
+          source,
         },
         images,
         videos,
       );
-      setReceipt({
-        receiptId: data.receiptId,
-        pdfUrl: data.pdfUrl,
-        emailSent: Boolean(data.emailSent),
-      });
+      await discard();
+      if (outcome.kind === "sent") {
+        const { receiptId, pdfUrl, emailSent } = outcome.response;
+        rememberReceipt(receiptId);
+        setResult({ kind: "sent", receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent) } });
+      } else {
+        setResult({ kind: "queued" });
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
       const error = toApiError(caught);
-      setErrorText(
-        (error.errors && error.errors.join(" ")) ||
-          error.message ||
-          "Failed to submit report. Please try again.",
-      );
+      setErrorText(error.errors?.join(" ") || error.message || t("failed"));
     } finally {
       setSubmitting(false);
     }
@@ -251,15 +245,22 @@ function SubmitReportView() {
   };
 
   const reset = () => {
-    setFormData(EMPTY_FORM);
+    void discard();
+    setFormData(prefilled);
     setCoords(null);
     setImages([]);
     setVideos([]);
-    setReceipt(null);
+    setResult(null);
     setStep(0);
+    started.current = false;
   };
 
-  if (receipt) return <SuccessPanel receipt={receipt} onReset={reset} />;
+  if (result?.kind === "sent") {
+    return <SubmittedPanel receipt={result.receipt} type="complaint" onReset={reset} />;
+  }
+  if (result?.kind === "queued") return <QueuedPanel type="complaint" onReset={reset} />;
+
+  const commendHref = `/commend-a-driver${busQuery(formData.busNumber || qrBus, formData.routeNumber, fromQr ? "qr" : undefined)}`;
 
   const stepContent = [
     // 0: The bus
@@ -269,120 +270,60 @@ function SubmitReportView() {
           <TextField
             fullWidth
             required
-            autoFocus
-            label="Bus number"
+            autoFocus={!qrBus}
+            label={t("busNumber")}
             placeholder="NE-9999"
             name="busNumber"
             value={formData.busNumber}
             onChange={handleChange}
-            slotProps={startIcon(<DirectionsBusRoundedIcon color="action" />)}
+            slotProps={{
+              ...startIcon(<DirectionsBusRoundedIcon color="action" />),
+              htmlInput: { maxLength: 20 },
+            }}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             required
-            label="Route"
-            placeholder="08 or Colombo–Matale"
+            autoFocus={Boolean(qrBus)}
+            label={t("route")}
+            placeholder={t("routePlaceholder")}
             name="routeNumber"
             value={formData.routeNumber}
             onChange={handleChange}
-            slotProps={startIcon(<AltRouteRoundedIcon color="action" />)}
+            slotProps={{
+              ...startIcon(<AltRouteRoundedIcon color="action" />),
+              htmlInput: { maxLength: 60 },
+            }}
           />
         </Grid>
       </Grid>
       <TextField
         fullWidth
-        label="Bus name (optional)"
+        label={t("busName")}
         placeholder="Nuwantha Express"
         name="busName"
         value={formData.busName}
         onChange={handleChange}
         slotProps={startIcon(<CommuteRoundedIcon color="action" />)}
       />
-      <Box>
-        <Typography id="category-label" variant="subtitle2" sx={{ mb: 1 }}>
-          What happened? *
-        </Typography>
-        <Box
-          role="radiogroup"
-          aria-labelledby="category-label"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1 }}
-        >
-          {CATEGORIES.map((c) => {
-            const selected = formData.category === c.value;
-            return (
-              <Box
-                key={c.value}
-                component="button"
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => {
-                  setFormData({ ...formData, category: c.value });
-                  setCategoryError(false);
-                }}
-                sx={{
-                  all: "unset",
-                  boxSizing: "border-box",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.25,
-                  px: 1.75,
-                  py: 1.4,
-                  borderRadius: 2.5,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                  border: 1.5,
-                  borderStyle: "solid",
-                  borderColor: selected ? "primary.main" : "divider",
-                  bgcolor: selected
-                    ? "rgba(var(--mui-palette-primary-mainChannel) / 0.08)"
-                    : "background.paper",
-                  color: selected ? "primary.main" : "text.primary",
-                  transition: "border-color 0.15s, background-color 0.15s",
-                  "&:hover": { borderColor: "primary.main" },
-                  "&:focus-visible": {
-                    outline: "3px solid",
-                    outlineColor: "primary.light",
-                    outlineOffset: 2,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    border: 2,
-                    borderStyle: "solid",
-                    borderColor: selected ? "primary.main" : "text.disabled",
-                    display: "grid",
-                    placeItems: "center",
-                    "&::after": selected
-                      ? {
-                          content: '""',
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          bgcolor: "primary.main",
-                        }
-                      : undefined,
-                  }}
-                />
-                {c.label}
-              </Box>
-            );
-          })}
-        </Box>
-        {categoryError && (
-          <Typography variant="body2" color="error" sx={{ mt: 1 }} role="alert">
-            Choose the kind of incident.
-          </Typography>
-        )}
-      </Box>
+      <CategoryPicker
+        label={t("categoryQuestion")}
+        options={CATEGORIES.map((c) => ({ value: c.value, label: tCategory(c.value) }))}
+        value={formData.category}
+        onChange={(category) => {
+          markStarted();
+          setFormData({ ...formData, category });
+          setCategoryError(false);
+        }}
+        error={categoryError ? t("chooseCategory") : undefined}
+      />
+      <Typography variant="body2" color="text.secondary">
+        {t.rich("commendInstead", {
+          link: (chunks) => <Link href={commendHref}>{chunks}</Link>,
+        })}
+      </Typography>
     </Box>,
 
     // 1: What happened
@@ -392,11 +333,11 @@ function SubmitReportView() {
           <TextField
             fullWidth
             type="datetime-local"
-            label="When did it happen?"
+            label={t("when")}
             name="incidentAt"
             value={formData.incidentAt}
             onChange={handleChange}
-            helperText="Leave empty if it just happened"
+            helperText={t("whenHelp")}
             slotProps={{ htmlInput: { max: nowForDateTimeInput() }, inputLabel: { shrink: true } }}
           />
         </Grid>
@@ -404,8 +345,8 @@ function SubmitReportView() {
           <TextField
             fullWidth
             required
-            label="Where?"
-            placeholder="Ambepussa Junction"
+            label={t("where")}
+            placeholder={t("wherePlaceholder")}
             name="location"
             value={formData.location}
             onChange={handleChange}
@@ -419,8 +360,8 @@ function SubmitReportView() {
         required
         multiline
         minRows={5}
-        label="Describe what happened"
-        placeholder="What did you see? Who was involved? Anything that helps us follow up."
+        label={t("description")}
+        placeholder={t("descriptionPlaceholder")}
         name="description"
         value={formData.description}
         onChange={handleChange}
@@ -436,7 +377,7 @@ function SubmitReportView() {
     <Box key="evidence" sx={{ display: "grid", gap: 2.5 }}>
       <MediaDropzone
         kind="image"
-        label="Add photos"
+        label={tMedia("addPhotos")}
         files={images}
         onChange={setImages}
         max={MAX_IMAGES}
@@ -445,7 +386,7 @@ function SubmitReportView() {
       />
       <MediaDropzone
         kind="video"
-        label="Add videos"
+        label={tMedia("addVideos")}
         files={videos}
         onChange={setVideos}
         max={MAX_VIDEOS}
@@ -455,11 +396,11 @@ function SubmitReportView() {
       <TextField
         fullWidth
         type="email"
-        label="Your email (optional)"
+        label={t("email")}
         name="passengerEmail"
         value={formData.passengerEmail}
         onChange={handleChange}
-        helperText="We'll send your receipt and status updates here. Never shown publicly."
+        helperText={t("emailHelp")}
         slotProps={startIcon(<EmailRoundedIcon color="action" />)}
       />
       {/* Honeypot field: invisible to people and screen readers */}
@@ -478,34 +419,37 @@ function SubmitReportView() {
     // 3: Review
     <Box key="review">
       <Box sx={{ borderRadius: 3, border: 1, borderColor: "divider", px: 2, py: 1 }}>
-        <DetailRow label="Bus">
+        <DetailRow label={t("reviewBus")}>
           {formData.busNumber}
           {formData.busName && ` · ${formData.busName}`}
         </DetailRow>
-        <DetailRow label="Route">{formData.routeNumber}</DetailRow>
-        <DetailRow label="Category">{categoryLabel(formData.category)}</DetailRow>
-        <DetailRow label="When">
-          {formData.incidentAt ? new Date(formData.incidentAt).toLocaleString() : "Just now"}
+        <DetailRow label={t("reviewRoute")}>{formData.routeNumber}</DetailRow>
+        <DetailRow label={t("reviewCategory")}>
+          {formData.category ? tCategory(formData.category) : ""}
         </DetailRow>
-        <DetailRow label="Where">
+        <DetailRow label={t("reviewWhen")}>
+          {formData.incidentAt ? new Date(formData.incidentAt).toLocaleString() : t("justNow")}
+        </DetailRow>
+        <DetailRow label={t("reviewWhere")}>
           {formData.location}
-          {coords && " (map pin attached)"}
+          {coords && ` ${t("mapPinAttached")}`}
         </DetailRow>
-        <DetailRow label="Evidence">
-          {images.length} photo{images.length === 1 ? "" : "s"}, {videos.length} video
-          {videos.length === 1 ? "" : "s"}
+        <DetailRow label={t("reviewEvidence")}>
+          {t("evidenceCount", { photos: images.length, videos: videos.length })}
         </DetailRow>
-        <DetailRow label="Receipt email">{formData.passengerEmail || "None"}</DetailRow>
+        <DetailRow label={t("reviewEmail")}>{formData.passengerEmail || t("none")}</DetailRow>
       </Box>
       <Typography variant="subtitle2" sx={{ mt: 2.5, mb: 0.5 }}>
-        Description
+        {t("reviewDescription")}
       </Typography>
       <Typography color="text.secondary" sx={{ whiteSpace: "pre-line" }}>
         {formData.description}
       </Typography>
       <Alert severity="info" icon={<LockRoundedIcon />} sx={{ mt: 3 }}>
-        By sending this report you agree to our <Link href="/terms-of-service">terms</Link> and{" "}
-        <Link href="/privacy-policy">privacy policy</Link>.
+        {t.rich("consent", {
+          terms: (chunks) => <Link href="/terms-of-service">{chunks}</Link>,
+          privacy: (chunks) => <Link href="/privacy-policy">{chunks}</Link>,
+        })}
       </Alert>
     </Box>,
   ];
@@ -518,13 +462,13 @@ function SubmitReportView() {
         <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ position: { md: "sticky" }, top: { md: 104 } }}>
             <Typography variant="overline" color="primary" component="p">
-              New report
+              {t("eyebrow")}
             </Typography>
             <Typography variant="h3" component="h1" sx={{ fontSize: { xs: "2rem", md: "2.4rem" } }}>
-              Report an incident
+              {t("title")}
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 1.5 }}>
-              It takes about two minutes. You don&apos;t need an account.
+              {t("subtitle")}
             </Typography>
             <Stepper
               activeStep={step}
@@ -536,11 +480,11 @@ function SubmitReportView() {
                   <StepLabel
                     optional={
                       <Typography variant="caption" color="text.secondary">
-                        {s.hint}
+                        {t(s.hint)}
                       </Typography>
                     }
                   >
-                    {s.label}
+                    {t(s.label)}
                   </StepLabel>
                 </Step>
               ))}
@@ -549,6 +493,32 @@ function SubmitReportView() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 8 }}>
+          <Box sx={{ display: "grid", gap: 1.5, mb: 2, "&:empty": { display: "none" } }}>
+            {!online && (
+              <Alert severity="warning" icon={<CloudOffRoundedIcon />}>
+                {t("offlineBanner")}
+              </Alert>
+            )}
+            {restoredAt && (
+              <Alert
+                severity="info"
+                icon={<HistoryRoundedIcon />}
+                onClose={dismissDraftNotice}
+                action={
+                  <Button color="inherit" size="small" onClick={reset}>
+                    {t("discardDraft")}
+                  </Button>
+                }
+              >
+                {t("draftRestored")}
+              </Alert>
+            )}
+            {fromQr && qrBus && step === 0 && !restoredAt && (
+              <Alert severity="success" icon={<QrCode2RoundedIcon />}>
+                {t("qrBanner", { bus: qrBus })}
+              </Alert>
+            )}
+          </Box>
           <Card sx={{ overflow: "hidden" }}>
             <LinearProgress
               variant="determinate"
@@ -557,10 +527,10 @@ function SubmitReportView() {
             />
             <Box component="form" onSubmit={handleStepSubmit} sx={{ p: { xs: 2.5, sm: 4 } }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                Step {step + 1} of {STEPS.length}
+                {t("stepOf", { current: step + 1, total: STEPS.length })}
               </Typography>
               <Typography variant="h5" component="h2" sx={{ mb: 3 }}>
-                {STEPS[step]?.label}
+                {t(STEPS[step]?.label ?? "stepBus")}
               </Typography>
 
               {stepContent[step]}
@@ -573,7 +543,7 @@ function SubmitReportView() {
                   disabled={step === 0 || submitting}
                   sx={{ visibility: step === 0 ? "hidden" : "visible" }}
                 >
-                  Back
+                  {tc("back")}
                 </Button>
                 <GradientButton
                   type="submit"
@@ -581,7 +551,7 @@ function SubmitReportView() {
                   loading={submitting}
                   endIcon={last ? <TaskAltRoundedIcon /> : <ArrowForwardRoundedIcon />}
                 >
-                  {last ? "Send report" : "Continue"}
+                  {last ? t("send") : tc("continue")}
                 </GradientButton>
               </Box>
             </Box>

@@ -1,11 +1,12 @@
 import { Router } from "express";
 import * as reportController from "../controllers/report.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
-import { submitLimiter, trackLimiter } from "../middleware/rate-limit.middleware.js";
+import { rateLimiter, submitLimiter, trackLimiter } from "../middleware/rate-limit.middleware.js";
 import { reportMediaUpload } from "../middleware/upload.middleware.js";
 import { validateBody, validateUuidParam } from "../middleware/validate.middleware.js";
 import {
   addNoteSchema,
+  rateOutcomeSchema,
   submitReportSchema,
   updateStatusSchema,
 } from "../validators/report.validator.js";
@@ -22,6 +23,12 @@ router.post(
   reportController.submitReport,
 );
 router.get("/track/:receiptId", trackLimiter, reportController.trackReport);
+router.post(
+  "/track/:receiptId/rating",
+  rateLimiter,
+  validateBody(rateOutcomeSchema),
+  reportController.rateOutcome,
+);
 
 // --- Admin --- (specific paths stay above "/:id" so they are not treated as an ID)
 router.get("/", requireAuth, reportController.getAllReports);

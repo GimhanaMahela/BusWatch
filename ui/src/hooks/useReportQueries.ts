@@ -8,6 +8,7 @@ import {
   getAllReports,
   getReportById,
   getReportStats,
+  rateOutcome,
   trackReport,
   updateReportStatus,
 } from "@/api/reportApi";
@@ -45,6 +46,16 @@ export const useTrackedReport = (receiptId: string | undefined) =>
     enabled: !!receiptId,
     retry: false, // a 404 means "no such receipt", not a transient failure
   });
+
+/** Public: the passenger rates the outcome; the tracking page updates in place. */
+export const useRateOutcome = (receiptId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { rating: number; feedback: string }) =>
+      rateOutcome(receiptId, input.rating, input.feedback),
+    onSuccess: (report) => queryClient.setQueryData(queryKeys.tracking(receiptId), report),
+  });
+};
 
 export const useAdmins = (enabled: boolean) =>
   useQuery({ queryKey: queryKeys.admins, queryFn: listAdmins, enabled });

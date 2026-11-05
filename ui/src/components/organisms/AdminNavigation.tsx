@@ -7,6 +7,7 @@ import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import {
   AppBar,
   Avatar,
@@ -42,6 +43,12 @@ const NAV_ITEMS = [
     href: "/admin/analytics",
     icon: <BarChartRoundedIcon />,
     match: ["/admin/analytics"],
+  },
+  {
+    label: "QR stickers",
+    href: "/admin/qr-codes",
+    icon: <QrCode2RoundedIcon />,
+    match: ["/admin/qr-codes"],
   },
 ];
 
@@ -163,6 +170,7 @@ function AdminNavigation() {
         position="sticky"
         sx={{
           display: { md: "none" },
+          displayPrint: "none",
           borderBottom: 1,
           borderColor: "divider",
           bgcolor: "rgba(var(--mui-palette-background-defaultChannel) / 0.8)",
@@ -200,6 +208,7 @@ function AdminNavigation() {
         component="aside"
         sx={{
           display: { xs: "none", md: "block" },
+          displayPrint: "none",
           width: SIDEBAR_WIDTH,
           flexShrink: 0,
           position: "sticky",

@@ -29,8 +29,10 @@ api/
 │   ├── controllers/          # Request/response handling           → <entity>.controller.ts
 │   ├── middleware/           # Express middleware                  → <name>.middleware.ts
 │   ├── services/             # Side effects: email, PDF, startup   → <name>.service.ts
+│   ├── i18n/                 # Email and PDF text in English, Sinhala and Tamil
 │   ├── utils/                # Small pure helpers                  → <name>.ts
 │   └── types/                # Global type augmentation (e.g. req.admin)
+├── assets/fonts/             # Noto Sans Sinhala/Tamil for PDF receipts (OFL; shipped in Docker and Vercel)
 ├── drizzle/                  # Generated SQL migrations (commit them; never edit applied ones)
 ├── drizzle.config.ts         # drizzle-kit settings
 └── tests/                    # Vitest + Supertest API tests on PGlite (in-process PostgreSQL)
@@ -66,7 +68,8 @@ A request goes `routes → middleware (auth, rate limit, upload, validateBody) �
 ```
 ui/
 ├── next.config.ts            # Loads the root .env, /api rewrite, standalone output
-├── public/                   # Static files (hero image, icons, manifest)
+├── messages/                 # en.json, si.json, ta.json: all public UI text (next-intl)
+├── public/                   # Static files (hero image, icons, manifest, sw.js service worker)
 └── src/
     ├── app/                  # Routes only: layouts, page.tsx files, metadata
     │   ├── layout.tsx        # <html>, font, colour-scheme script, MUI cache provider
@@ -76,6 +79,7 @@ ui/
     ├── views/                # Screen components rendered by page.tsx → <Name>View.tsx
     │   ├── public/           # Home, Submit, Track, About, Privacy, Terms
     │   └── admin/            # Login, Dashboard, Report details, Analytics
+    ├── i18n/                 # Locale cookie / Accept-Language negotiation, next-intl request config
     ├── api/                  # HTTP calls, one file per resource → <resource>Api.ts; apiClient.ts is shared
     ├── hooks/                # useAuth, useReportQueries (TanStack Query hooks + query keys), useIsClient
     ├── lib/                  # queryClient, tokenStore (admin token in localStorage), format helpers
@@ -140,10 +144,28 @@ state (form fields, dialogs) stays in `useState`.
 - Colours come from the theme (`primary.main`) or its CSS variables
   (`rgba(var(--mui-palette-primary-mainChannel) / 0.1)`), so both colour schemes work.
 
+**Languages (next-intl).** The public site is in English, Sinhala and Tamil. The language comes from
+the `NEXT_LOCALE` cookie, else `Accept-Language`; URLs have no locale prefix, so emailed links and QR
+stickers work in every language. Reading the cookie makes public pages render per request rather than
+being prerendered. Text lives in `ui/messages/*.json`; keys are type-checked against `en.json`
+(`types/next-intl.d.ts`) and `i18n/messages.test.ts` fails if a translation is missing or drops a
+placeholder. Missing keys fall back to English. The admin console stays in English. Translations were
+written by the development team and should be reviewed by native speakers.
+
+**Offline and installable.** `public/sw.js` (hand-written, no build plugin) serves pages network-first
+with a cached fallback and `/offline`, and caches hashed static assets. It never caches `/api`, `/admin`
+or `/r`. Forms save drafts to IndexedDB (`lib/offlineStore.ts`, `hooks/useFormDraft.ts`); reports sent
+without a connection go to an outbox that `OfflineOutbox` (mounted in `PublicLayout`) sends when the
+browser is back online. The worker only registers in production builds.
+
+**Metrics.** `trackEvent()` (`api/metricsApi.ts`) counts anonymous events (form started, tracking
+visit, QR scan, share, ...) as daily totals in `daily_metrics`. Submissions are counted by the API.
+
 ## Cross-cutting conventions
 
-- Status and category enums in `api/src/config/constants.ts` must match
-  `ui/src/constants/reportConstants.ts`.
+- Status, category, type and language enums in `api/src/config/constants.ts` must match
+  `ui/src/constants/reportConstants.ts`. Category and status names are translated twice: in
+  `api/src/i18n/messages.ts` (emails, PDF) and `ui/messages/*.json` (site).
 - One `.env` at the repo root (template: `.env.example`). The API reads all of it; Next only exposes
   `NEXT_PUBLIC_*` variables to the browser.
 - Dependencies: the API's runtime packages are `dependencies`; UI libraries and tooling are

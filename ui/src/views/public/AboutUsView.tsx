@@ -10,97 +10,72 @@ import PhoneRoundedIcon from "@mui/icons-material/PhoneRounded";
 import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import { Box, Card, Container, Grid, IconButton, Link as MuiLink, Typography } from "@mui/material";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { GradientButton } from "@/components/atoms";
 import { HeroBand } from "@/components/templates";
 
-const IMPACTS: { icon: ReactNode; title: string; text: string }[] = [
-  {
-    icon: <HealthAndSafetyRoundedIcon />,
-    title: "Enhanced safety",
-    text: "Helping identify and fix hazards before someone gets hurt.",
-  },
-  {
-    icon: <ScheduleRoundedIcon />,
-    title: "Improved punctuality",
-    text: "Pinpointing skipped halts and missed schedules for more reliable service.",
-  },
-  {
-    icon: <VerifiedRoundedIcon />,
-    title: "Better service quality",
-    text: "Encouraging higher standards of vehicle maintenance and professionalism.",
-  },
-  {
-    icon: <AccessibilityNewRoundedIcon />,
-    title: "Accessibility",
-    text: "Surfacing the challenges faced by passengers with disabilities.",
-  },
-  {
-    icon: <GroupsRoundedIcon />,
-    title: "Community empowerment",
-    text: "Giving every commuter a voice that is recorded and followed up.",
-  },
-];
-
-const CONTACTS = [
-  { icon: <EmailRoundedIcon />, label: "info@buswatch.com", href: "mailto:info@buswatch.com" },
-  { icon: <PhoneRoundedIcon />, label: "+94 76 838 9990", href: "tel:+94768389990" },
-  { icon: <LocationOnRoundedIcon />, label: "Matale, Sri Lanka" },
+const IMPACTS: {
+  icon: ReactNode;
+  key: "safety" | "punctuality" | "quality" | "accessibility" | "community";
+}[] = [
+  { icon: <HealthAndSafetyRoundedIcon />, key: "safety" },
+  { icon: <ScheduleRoundedIcon />, key: "punctuality" },
+  { icon: <VerifiedRoundedIcon />, key: "quality" },
+  { icon: <AccessibilityNewRoundedIcon />, key: "accessibility" },
+  { icon: <GroupsRoundedIcon />, key: "community" },
 ];
 
 function AboutUsView() {
+  const t = useTranslations("about");
+  const contacts = [
+    { icon: <EmailRoundedIcon />, label: "info@buswatch.com", href: "mailto:info@buswatch.com" },
+    { icon: <PhoneRoundedIcon />, label: "+94 76 838 9990", href: "tel:+94768389990" },
+    { icon: <LocationOnRoundedIcon />, label: t("location") },
+  ];
   return (
     <>
-      <HeroBand
-        eyebrow="About BusWatch"
-        title="Driving better commutes, together."
-        subtitle="We believe every voice matters in shaping a more efficient, safer and friendlier public transport system."
-      />
+      <HeroBand eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
         <Grid container spacing={{ xs: 4, md: 8 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="overline" color="primary" component="p">
-              Our mission
+              {t("missionEyebrow")}
             </Typography>
             <Typography variant="h4" component="h2">
-              Empowering commuters
+              {t("missionTitle")}
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.8 }}>
-              Our mission is to give daily commuters a simple tool to report, track and influence
-              the quality of public bus services. By bridging the gap between passengers and
-              transport authorities, we aim for a transparent, responsive network where feedback
-              turns into real improvements.
+              {t("missionText")}
             </Typography>
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="overline" color="primary" component="p">
-              Our vision
+              {t("visionEyebrow")}
             </Typography>
             <Typography variant="h4" component="h2">
-              A future of seamless commutes
+              {t("visionTitle")}
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.8 }}>
-              We envision public transport that is consistently excellent, comfortable and reliable,
-              with BusWatch as the leading platform for passenger advocacy and continuous
-              improvement, driven by the insights of the community it serves.
+              {t("visionText")}
             </Typography>
           </Grid>
         </Grid>
 
         <Typography variant="h4" component="h2" sx={{ mt: { xs: 8, md: 12 }, mb: 3 }}>
-          Why it matters
+          {t("whyTitle")}
         </Typography>
         <Grid container spacing={2.5}>
           {IMPACTS.map((item) => (
-            <Grid key={item.title} size={{ xs: 12, sm: 6, md: 4 }}>
+            <Grid key={item.key} size={{ xs: 12, sm: 6, md: 4 }}>
               <Card sx={{ p: 3, height: "100%" }}>
                 <Box sx={{ color: "primary.main", "& svg": { fontSize: 30 } }}>{item.icon}</Box>
                 <Typography variant="h6" component="h3" sx={{ mt: 1.5 }}>
-                  {item.title}
+                  {t(`${item.key}Title`)}
                 </Typography>
                 <Typography color="text.secondary" sx={{ mt: 0.75 }}>
-                  {item.text}
+                  {t(`${item.key}Text`)}
                 </Typography>
               </Card>
             </Grid>
@@ -120,7 +95,7 @@ function AboutUsView() {
               }}
             >
               <Typography variant="h6" component="p">
-                Seen something on a bus? Your report is the first step.
+                {t("ctaText")}
               </Typography>
               <GradientButton
                 href="/submit-report"
@@ -132,7 +107,7 @@ function AboutUsView() {
                   "&:hover": { background: "rgba(255,255,255,0.28)" },
                 }}
               >
-                Report an incident
+                {t("ctaButton")}
               </GradientButton>
             </Card>
           </Grid>
@@ -150,10 +125,10 @@ function AboutUsView() {
         >
           <Box>
             <Typography variant="h4" component="h2">
-              Get in touch
+              {t("contactTitle")}
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              We&apos;d love to hear from you.
+              {t("contactText")}
             </Typography>
             <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
               <IconButton
@@ -177,7 +152,7 @@ function AboutUsView() {
             </Box>
           </Box>
           <Box sx={{ display: "grid", gap: 1.5 }}>
-            {CONTACTS.map((c) => (
+            {contacts.map((c) => (
               <Box
                 key={c.label}
                 sx={{

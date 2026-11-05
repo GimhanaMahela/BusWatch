@@ -6,6 +6,9 @@ import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FilterAltOffRoundedIcon from "@mui/icons-material/FilterAltOffRounded";
 import HourglassTopRoundedIcon from "@mui/icons-material/HourglassTopRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
+import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -27,6 +30,8 @@ import {
   Tab,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -36,7 +41,13 @@ import { useEffect, useState } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { StatusChip } from "@/components/atoms";
 import { EmptyState, PageHeader, StatTile } from "@/components/molecules";
-import { CATEGORIES, STATUSES, categoryLabel } from "@/constants/reportConstants";
+import {
+  CATEGORIES,
+  COMMENDATION_CATEGORIES,
+  STATUSES,
+  categoryLabel,
+  type ReportType,
+} from "@/constants/reportConstants";
 import useAuth from "@/hooks/useAuth";
 import { useDeleteReport, useReportList, useReportStats } from "@/hooks/useReportQueries";
 import { formatDateTime, timeAgo } from "@/lib/format";
@@ -62,13 +73,22 @@ function AdminDashboardView() {
   const filters = Object.fromEntries(
     FILTER_KEYS.map((k) => [k, searchParams.get(k) ?? ""]),
   ) as Record<FilterKey, string>;
+  // Complaints and commendations are worked on separately; complaints are the default view
+  const type: ReportType =
+    searchParams.get("type") === "commendation" ? "commendation" : "complaint";
+  const commendations = type === "commendation";
   const page = Math.max(parseInt(searchParams.get("page") ?? "", 10) || 1, 1);
   const limit = parseInt(searchParams.get("limit") ?? "", 10) || 20;
 
   const [searchInput, setSearchInput] = useState(filters.q);
   const [reportToDelete, setReportToDelete] = useState<Report | null>(null);
 
-  const listParams: ReportListParams = { page: 1, limit: 20, ...Object.fromEntries(searchParams) };
+  const listParams: ReportListParams = {
+    page: 1,
+    limit: 20,
+    ...Object.fromEntries(searchParams),
+    type,
+  };
   const reportList = useReportList(listParams);
   const stats = useReportStats();
   const deleteMutation = useDeleteReport();
@@ -99,8 +119,17 @@ function AdminDashboardView() {
 
   const clearFilters = () => {
     setSearchInput("");
-    router.replace("?", { scroll: false });
+    router.replace(commendations ? "?type=commendation" : "?", { scroll: false });
   };
+
+  const switchType = (next: ReportType | null) => {
+    if (!next || next === type) return;
+    // Categories differ between the two types, so drop that filter
+    updateParams({ type: next === "commendation" ? next : null, category: null });
+  };
+
+  const typeStats = stats.data && (commendations ? stats.data.commendations : stats.data);
+  const categoryOptions = commendations ? COMMENDATION_CATEGORIES : CATEGORIES;
 
   const confirmDelete = () => {
     if (!reportToDelete) return;
@@ -108,10 +137,10 @@ function AdminDashboardView() {
   };
 
   const tabCount = (value: string) => {
-    if (!stats.data) return null;
-    if (value === "") return stats.data.total;
-    if (value === "open") return stats.data.open;
-    return stats.data.byStatus[value as keyof typeof stats.data.byStatus] ?? 0;
+    if (!typeStats) return null;
+    if (value === "") return typeStats.total;
+    if (value === "open") return typeStats.open;
+    return typeStats.byStatus[value as keyof typeof typeStats.byStatus] ?? 0;
   };
 
   const columns: GridColDef<Report>[] = [
@@ -133,8 +162,16 @@ function AdminDashboardView() {
       flex: 0.9,
       renderCell: ({ row }) => (
         <Box sx={{ lineHeight: 1.3, py: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 0.5 }}
+          >
             {row.busNumber}
+            {row.source === "qr" && (
+              <Tooltip title="Sent from the QR sticker in the bus">
+                <QrCode2RoundedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+              </Tooltip>
+            )}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Route {row.routeNumber}
@@ -150,7 +187,13 @@ function AdminDashboardView() {
       flex: 1.1,
       valueGetter: (value: string) => categoryLabel(value),
     },
-    { field: "location", headerName: "Location", minWidth: 160, flex: 1 },
+    {
+      field: "location",
+      headerName: "Location",
+      minWidth: 160,
+      flex: 1,
+      valueGetter: (value: string | null) => value ?? "–",
+    },
     {
       field: "reportedAt",
       headerName: "Reported",
@@ -195,7 +238,7 @@ function AdminDashboardView() {
     <>
       <PageHeader
         eyebrow="Workspace"
-        title="Reports"
+        title={commendations ? "Commendations" : "Reports"}
         subtitle={admin ? `Welcome back, ${admin.email}` : undefined}
         actions={
           <>
@@ -217,18 +260,38 @@ function AdminDashboardView() {
         }
       />
 
+      <ToggleButtonGroup
+        exclusive
+        value={type}
+        onChange={(_, next: ReportType | null) => switchType(next)}
+        aria-label="Report type"
+        sx={{ mb: 2.5, bgcolor: "background.paper" }}
+      >
+        <ToggleButton value="complaint" sx={{ px: 2, gap: 1, fontWeight: 650 }}>
+          <ReportProblemRoundedIcon fontSize="small" />
+          Complaints
+          {stats.data && ` (${stats.data.total})`}
+        </ToggleButton>
+        <ToggleButton value="commendation" sx={{ px: 2, gap: 1, fontWeight: 650 }}>
+          <ThumbUpAltRoundedIcon fontSize="small" />
+          Commendations
+          {stats.data && ` (${stats.data.commendations.total})`}
+        </ToggleButton>
+      </ToggleButtonGroup>
+
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 6, lg: 3 }}>
           <StatTile
-            label="Total reports"
-            value={stats.data?.total ?? "–"}
-            icon={<InboxRoundedIcon />}
+            label={commendations ? "Total commendations" : "Total reports"}
+            value={typeStats?.total ?? "–"}
+            icon={commendations ? <ThumbUpAltRoundedIcon /> : <InboxRoundedIcon />}
+            tone={commendations ? "success" : "primary"}
           />
         </Grid>
         <Grid size={{ xs: 6, lg: 3 }}>
           <StatTile
             label="Open"
-            value={stats.data?.open ?? "–"}
+            value={typeStats?.open ?? "–"}
             hint="Pending, reviewed or escalated"
             icon={<AssignmentLateRoundedIcon />}
             tone="secondary"
@@ -237,7 +300,7 @@ function AdminDashboardView() {
         <Grid size={{ xs: 6, lg: 3 }}>
           <StatTile
             label="Awaiting review"
-            value={stats.data?.byStatus.pending ?? "–"}
+            value={typeStats?.byStatus.pending ?? "–"}
             icon={<HourglassTopRoundedIcon />}
             tone="warning"
           />
@@ -245,7 +308,7 @@ function AdminDashboardView() {
         <Grid size={{ xs: 6, lg: 3 }}>
           <StatTile
             label="Last 30 days"
-            value={stats.data?.last30Days ?? "–"}
+            value={typeStats?.last30Days ?? "–"}
             icon={<CalendarMonthRoundedIcon />}
             tone="info"
           />
@@ -317,7 +380,7 @@ function AdminDashboardView() {
             sx={{ minWidth: 200 }}
           >
             <MenuItem value="">All categories</MenuItem>
-            {CATEGORIES.map((c) => (
+            {categoryOptions.map((c) => (
               <MenuItem key={c.value} value={c.value}>
                 {c.label}
               </MenuItem>
@@ -376,11 +439,19 @@ function AdminDashboardView() {
             noRowsOverlay: () => (
               <EmptyState
                 icon={hasFilters ? <SearchOffRoundedIcon /> : <InboxRoundedIcon />}
-                title={hasFilters ? "No reports match these filters" : "No reports yet"}
+                title={
+                  hasFilters
+                    ? "Nothing matches these filters"
+                    : commendations
+                      ? "No commendations yet"
+                      : "No reports yet"
+                }
                 description={
                   hasFilters
                     ? "Try a different search or clear the filters."
-                    : "New passenger reports will appear here."
+                    : commendations
+                      ? "Praise for drivers and crews will appear here."
+                      : "New passenger reports will appear here."
                 }
               />
             ),

@@ -1,32 +1,36 @@
 import { Box, Container, Divider, Grid, Link as MuiLink, Typography } from "@mui/material";
+import { useTranslations } from "next-intl";
 import { BrandMark } from "@/components/atoms";
+import { InstallAppButton } from "@/components/molecules";
 
 const COLUMNS = [
   {
-    title: "Passengers",
+    title: "passengers",
     links: [
-      { label: "Report an incident", href: "/submit-report" },
-      { label: "Track a report", href: "/track" },
+      { key: "report", href: "/submit-report" },
+      { key: "commend", href: "/commend-a-driver" },
+      { key: "track", href: "/track" },
     ],
   },
   {
-    title: "BusWatch",
+    title: "buswatch",
     links: [
-      { label: "About us", href: "/about-us" },
-      { label: "Admin sign in", href: "/admin/login" },
+      { key: "about", href: "/about-us" },
+      { key: "adminSignIn", href: "/admin/login" },
     ],
   },
   {
-    title: "Legal",
+    title: "legal",
     links: [
-      { label: "Privacy policy", href: "/privacy-policy" },
-      { label: "Terms of service", href: "/terms-of-service" },
+      { key: "privacy", href: "/privacy-policy" },
+      { key: "terms", href: "/terms-of-service" },
     ],
   },
-];
+] as const;
 
 /** Site-wide footer with link columns. */
 function SiteFooter() {
+  const t = useTranslations("footer");
   return (
     <Box
       component="footer"
@@ -37,15 +41,15 @@ function SiteFooter() {
           <Grid size={{ xs: 12, md: 5 }}>
             <BrandMark />
             <Typography color="text.secondary" sx={{ mt: 2, maxWidth: 340 }}>
-              Your eye on public transport. Report incidents in minutes and follow every step until
-              they are resolved.
+              {t("tagline")}
             </Typography>
+            <InstallAppButton sx={{ mt: 2.5 }} />
           </Grid>
           <Grid size={{ xs: 12, md: 7 }} container spacing={3}>
             {COLUMNS.map((column) => (
               <Grid key={column.title} size={{ xs: 6, sm: 4 }}>
                 <Typography variant="overline" color="text.secondary">
-                  {column.title}
+                  {t(column.title)}
                 </Typography>
                 <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0, mt: 1 }}>
                   {column.links.map((link) => (
@@ -56,7 +60,7 @@ function SiteFooter() {
                         color="text.primary"
                         sx={{ fontWeight: 500 }}
                       >
-                        {link.label}
+                        {t(link.key)}
                       </MuiLink>
                     </Box>
                   ))}
@@ -67,7 +71,7 @@ function SiteFooter() {
         </Grid>
         <Divider sx={{ my: 4 }} />
         <Typography variant="body2" color="text.secondary">
-          © {new Date().getFullYear()} BusWatch · Made for safer journeys in Sri Lanka.
+          © {new Date().getFullYear()} BusWatch · {t("madeFor")}
         </Typography>
       </Container>
     </Box>
