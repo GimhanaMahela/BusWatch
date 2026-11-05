@@ -13,3 +13,9 @@ export const unsubscribeFromReport = (receiptId: string, endpoint: string) =>
 
 export const isFollowingReport = (receiptId: string, endpoint: string) =>
   call<{ subscribed: boolean }>(apiClient.post(`${base(receiptId)}/status`, { endpoint }));
+
+/** A t.me link that makes the passenger's Telegram chat follow the report (valid for a day) */
+export const getTelegramLink = (receiptId: string) =>
+  call<{ url: string }>(
+    apiClient.get(`/reports/track/${encodeURIComponent(receiptId.trim())}/telegram`),
+  );

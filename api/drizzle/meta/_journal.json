@@ -29,6 +29,13 @@
       "when": 1793877354480,
       "tag": "0003_phase3_two_way_contact",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793887456210,
+      "tag": "0004_android_sms_and_telegram",
+      "breakpoints": true
     }
   ]
 }

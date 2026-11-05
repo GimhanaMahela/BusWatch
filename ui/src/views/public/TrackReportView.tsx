@@ -23,7 +23,12 @@ import { ApiError, errorMessage } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
 import { StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, ReceiptSearchForm, ShareButton } from "@/components/molecules";
-import { OutcomeRating, PushToggle, ReportConversation } from "@/components/organisms";
+import {
+  OutcomeRating,
+  PushToggle,
+  ReportConversation,
+  TelegramFollow,
+} from "@/components/organisms";
 import { HeroBand } from "@/components/templates";
 import type { ReportStatus } from "@/constants/reportConstants";
 import useIsClient from "@/hooks/useIsClient";
@@ -325,6 +330,7 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
               <Stack spacing={3}>
                 {report.canRate && <OutcomeRating key={report.ratedAt ?? "new"} report={report} />}
                 <PushToggle receiptId={report.receiptId} />
+                <TelegramFollow receiptId={report.receiptId} />
                 <Card sx={{ p: { xs: 2.5, sm: 3 } }}>
                   <Typography variant="subtitle1" component="h2" sx={{ mb: 1 }}>
                     {t("details")}

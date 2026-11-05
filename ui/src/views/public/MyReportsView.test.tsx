@@ -2,7 +2,12 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/api/apiClient";
-import { getMyReports, requestSignInCode, verifySignInCode } from "@/api/passengerApi";
+import {
+  getContactChannels,
+  getMyReports,
+  requestSignInCode,
+  verifySignInCode,
+} from "@/api/passengerApi";
 import { passengerSession } from "@/lib/passengerSession";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import MyReportsView from "./MyReportsView";
@@ -11,7 +16,9 @@ vi.mock("@/api/passengerApi", () => ({
   requestSignInCode: vi.fn(),
   verifySignInCode: vi.fn(),
   getMyReports: vi.fn(),
+  getContactChannels: vi.fn(),
 }));
+const mockedChannels = vi.mocked(getContactChannels);
 const mockedRequest = vi.mocked(requestSignInCode);
 const mockedVerify = vi.mocked(verifySignInCode);
 const mockedReports = vi.mocked(getMyReports);
@@ -24,6 +31,13 @@ describe("MyReportsView", () => {
     passengerSession.set(null);
   });
   afterEach(() => passengerSession.set(null));
+
+  it("asks for an email address only when SMS is switched off", async () => {
+    mockedChannels.mockResolvedValue({ email: true, sms: false, push: false, telegram: false });
+    renderWithProviders(<MyReportsView />);
+    expect(await screen.findByLabelText("Email address")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Email or mobile number")).not.toBeInTheDocument();
+  });
 
   it("signs in with a one-time code and lists the passenger's reports", async () => {
     const user = userEvent.setup({ delay: null });

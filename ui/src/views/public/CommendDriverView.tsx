@@ -42,6 +42,7 @@ import {
   type CommendationCategory,
   type Language,
 } from "@/constants/reportConstants";
+import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useFormDraft from "@/hooks/useFormDraft";
 import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
@@ -98,6 +99,8 @@ const startIcon = (icon: ReactNode) => ({
 /** "Commend a driver": one short step, no evidence, location optional. */
 function CommendDriverView() {
   const t = useTranslations("commend");
+  // No phone field when no SMS gateway is set up: there would be nothing to send to it
+  const smsAvailable = useSmsAvailable();
   const ts = useTranslations("submit");
   const tCategory = useTranslations("categories");
   const locale = useLocale() as Language;
@@ -367,14 +370,16 @@ function CommendDriverView() {
           helperText={t("emailHelp")}
           slotProps={startIcon(<EmailRoundedIcon color="action" />)}
         />
-        <PhoneField
-          name="passengerPhone"
-          label={t("phone")}
-          helperText={t("phoneHelp")}
-          invalidText={ts("phoneInvalid")}
-          value={formData.passengerPhone}
-          onChange={handleChange}
-        />
+        {smsAvailable && (
+          <PhoneField
+            name="passengerPhone"
+            label={t("phone")}
+            helperText={t("phoneHelp")}
+            invalidText={ts("phoneInvalid")}
+            value={formData.passengerPhone}
+            onChange={handleChange}
+          />
+        )}
         <input
           type="text"
           name="website"

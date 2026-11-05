@@ -4,9 +4,10 @@ import { messagesFor } from "../i18n/messages.js";
 import { sendMessageEmail, sendStatusUpdateEmail, trackingUrl } from "./email.service.js";
 import { sendPushToReport } from "./push.service.js";
 import { sendSms } from "./sms.service.js";
+import { sendTelegramToReport } from "./telegram.service.js";
 
 // Tells a passenger something happened on their report, on every channel they gave us:
-// email, SMS (or WhatsApp) and browser push. Each channel is best-effort: the change is already
+// email, SMS (or WhatsApp), browser push and Telegram. Each channel is best-effort: the change is already
 // saved, so a failed delivery is logged and reported back to the admin, never thrown.
 
 export type PassengerEvent =
@@ -17,6 +18,8 @@ export interface Delivery {
   sms: boolean;
   /** Devices reached by browser push */
   push: number;
+  /** Telegram chats reached */
+  telegram: number;
 }
 
 type Recipient = Pick<
@@ -95,6 +98,14 @@ export const notifyPassenger = async (
     0,
   );
 
-  const [emailSent, smsSent, pushSent] = await Promise.all([email, sms, push]);
-  return { email: emailSent, sms: smsSent, push: pushSent };
+  // Telegram gets the same short text as SMS: chats can be read by anyone holding the phone
+  const telegram = attempt("Telegram", () => sendTelegramToReport(report.id, smsText), 0);
+
+  const [emailSent, smsSent, pushSent, telegramSent] = await Promise.all([
+    email,
+    sms,
+    push,
+    telegram,
+  ]);
+  return { email: emailSent, sms: smsSent, push: pushSent, telegram: telegramSent };
 };

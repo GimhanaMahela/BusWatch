@@ -497,6 +497,7 @@ const getEngagementStats = async (now: Date) => {
     passengerMessages: metrics.passenger_message,
     myReportsSignins: metrics.my_reports_signin,
     pushSubscriptions: metrics.push_subscribed,
+    telegramLinks: metrics.telegram_linked,
   };
 };
 

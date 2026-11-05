@@ -328,7 +328,7 @@ export const updateReportStatus = async (
 
   const delivery = notifyPassenger
     ? await deliverToPassenger(report, { kind: "status", status, note })
-    : { email: false, sms: false, push: 0 };
+    : { email: false, sms: false, push: 0, telegram: 0 };
 
   res.json({ ...report, emailSent: delivery.email, delivery });
 };

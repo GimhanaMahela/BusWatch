@@ -12,6 +12,7 @@ import { requestCodeSchema, verifyCodeSchema } from "../validators/passenger.val
 // "My reports": passwordless sign-in with a one-time code, separate from the admin login
 const router = Router();
 
+router.get("/channels", passengerLimiter, passengerController.channels);
 router.post("/code", codeLimiter, validateBody(requestCodeSchema), passengerController.requestCode);
 router.post(
   "/session",

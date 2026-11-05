@@ -29,6 +29,7 @@ import { GradientButton, StatusChip } from "@/components/atoms";
 import { EmptyState, ReceiptSearchForm } from "@/components/molecules";
 import { HeroBand } from "@/components/templates";
 import type { Language } from "@/constants/reportConstants";
+import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useIsClient from "@/hooks/useIsClient";
 import { useMyReports } from "@/hooks/useReportQueries";
 import { passengerSession } from "@/lib/passengerSession";
@@ -43,6 +44,8 @@ const looksLikeContact = (value: string) =>
 function SignInCard() {
   const t = useTranslations("myReports");
   const locale = useLocale() as Language;
+  // Email only when no SMS gateway is set up (codes by SMS couldn't be delivered)
+  const smsAvailable = useSmsAvailable();
   const [contact, setContact] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -97,8 +100,8 @@ function SignInCard() {
           <TextField
             fullWidth
             autoFocus
-            label={t("contactLabel")}
-            placeholder={t("contactPlaceholder")}
+            label={smsAvailable ? t("contactLabel") : t("contactLabelEmail")}
+            placeholder={smsAvailable ? t("contactPlaceholder") : t("contactPlaceholderEmail")}
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             autoComplete="email"

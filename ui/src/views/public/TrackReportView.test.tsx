@@ -10,6 +10,10 @@ import TrackReportView from "./TrackReportView";
 vi.mock("@/api/reportApi", () => ({ trackReport: vi.fn(), rateOutcome: vi.fn() }));
 // Browser notifications are off unless the server has push keys
 vi.mock("@/api/pushApi", () => ({ getPushKey: () => Promise.resolve({ publicKey: null }) }));
+vi.mock("@/api/passengerApi", () => ({
+  getContactChannels: () =>
+    Promise.resolve({ email: true, sms: true, push: false, telegram: false }),
+}));
 const mockedTrackReport = vi.mocked(trackReport);
 const mockedRateOutcome = vi.mocked(rateOutcome);
 

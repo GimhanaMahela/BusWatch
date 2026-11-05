@@ -54,6 +54,7 @@ import {
 import type { LatLng } from "@/components/molecules/LocationPicker";
 import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
 import { CATEGORIES, type ComplaintCategory, type Language } from "@/constants/reportConstants";
+import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useFormDraft from "@/hooks/useFormDraft";
 import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
@@ -135,6 +136,8 @@ const startIcon = (icon: ReactNode) => ({
 
 function SubmitReportView() {
   const t = useTranslations("submit");
+  // No phone field when no SMS gateway is set up: there would be nothing to send to it
+  const smsAvailable = useSmsAvailable();
   const tc = useTranslations("common");
   const tCategory = useTranslations("categories");
   const tMedia = useTranslations("media");
@@ -415,14 +418,16 @@ function SubmitReportView() {
         helperText={t("emailHelp")}
         slotProps={startIcon(<EmailRoundedIcon color="action" />)}
       />
-      <PhoneField
-        name="passengerPhone"
-        label={t("phone")}
-        helperText={t("phoneHelp")}
-        invalidText={t("phoneInvalid")}
-        value={formData.passengerPhone}
-        onChange={handleChange}
-      />
+      {smsAvailable && (
+        <PhoneField
+          name="passengerPhone"
+          label={t("phone")}
+          helperText={t("phoneHelp")}
+          invalidText={t("phoneInvalid")}
+          value={formData.passengerPhone}
+          onChange={handleChange}
+        />
+      )}
       {/* Honeypot field: invisible to people and screen readers */}
       <input
         type="text"

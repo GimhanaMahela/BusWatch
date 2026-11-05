@@ -13,7 +13,9 @@ import {
   type PassengerContact,
 } from "../repositories/passenger.repository.js";
 import { isEmailConfigured, sendSignInCodeEmail } from "../services/email.service.js";
+import { isPushConfigured } from "../services/push.service.js";
 import { isSmsConfigured, sendSms } from "../services/sms.service.js";
+import { isTelegramConfigured } from "../services/telegram.service.js";
 import { maskEmail, maskPhone } from "../utils/phone.js";
 import type { RequestCodeInput, VerifyCodeInput } from "../validators/passenger.validator.js";
 
@@ -25,6 +27,19 @@ const development = () => env.NODE_ENV === "development";
 /** Whether codes can be delivered on this channel (in development they are printed instead). */
 const channelAvailable = (channel: ContactChannel) =>
   development() || (channel === "email" ? isEmailConfigured() : isSmsConfigured());
+
+// @desc    Which ways of reaching passengers are switched on, so the site only offers those
+//          (e.g. no phone number field when no SMS gateway is set up)
+// @route   GET /api/passenger/channels
+// @access  Public
+export const channels = (_req: Request, res: Response) => {
+  res.json({
+    email: channelAvailable("email"),
+    sms: channelAvailable("phone"),
+    push: isPushConfigured(),
+    telegram: isTelegramConfigured(),
+  });
+};
 
 const masked = ({ channel, destination }: PassengerContact) =>
   channel === "email" ? maskEmail(destination) : maskPhone(destination);

@@ -171,11 +171,20 @@ descriptions, contact details or exact times to these endpoints. The heatmap is 
 Natural Earth outline (`constants/sriLankaOutline.ts`), so no map key or third-party tracking is needed.
 
 **Two-way contact.** `notification.service.ts` sends a status change or team message to the passenger
-on every channel they gave: email (`email.service.ts`), SMS (`sms.service.ts`: Notify.lk or Twilio,
-picked by `SMS_PROVIDER`) and Web Push (`push.service.ts`, one `push_subscriptions` row per device and
+on every channel they gave: email (`email.service.ts`), SMS (`sms.service.ts`: an Android phone running SMS
+Gateway for Android, Notify.lk or Twilio, picked by `SMS_PROVIDER`), Telegram (`telegram.service.ts`)
+and Web Push (`push.service.ts`, one `push_subscriptions` row per device and
 report). Each channel is best-effort and the result (`delivery`) goes back to the admin. Messages live in
 `report_messages` with a `readAt` per side. The passenger's key to a report stays its receipt ID, as for
 ratings; replies close `REPLY_WINDOW_DAYS` after the report does.
+`GET /api/passenger/channels` tells the UI which channels are on, so it hides the phone field without
+SMS and the Telegram card without a bot.
+
+Telegram: the tracking page fetches a `t.me/<bot>?start=<token>` link, where the token is the receipt ID,
+an expiry and an HMAC (valid a day). Pressing Start sends `/start <token>` to the bot; the chat is saved
+in `telegram_subscriptions` (private chats only) and `/stop` deletes it. The API receives bot messages by
+long polling, started from `server.ts`, or by webhook (`POST /api/telegram/webhook`, checked against
+`TELEGRAM_WEBHOOK_SECRET`) on serverless hosts. Chats that block the bot are forgotten.
 
 "My reports" uses passwordless sessions: `passenger_codes` stores an HMAC of each 6-digit code (10 min,
 5 tries, 3 codes per contact per 15 min), and `POST /api/passenger/code` answers the same whether or

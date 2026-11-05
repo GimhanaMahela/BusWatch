@@ -435,6 +435,12 @@
     "unavailable": "Notifications aren't available yet.",
     "failed": "Couldn't change notifications. Please try again."
   },
+  "telegram": {
+    "title": "Get updates on Telegram",
+    "text": "Free updates in the Telegram app when your report changes or the team writes to you. Tap the button, then press Start.",
+    "button": "Open Telegram",
+    "hint": "Send /stop to the bot at any time to stop."
+  },
   "messages": {
     "title": "Messages",
     "subtitle": "Talk to the BusWatch team about this report.",
@@ -457,6 +463,8 @@
     "subtitle": "Sign in with the email or mobile number you gave when reporting. We'll send you a one-time code: no password to remember.",
     "contactLabel": "Email or mobile number",
     "contactPlaceholder": "you@example.com or 077 123 4567",
+    "contactLabelEmail": "Email address",
+    "contactPlaceholderEmail": "you@example.com",
     "sendCode": "Send me a code",
     "codeSent": "If we have reports for {sentTo}, a 6-digit code is on its way. It expires in 10 minutes.",
     "codeLabel": "6-digit code",

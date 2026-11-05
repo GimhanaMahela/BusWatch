@@ -52,6 +52,12 @@ export interface ApiMessages {
     messageTitle: string;
     messageBody: (receiptId: string) => string;
   };
+  telegram: {
+    linked: (receiptId: string) => string;
+    welcome: string;
+    invalidLink: string;
+    stopped: string;
+  };
   pdf: {
     subtitle: string;
     title: Record<ReportType, [string, string]>;
@@ -166,6 +172,16 @@ const en: ApiMessages = {
     statusBody: (id, status) => `${id} is now: ${status}`,
     messageTitle: "New message from BusWatch",
     messageBody: (id) => `About your report ${id}. Tap to read and reply.`,
+  },
+  telegram: {
+    linked: (id) =>
+      `You're following BusWatch report ${id}. We'll message you here when its status changes or the team writes to you. Send /stop to stop.`,
+    welcome:
+      "Hi! This bot sends updates about your BusWatch reports. Open your report's tracking page and tap “Get updates on Telegram” to follow it here.",
+    invalidLink:
+      "This link has expired or isn't valid. Open your report's tracking page and tap “Get updates on Telegram” again.",
+    stopped:
+      "Done. You won't get any more BusWatch updates here. You can follow a report again from its tracking page.",
   },
   pdf: {
     subtitle: "Public Transport Monitoring System",
@@ -292,6 +308,16 @@ const si: ApiMessages = {
     messageTitle: "BusWatch වෙතින් නව පණිවිඩයක්",
     messageBody: (id) => `ඔබේ වාර්තාව ${id} ගැන. කියවා පිළිතුරු දීමට තට්ටු කරන්න.`,
   },
+  telegram: {
+    linked: (id) =>
+      `ඔබ දැන් BusWatch වාර්තාව ${id} අනුගමනය කරයි. එහි තත්ත්වය වෙනස් වූ විට හෝ කණ්ඩායම ඔබට පණිවිඩයක් එවූ විට අපි මෙහි ඔබට දන්වන්නෙමු. නැවැත්වීමට /stop යවන්න.`,
+    welcome:
+      "ආයුබෝවන්! මෙම බොට් ඔබේ BusWatch වාර්තා පිළිබඳ යාවත්කාලීන තොරතුරු එවයි. ඔබේ වාර්තාවේ ලුහුබැඳීමේ පිටුව විවෘත කර “Telegram හරහා යාවත්කාලීන ලබාගන්න” තට්ටු කරන්න.",
+    invalidLink:
+      "මෙම සබැඳිය කල් ඉකුත් වී ඇත හෝ වලංගු නැත. ඔබේ වාර්තාවේ ලුහුබැඳීමේ පිටුව විවෘත කර “Telegram හරහා යාවත්කාලීන ලබාගන්න” නැවත තට්ටු කරන්න.",
+    stopped:
+      "හරි. ඔබට තවදුරටත් මෙහි BusWatch යාවත්කාලීන නොලැබේ. ලුහුබැඳීමේ පිටුවෙන් ඕනෑම වේලාවක වාර්තාවක් නැවත අනුගමනය කළ හැක.",
+  },
   pdf: {
     subtitle: "පොදු ප්‍රවාහන නිරීක්ෂණ පද්ධතිය",
     title: { complaint: ["සිද්ධි", "වාර්තාව"], commendation: ["රියැදුරු", "ප්‍රශංසාව"] },
@@ -412,6 +438,16 @@ const ta: ApiMessages = {
     statusBody: (id, status) => `${id} இப்போது: ${status}`,
     messageTitle: "BusWatch இலிருந்து புதிய செய்தி",
     messageBody: (id) => `உங்கள் அறிக்கை ${id} பற்றி. படித்துப் பதிலளிக்கத் தட்டவும்.`,
+  },
+  telegram: {
+    linked: (id) =>
+      `நீங்கள் இப்போது BusWatch அறிக்கை ${id} ஐப் பின்தொடர்கிறீர்கள். அதன் நிலை மாறும்போது அல்லது குழு உங்களுக்கு எழுதும்போது இங்கே தெரிவிப்போம். நிறுத்த /stop அனுப்பவும்.`,
+    welcome:
+      "வணக்கம்! இந்த பாட் உங்கள் BusWatch அறிக்கைகள் பற்றிய புதுப்பிப்புகளை அனுப்புகிறது. உங்கள் அறிக்கையின் கண்காணிப்புப் பக்கத்தைத் திறந்து “Telegram இல் புதுப்பிப்புகளைப் பெறுக” என்பதைத் தட்டவும்.",
+    invalidLink:
+      "இந்த இணைப்பு காலாவதியானது அல்லது செல்லாது. உங்கள் அறிக்கையின் கண்காணிப்புப் பக்கத்தைத் திறந்து “Telegram இல் புதுப்பிப்புகளைப் பெறுக” என்பதை மீண்டும் தட்டவும்.",
+    stopped:
+      "முடிந்தது. இனி இங்கே BusWatch புதுப்பிப்புகள் வராது. கண்காணிப்புப் பக்கத்திலிருந்து எப்போது வேண்டுமானாலும் ஓர் அறிக்கையை மீண்டும் பின்தொடரலாம்.",
   },
   pdf: {
     subtitle: "பொதுப் போக்குவரத்து கண்காணிப்பு அமைப்பு",

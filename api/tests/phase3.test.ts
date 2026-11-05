@@ -241,7 +241,7 @@ describe("messages between admin and passenger", () => {
       .set("x-auth-token", token)
       .send({ body: "Which seat were you in?" });
     expect(asked.status).toBe(201);
-    expect(asked.body.delivery).toEqual({ email: true, sms: true, push: 0 });
+    expect(asked.body.delivery).toEqual({ email: true, sms: true, push: 0, telegram: 0 });
     expect(asked.body.messages).toEqual([
       expect.objectContaining({ sender: "admin", author: "root@test.com" }),
     ]);
@@ -391,7 +391,7 @@ describe("status updates by SMS and browser push", () => {
       .put(`/api/reports/${report?.id}/status`)
       .set("x-auth-token", token)
       .send({ status: "escalated" });
-    expect(update.body.delivery).toEqual({ email: false, sms: true, push: 1 });
+    expect(update.body.delivery).toEqual({ email: false, sms: true, push: 1, telegram: 0 });
     // In the passenger's language (Sinhala)
     expect(sent.sms[0]?.text).toContain("බලධාරීන් වෙත යොමු කරන ලදී");
     expect(JSON.parse(sent.push[0]?.payload ?? "{}")).toMatchObject({

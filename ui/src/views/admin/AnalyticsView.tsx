@@ -12,6 +12,7 @@ import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import TelegramIcon from "@mui/icons-material/Telegram";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
@@ -360,6 +361,15 @@ function AnalyticsView() {
               icon={<NotificationsActiveRoundedIcon />}
               value={engagement.pushSubscriptions}
               hint="New browser notification sign-ups"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Telegram followers"
+              tone="info"
+              icon={<TelegramIcon />}
+              value={engagement.telegramLinks}
+              hint="Chats that pressed Start on the bot"
             />
           </Grid>
 

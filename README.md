@@ -39,12 +39,15 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   were you in?"); the passenger reads and replies on the tracking page, where the team appears as
   "BusWatch team". Unread replies are flagged in the admin reports table.
 - **SMS or WhatsApp updates**: an optional mobile number on the forms. Receipts, status changes and new
-  messages are texted through Notify.lk or Twilio (`SMS_PROVIDER`). Texts link to the report and never
-  contain the team's message itself.
+  messages are texted from your own Android phone (free, SMS Gateway for Android) or through Notify.lk
+  or Twilio (`SMS_PROVIDER`). Texts link to the report and never contain the team's message itself.
+  With no SMS set up, the phone field is hidden.
+- **Telegram updates**: "Get updates on Telegram" on the tracking and receipt pages opens the BusWatch
+  bot; pressing Start follows the report, `/stop` ends all updates. Free, no phone number needed.
 - **Browser push notifications**: "Get notified on this device" on the tracking and receipt pages
   (Web Push, `VAPID_*` keys). On iPhone it works once BusWatch is added to the Home Screen.
 
-Status changes and messages go out on every channel the passenger gave (email, SMS, push), in their
+Status changes and messages go out on every channel the passenger gave (email, SMS, push, Telegram), in their
 language; the admin sees which ones reached them.
 
 The admin **Analytics** page tracks the Phase 1 success metrics: form completion rate, return visits to
@@ -75,12 +78,20 @@ added from the dashboard's **Admins** dialog.
 
 ### Optional services
 
-| Feature                  | Variables                                                | Without them                      |
-| ------------------------ | -------------------------------------------------------- | --------------------------------- |
-| Emails (receipts, codes) | `EMAIL_SERVICE_*`                                        | Skipped (codes printed in dev)    |
-| SMS / WhatsApp           | `SMS_PROVIDER` + `NOTIFYLK_*` or `TWILIO_*`              | Skipped (texts printed in dev)    |
-| Browser push             | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | The "Get notified" card is hidden |
-| CAPTCHA                  | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Submissions aren't checked        |
+| Feature                  | Variables                                                    | Without them                                      |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------------------- |
+| Emails (receipts, codes) | `EMAIL_SERVICE_*`                                            | Skipped (codes printed in dev)                    |
+| SMS / WhatsApp           | `SMS_PROVIDER` + `ANDROID_SMS_*`, `NOTIFYLK_*` or `TWILIO_*` | Phone field hidden (in dev: shown, texts printed) |
+| Telegram                 | `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_WEBHOOK_SECRET` hosted)    | The Telegram card is hidden                       |
+| Browser push             | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`     | The "Get notified" card is hidden                 |
+| CAPTCHA                  | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`     | Submissions aren't checked                        |
+
+**Free options:** browser push, Telegram and SMS from an Android phone cost nothing (the phone only uses
+its SIM's SMS package). For SMS, install [SMS Gateway for Android](https://sms-gate.app) on a spare
+Android phone, set `SMS_PROVIDER=android` and copy the username and password the app shows (cloud mode
+works from anywhere; local mode needs the API and phone on the same network). For Telegram, create a bot
+with [@BotFather](https://t.me/BotFather) (`/newbot`) and set `TELEGRAM_BOT_TOKEN`; the API starts
+listening for the bot's messages on its own.
 
 Generate push keys once with `npx web-push generate-vapid-keys`. For WhatsApp through Twilio, set
 `TWILIO_FROM=whatsapp:+…`; messages a passenger didn't start need templates approved by WhatsApp, so

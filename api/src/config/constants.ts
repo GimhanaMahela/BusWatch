@@ -115,6 +115,7 @@ export const METRIC_EVENTS = [
   "admin_message",
   "passenger_message",
   "push_subscribed",
+  "telegram_linked",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 

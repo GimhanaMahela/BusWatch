@@ -11,3 +11,4 @@ export { default as SiteFooter } from "./SiteFooter";
 export { default as SiteHeader } from "./SiteHeader";
 export { default as StoryEditorDialog, type StoryDraft } from "./StoryEditorDialog";
 export { default as SubmittedPanel, type Receipt } from "./SubmittedPanel";
+export { default as TelegramFollow } from "./TelegramFollow";

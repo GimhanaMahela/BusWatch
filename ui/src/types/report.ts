@@ -48,6 +48,8 @@ export interface Delivery {
   sms: boolean;
   /** Devices reached by browser push */
   push: number;
+  /** Telegram chats reached */
+  telegram: number;
 }
 
 /** Full report as admins see it */
@@ -210,6 +212,7 @@ export interface EngagementStats {
   passengerMessages: number;
   myReportsSignins: number;
   pushSubscriptions: number;
+  telegramLinks: number;
 }
 
 /** A report in "My reports" */

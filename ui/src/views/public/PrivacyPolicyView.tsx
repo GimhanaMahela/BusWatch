@@ -83,9 +83,10 @@ const SECTIONS: ContentSection[] = [
           didn&apos;t include, and you can reply from the tracking page. Messages are stored with
           your report and seen only by you (with your receipt ID) and our team. If you gave an email
           address or mobile number, we use it to tell you about status changes and new messages.
-          Text messages are sent through an SMS provider (such as Notify.lk or Twilio), which
-          receives your number and the text of that message only; texts never include what our team
-          wrote, just a link to your report.
+          Text messages are sent from our own phone through the SMS Gateway for Android app, or
+          through an SMS provider (such as Notify.lk or Twilio), which receives your number and the
+          text of that message only; texts never include what our team wrote, just a link to your
+          report.
         </p>
         <p>
           To open My reports, we send a one-time code to the email address or mobile number you
@@ -98,6 +99,12 @@ const SECTIONS: ContentSection[] = [
           service (for example Google or Apple) uses to deliver them. We keep it only to notify you
           about that report, and forget it when you turn notifications off or your browser withdraws
           it.
+        </p>
+        <p>
+          If you follow a report on Telegram, we keep your Telegram chat ID (not your phone number
+          or name) to send you short updates with a link to your report, never what our team wrote.
+          Telegram delivers these messages under its own privacy policy. Send /stop to the BusWatch
+          bot and we delete your chat ID straight away.
         </p>
         <h3>Data kept on your device</h3>
         <p>

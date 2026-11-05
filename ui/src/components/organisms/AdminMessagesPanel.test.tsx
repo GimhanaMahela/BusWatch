@@ -34,18 +34,23 @@ describe("AdminMessagesPanel", () => {
   });
 
   it("describes which channels reached the passenger", () => {
-    expect(describeDelivery({ email: true, sms: true, push: 2 })).toBe(
+    expect(describeDelivery({ email: true, sms: true, push: 2, telegram: 0 })).toBe(
       "Saved. The passenger was notified by email, SMS and browser notification (2 devices).",
     );
-    expect(describeDelivery({ email: false, sms: true, push: 0 })).toBe(
-      "Saved. The passenger was notified by SMS.",
+    expect(describeDelivery({ email: false, sms: true, push: 0, telegram: 1 })).toBe(
+      "Saved. The passenger was notified by SMS and Telegram (1 chat).",
     );
-    expect(describeDelivery({ email: false, sms: false, push: 0 })).toMatch(/no email, phone/);
+    expect(describeDelivery({ email: false, sms: false, push: 0, telegram: 0 })).toMatch(
+      /no email, phone/,
+    );
   });
 
   it("marks passenger messages read and sends a question", async () => {
     const user = userEvent.setup({ delay: null });
-    mockedSend.mockResolvedValue({ ...report, delivery: { email: true, sms: false, push: 0 } });
+    mockedSend.mockResolvedValue({
+      ...report,
+      delivery: { email: true, sms: false, push: 0, telegram: 0 },
+    });
     renderWithProviders(<AdminMessagesPanel report={report} />);
 
     expect(screen.getByText("I have a video too")).toBeInTheDocument();

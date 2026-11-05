@@ -18,3 +18,13 @@ export const getMyReports = (token: string) =>
   call<{ contact: PassengerContactInfo; reports: PassengerReportSummary[] }>(
     apiClient.get("/passenger/reports", { headers: { "x-passenger-token": token } }),
   );
+
+/** Ways of reaching passengers the server has switched on */
+export interface ContactChannels {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+  telegram: boolean;
+}
+
+export const getContactChannels = () => call<ContactChannels>(apiClient.get("/passenger/channels"));

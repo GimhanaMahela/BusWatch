@@ -34,7 +34,7 @@ export const sendAdminMessage = async (
 
   const delivery = req.body.notifyPassenger
     ? await notifyPassenger(current, { kind: "message", body: req.body.body })
-    : { email: false, sms: false, push: 0 };
+    : { email: false, sms: false, push: 0, telegram: 0 };
 
   const report = await findReportById(current.id);
   res.status(201).json({ ...report, delivery });

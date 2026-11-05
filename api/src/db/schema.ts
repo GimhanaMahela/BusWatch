@@ -179,6 +179,20 @@ export const pushSubscriptions = pgTable(
   (t) => [uniqueIndex().on(t.reportId, t.endpoint), index().on(t.endpoint)],
 );
 
+/** Telegram chats following a report: the passenger pressed Start on the BusWatch bot. */
+export const telegramSubscriptions = pgTable(
+  "telegram_subscriptions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reportId: uuid()
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    chatId: text().notNull(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.reportId, t.chatId), index().on(t.chatId)],
+);
+
 export interface StoryTranslation {
   title: string;
   body: string;

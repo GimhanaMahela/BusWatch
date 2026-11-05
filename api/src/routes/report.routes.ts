@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as messageController from "../controllers/message.controller.js";
 import * as pushController from "../controllers/push.controller.js";
 import * as reportController from "../controllers/report.controller.js";
+import * as telegramController from "../controllers/telegram.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import {
   messageLimiter,
@@ -72,6 +73,7 @@ router.post(
   validateBody(pushUnsubscribeSchema),
   pushController.status,
 );
+router.get("/track/:receiptId/telegram", pushLimiter, telegramController.followLink);
 
 // --- Admin --- (specific paths stay above "/:id" so they are not treated as an ID)
 router.get("/", requireAuth, reportController.getAllReports);

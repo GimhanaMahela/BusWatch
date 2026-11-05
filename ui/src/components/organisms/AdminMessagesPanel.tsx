@@ -25,9 +25,11 @@ export const describeDelivery = (delivery: Delivery) => {
     delivery.sms && "SMS",
     delivery.push > 0 &&
       `browser notification (${delivery.push} device${delivery.push === 1 ? "" : "s"})`,
+    delivery.telegram > 0 &&
+      `Telegram (${delivery.telegram} chat${delivery.telegram === 1 ? "" : "s"})`,
   ].filter((channel): channel is string => Boolean(channel));
   if (channels.length === 0) {
-    return "Saved. The passenger has no email, phone or notifications on file, so they'll see it on their tracking page.";
+    return "Saved. The passenger has no email, phone, notifications or Telegram on file, so they'll see it on their tracking page.";
   }
   const list =
     channels.length > 1
@@ -151,7 +153,7 @@ function AdminMessagesPanel({ report }: { report: Report }) {
           <FormControlLabel
             sx={{ flex: 1, minWidth: 220 }}
             control={<Checkbox checked={notify} onChange={(e) => setNotify(e.target.checked)} />}
-            label="Notify them (email, SMS and browser notifications they signed up for)"
+            label="Notify them (email, SMS, browser notifications and Telegram they signed up for)"
             slotProps={{ typography: { variant: "body2" } }}
           />
           <Button

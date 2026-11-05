@@ -32,8 +32,16 @@ const EnvSchema = z.object({
   // SMS / WhatsApp updates and sign-in codes. "none" (the default) sends nothing.
   SMS_PROVIDER: z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.enum(["none", "notifylk", "twilio"]).default("none"),
+    z.enum(["none", "android", "notifylk", "twilio"]).default("none"),
   ),
+  // "android": free SMS from your own Android phone and SIM with the SMS Gateway for Android app
+  // (https://sms-gate.app). Cloud mode by default; for local mode use http://<phone-ip>:8080
+  ANDROID_SMS_URL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.url().default("https://api.sms-gate.app/3rdparty/v1"),
+  ),
+  ANDROID_SMS_USERNAME: optional(z.string()),
+  ANDROID_SMS_PASSWORD: optional(z.string()),
   NOTIFYLK_USER_ID: optional(z.string()),
   NOTIFYLK_API_KEY: optional(z.string()),
   NOTIFYLK_SENDER_ID: optional(z.string()),
@@ -47,6 +55,14 @@ const EnvSchema = z.object({
   VAPID_PRIVATE_KEY: optional(z.string()),
   // Contact for push services, e.g. mailto:info@buswatch.lk
   VAPID_SUBJECT: optional(z.string()),
+
+  // Free Telegram updates. Create a bot with @BotFather and paste its token here.
+  TELEGRAM_BOT_TOKEN: optional(z.string()),
+  // Hosted only: with a secret set, Telegram calls FRONTEND_URL/api/telegram/webhook instead of
+  // the API asking Telegram for new messages (long polling, the default; works on localhost)
+  TELEGRAM_WEBHOOK_SECRET: optional(
+    z.string().regex(/^[\w-]{1,256}$/, "Use letters, digits, _ and -"),
+  ),
 
   EMAIL_ALLOW_SELF_SIGNED: z
     .enum(["true", "false"])

@@ -12,6 +12,7 @@ import { trackEvent } from "@/api/metricsApi";
 import { GradientButton } from "@/components/atoms";
 import { ResultCard, ShareButton } from "@/components/molecules";
 import PushToggle from "./PushToggle";
+import TelegramFollow from "./TelegramFollow";
 import type { ReportType } from "@/constants/reportConstants";
 
 export interface Receipt {
@@ -120,6 +121,7 @@ function SubmittedPanel({
         />
       </Box>
       <PushToggle receiptId={receipt.receiptId} compact />
+      <TelegramFollow receiptId={receipt.receiptId} compact />
       <Button onClick={onReset} sx={{ mt: 2 }}>
         {commendation ? t("anotherCommendation") : t("another")}
       </Button>
