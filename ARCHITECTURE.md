@@ -170,6 +170,23 @@ the Next pages cache their fetches for the same time (`lib/serverApi.ts`). Never
 descriptions, contact details or exact times to these endpoints. The heatmap is plain SVG over a
 Natural Earth outline (`constants/sriLankaOutline.ts`), so no map key or third-party tracking is needed.
 
+**Two-way contact.** `notification.service.ts` sends a status change or team message to the passenger
+on every channel they gave: email (`email.service.ts`), SMS (`sms.service.ts`: Notify.lk or Twilio,
+picked by `SMS_PROVIDER`) and Web Push (`push.service.ts`, one `push_subscriptions` row per device and
+report). Each channel is best-effort and the result (`delivery`) goes back to the admin. Messages live in
+`report_messages` with a `readAt` per side. The passenger's key to a report stays its receipt ID, as for
+ratings; replies close `REPLY_WINDOW_DAYS` after the report does.
+
+"My reports" uses passwordless sessions: `passenger_codes` stores an HMAC of each 6-digit code (10 min,
+5 tries, 3 codes per contact per 15 min), and `POST /api/passenger/code` answers the same whether or
+not the contact has reports. The session is a JWT with its own audience, sent as `x-passenger-token`;
+`requireAuth` rejects any token without an admin claim, so the two sessions never mix. Phone numbers are
+stored in E.164 (`utils/phone.ts`, mirrored in `ui/src/lib/phone.ts`).
+
+The service worker shows push notifications and posts `report-updated` to open tabs so the tracking
+page refreshes. In development `lib/push.ts` registers it as `/sw.js?mode=push-only`, which skips the
+page cache.
+
 **CAPTCHA.** `verifyTurnstile` runs on report submission when `TURNSTILE_SECRET_KEY` is set. The browser
 fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
 offline outbox; a failed check keeps the report in the outbox instead of dropping it.

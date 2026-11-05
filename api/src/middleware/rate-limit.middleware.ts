@@ -24,3 +24,10 @@ export const rateLimiter = limiter(15, 20, "Too many ratings. Please try again l
 export const publicLimiter = limiter(15, 300, "Too many requests. Please try again later.");
 // Generous: one page view sends at most a couple of events
 export const metricsLimiter = limiter(15, 300, "Too many requests. Please try again later.");
+
+// Two-way contact (Phase 3)
+export const codeLimiter = limiter(15, 10, "Too many code requests. Please try again later.");
+export const signInLimiter = limiter(15, 20, "Too many sign-in attempts. Please try again later.");
+export const messageLimiter = limiter(15, 20, "Too many messages. Please try again later.");
+export const pushLimiter = limiter(15, 60, "Too many requests. Please try again later.");
+export const passengerLimiter = limiter(15, 120, "Too many requests. Please try again later.");

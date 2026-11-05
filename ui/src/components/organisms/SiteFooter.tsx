@@ -10,6 +10,7 @@ const COLUMNS = [
       { key: "report", href: "/submit-report" },
       { key: "commend", href: "/commend-a-driver" },
       { key: "track", href: "/track" },
+      { key: "myReports", href: "/my-reports" },
     ],
   },
   {

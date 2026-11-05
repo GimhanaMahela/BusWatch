@@ -35,7 +35,7 @@ import {
 } from "react";
 import { toApiError } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
-import { CategoryPicker } from "@/components/molecules";
+import { CategoryPicker, PhoneField } from "@/components/molecules";
 import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
 import {
   COMMENDATION_CATEGORIES,
@@ -59,6 +59,7 @@ interface CommendForm {
   incidentAt: string;
   location: string;
   passengerEmail: string;
+  passengerPhone: string;
   website: string;
 }
 
@@ -70,6 +71,7 @@ const EMPTY_FORM: CommendForm = {
   incidentAt: "",
   location: "",
   passengerEmail: "",
+  passengerPhone: "",
   website: "", // Honeypot
 };
 
@@ -167,9 +169,12 @@ function CommendDriverView() {
       );
       await discard();
       if (outcome.kind === "sent") {
-        const { receiptId, pdfUrl, emailSent } = outcome.response;
+        const { receiptId, pdfUrl, emailSent, smsSent } = outcome.response;
         rememberReceipt(receiptId);
-        setResult({ kind: "sent", receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent) } });
+        setResult({
+          kind: "sent",
+          receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent), smsSent: Boolean(smsSent) },
+        });
       } else {
         setResult({ kind: "queued" });
       }
@@ -361,6 +366,14 @@ function CommendDriverView() {
           onChange={handleChange}
           helperText={t("emailHelp")}
           slotProps={startIcon(<EmailRoundedIcon color="action" />)}
+        />
+        <PhoneField
+          name="passengerPhone"
+          label={t("phone")}
+          helperText={t("phoneHelp")}
+          invalidText={ts("phoneInvalid")}
+          value={formData.passengerPhone}
+          onChange={handleChange}
         />
         <input
           type="text"

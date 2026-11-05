@@ -14,11 +14,14 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import {
   ADMIN_ROLES,
+  CONTACT_CHANNELS,
   LANGUAGES,
+  MESSAGE_SENDERS,
   METRIC_EVENTS,
   REPORT_CATEGORIES,
   REPORT_SOURCES,
@@ -38,6 +41,8 @@ export const reportType = pgEnum("report_type", REPORT_TYPES);
 export const reportSource = pgEnum("report_source", REPORT_SOURCES);
 export const language = pgEnum("language", LANGUAGES);
 export const metricEvent = pgEnum("metric_event", METRIC_EVENTS);
+export const messageSender = pgEnum("message_sender", MESSAGE_SENDERS);
+export const contactChannel = pgEnum("contact_channel", CONTACT_CHANNELS);
 
 export const admins = pgTable("admins", {
   id: uuid().primaryKey().defaultRandom(),
@@ -66,6 +71,8 @@ export const reports = pgTable(
     incidentAt: timestamptz(), // when it happened (passenger-provided)
     reportedAt: timestamptz().notNull().defaultNow(), // when it was submitted
     passengerEmail: text(),
+    // Optional, for SMS updates and "My reports" sign-in; stored as E.164 (+94771234567)
+    passengerPhone: text(),
     language: language().notNull().default("en"), // passenger's language for emails and the PDF
     source: reportSource().notNull().default("web"),
     status: reportStatus().notNull().default("pending"),
@@ -84,6 +91,8 @@ export const reports = pgTable(
     index().on(t.status),
     index().on(t.category),
     index().on(t.type),
+    index().on(t.passengerEmail),
+    index().on(t.passengerPhone),
     check("outcome_rating_range", sql`${t.outcomeRating} BETWEEN 1 AND 5`),
   ],
 );
@@ -115,6 +124,59 @@ export const reportNotes = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.reportId, t.createdAt)],
+);
+
+/**
+ * "Messages between admin and passenger": a conversation on one report, e.g. an admin asking
+ * "Which seat were you in?" and the passenger replying from the tracking page.
+ */
+export const reportMessages = pgTable(
+  "report_messages",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reportId: uuid()
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    sender: messageSender().notNull(),
+    body: text().notNull(),
+    author: text(), // admin email for admin messages; never exposed publicly
+    createdAt: timestamptz().notNull().defaultNow(),
+    // When the other side read it (admins for passenger messages, the passenger for admin ones)
+    readAt: timestamptz(),
+  },
+  (t) => [index().on(t.reportId, t.createdAt)],
+);
+
+/** One-time sign-in codes for "My reports". Only a hash of the code is stored. */
+export const passengerCodes = pgTable(
+  "passenger_codes",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    channel: contactChannel().notNull(),
+    destination: text().notNull(), // lower-case email or E.164 phone
+    codeHash: text().notNull(),
+    attempts: smallint().notNull().default(0),
+    expiresAt: timestamptz().notNull(),
+    usedAt: timestamptz(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [index().on(t.destination, t.createdAt.desc())],
+);
+
+/** Browser push subscriptions: a device asked to be notified about one report. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reportId: uuid()
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    endpoint: text().notNull(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.reportId, t.endpoint), index().on(t.endpoint)],
 );
 
 export interface StoryTranslation {
@@ -161,6 +223,11 @@ export const dailyMetrics = pgTable(
 export const reportsRelations = relations(reports, ({ many }) => ({
   statusHistory: many(reportStatusChanges),
   notes: many(reportNotes),
+  messages: many(reportMessages),
+}));
+
+export const reportMessagesRelations = relations(reportMessages, ({ one }) => ({
+  report: one(reports, { fields: [reportMessages.reportId], references: [reports.id] }),
 }));
 
 export const reportStatusChangesRelations = relations(reportStatusChanges, ({ one }) => ({
@@ -176,5 +243,7 @@ export type ReportRow = typeof reports.$inferSelect;
 export type NewReportRow = typeof reports.$inferInsert;
 export type StatusChangeRow = typeof reportStatusChanges.$inferSelect;
 export type NoteRow = typeof reportNotes.$inferSelect;
+export type MessageRow = typeof reportMessages.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type StoryRow = typeof impactStories.$inferSelect;
 export type NewStoryRow = typeof impactStories.$inferInsert;

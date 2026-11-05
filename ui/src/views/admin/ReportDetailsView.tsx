@@ -41,6 +41,8 @@ import { useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
+import { AdminMessagesPanel } from "@/components/organisms";
+import { describeDelivery } from "@/components/organisms/AdminMessagesPanel";
 import {
   MIN_PUBLIC_REPORTS,
   PUBLIC_STATUSES,
@@ -238,7 +240,7 @@ function ReportDetailsView({ id }: { id: string }) {
           setSelectedStatus(null);
           setStatusNote("");
           setStatusSuccess(
-            updated.emailSent ? "Status updated and the passenger was emailed." : "Status updated.",
+            notifyPassenger ? describeDelivery(updated.delivery) : "Status updated.",
           );
         },
       },
@@ -416,6 +418,9 @@ function ReportDetailsView({ id }: { id: string }) {
               <DetailRow label="Passenger email">
                 {report.passengerEmail || "Not provided"}
               </DetailRow>
+              <DetailRow label="Passenger mobile">
+                {report.passengerPhone || "Not provided"}
+              </DetailRow>
               <DetailRow label="Language">{languageLabel(report.language)}</DetailRow>
               <DetailRow label="Sent from">
                 {report.source === "qr" ? "QR sticker in the bus" : "Website"}
@@ -434,6 +439,8 @@ function ReportDetailsView({ id }: { id: string }) {
               </Button>
             )}
           </SectionPanel>
+
+          <AdminMessagesPanel report={report} />
 
           <SectionPanel
             title="Evidence"
@@ -565,7 +572,7 @@ function ReportDetailsView({ id }: { id: string }) {
                   multiline
                   minRows={3}
                   label="Message to the passenger"
-                  helperText="Optional. Shown on the public tracking page and in the email."
+                  helperText="Optional. Shown on the public tracking page and in the email. For questions, use Messages instead."
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
                   slotProps={{ htmlInput: { maxLength: 2000 } }}
@@ -573,16 +580,11 @@ function ReportDetailsView({ id }: { id: string }) {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={notifyPassenger && Boolean(report.passengerEmail)}
+                      checked={notifyPassenger}
                       onChange={(e) => setNotifyPassenger(e.target.checked)}
-                      disabled={!report.passengerEmail}
                     />
                   }
-                  label={
-                    report.passengerEmail
-                      ? "Email the passenger about this update"
-                      : "No passenger email on file"
-                  }
+                  label="Notify the passenger (email, SMS and browser notifications they signed up for)"
                   slotProps={{ typography: { variant: "body2" } }}
                 />
                 <GradientButton

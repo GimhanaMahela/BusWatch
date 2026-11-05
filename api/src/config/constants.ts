@@ -111,6 +111,10 @@ export const METRIC_EVENTS = [
   "app_installed",
   "impact_view",
   "scorecard_view",
+  "my_reports_signin",
+  "admin_message",
+  "passenger_message",
+  "push_subscribed",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -127,6 +131,34 @@ export const CLIENT_METRIC_EVENTS = [
   "impact_view",
   "scorecard_view",
 ] as const satisfies readonly MetricEvent[];
+
+// ---------------------------------------------------------------- Two-way contact (Phase 3)
+
+/** Who wrote a message on a report's conversation. */
+export const MESSAGE_SENDERS = ["admin", "passenger"] as const;
+export type MessageSender = (typeof MESSAGE_SENDERS)[number];
+
+/** How a passenger signs in to "My reports": a one-time code sent by email or SMS. */
+export const CONTACT_CHANNELS = ["email", "phone"] as const;
+export type ContactChannel = (typeof CONTACT_CHANNELS)[number];
+
+export const PASSENGER_CODE = {
+  digits: 6,
+  ttlMinutes: 10,
+  /** Wrong guesses allowed per code before it stops working */
+  maxAttempts: 5,
+  /** Codes one email address or phone number can be sent per window (each SMS costs money) */
+  maxPerWindow: 3,
+  windowMinutes: 15,
+} as const;
+
+/** "My reports" sessions last a month; passengers sign in again with a new code after that. */
+export const PASSENGER_SESSION_DAYS = 30;
+
+/** Passengers can still reply this many days after their report was closed. */
+export const REPLY_WINDOW_DAYS = 30;
+
+export const MAX_MESSAGE_LENGTH = 2000;
 
 export const ADMIN_ROLES = ["superadmin", "admin"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];

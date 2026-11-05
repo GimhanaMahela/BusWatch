@@ -29,6 +29,25 @@ const EnvSchema = z.object({
   // Cloudflare Turnstile CAPTCHA on public submissions; skipped when unset (development, tests)
   TURNSTILE_SECRET_KEY: optional(z.string()),
 
+  // SMS / WhatsApp updates and sign-in codes. "none" (the default) sends nothing.
+  SMS_PROVIDER: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["none", "notifylk", "twilio"]).default("none"),
+  ),
+  NOTIFYLK_USER_ID: optional(z.string()),
+  NOTIFYLK_API_KEY: optional(z.string()),
+  NOTIFYLK_SENDER_ID: optional(z.string()),
+  TWILIO_ACCOUNT_SID: optional(z.string()),
+  TWILIO_AUTH_TOKEN: optional(z.string()),
+  // A Twilio number (+1...) for SMS, or "whatsapp:+1..." to send WhatsApp messages instead
+  TWILIO_FROM: optional(z.string()),
+
+  // Browser push notifications (Web Push). Generate a pair with `npx web-push generate-vapid-keys`.
+  VAPID_PUBLIC_KEY: optional(z.string()),
+  VAPID_PRIVATE_KEY: optional(z.string()),
+  // Contact for push services, e.g. mailto:info@buswatch.lk
+  VAPID_SUBJECT: optional(z.string()),
+
   EMAIL_ALLOW_SELF_SIGNED: z
     .enum(["true", "false"])
     .default("false")

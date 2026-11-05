@@ -4,6 +4,7 @@ import {
   count,
   desc,
   eq,
+  getTableColumns,
   gte,
   ilike,
   inArray,
@@ -24,6 +25,7 @@ import {
 } from "../config/constants.js";
 import { db } from "../db/client.js";
 import {
+  reportMessages,
   reportNotes,
   reports,
   reportStatusChanges,
@@ -31,6 +33,13 @@ import {
   type ReportRow,
 } from "../db/schema.js";
 import { getMetricTotals } from "./metric.repository.js";
+
+/**
+ * The outer query's report id inside a correlated subquery. Drizzle leaves column names
+ * unqualified when selecting from one table, so a plain ${reports.id} there would mean the
+ * subquery table's own "id".
+ */
+export const outerReportId = sql`${sql.identifier("reports")}.${sql.identifier("id")}`;
 
 /** Loads one report with its timeline and internal notes, oldest first. */
 const findOneWithRelations = (where: SQL) =>
@@ -44,6 +53,17 @@ const findOneWithRelations = (where: SQL) =>
       notes: {
         columns: { id: true, text: true, author: true, createdAt: true },
         orderBy: [asc(reportNotes.createdAt)],
+      },
+      messages: {
+        columns: {
+          id: true,
+          sender: true,
+          body: true,
+          author: true,
+          createdAt: true,
+          readAt: true,
+        },
+        orderBy: [asc(reportMessages.createdAt)],
       },
     },
   });
@@ -129,9 +149,16 @@ export const listReports = async ({
   }
   const where = and(...conditions);
 
+  // Passenger messages no admin has read yet ("waiting for a reply" in the reports table)
+  const unreadMessages = sql<number>`(
+    SELECT count(*)::int FROM ${reportMessages}
+    WHERE ${reportMessages.reportId} = ${outerReportId}
+      AND ${reportMessages.sender} = 'passenger' AND ${reportMessages.readAt} IS NULL
+  )`;
+
   const [rows, total] = await Promise.all([
     db
-      .select()
+      .select({ ...getTableColumns(reports), unreadMessages })
       .from(reports)
       .where(where)
       .orderBy(desc(reports.reportedAt))
@@ -361,19 +388,21 @@ const getEngagementStats = async (now: Date) => {
   const since = new Date(now.getTime() - 30 * DAY_MS);
   const sinceDay = since.toISOString().slice(0, 10);
 
-  // First admin action on each recent report (the automatic "Report received." entry has no author)
+  // First admin action on each recent report: a status change by an admin (the automatic
+  // "Report received." entry has no author) or a message to the passenger, whichever came first
   const firstResponses = db
     .select({
       reportedAt: reports.reportedAt,
-      firstAt: sql<Date>`min(${reportStatusChanges.changedAt})`.as("first_at"),
+      firstAt: sql<Date | null>`least(
+        (SELECT min(${reportStatusChanges.changedAt}) FROM ${reportStatusChanges}
+          WHERE ${reportStatusChanges.reportId} = ${outerReportId}
+            AND ${reportStatusChanges.changedBy} IS NOT NULL),
+        (SELECT min(${reportMessages.createdAt}) FROM ${reportMessages}
+          WHERE ${reportMessages.reportId} = ${outerReportId} AND ${reportMessages.sender} = 'admin')
+      )`.as("first_at"),
     })
     .from(reports)
-    .innerJoin(
-      reportStatusChanges,
-      and(eq(reportStatusChanges.reportId, reports.id), isNotNull(reportStatusChanges.changedBy)),
-    )
     .where(gte(reports.reportedAt, since))
-    .groupBy(reports.id)
     .as("first_responses");
 
   const rated = and(eq(reports.type, "complaint"), isNotNull(reports.outcomeRating));
@@ -398,7 +427,8 @@ const getEngagementStats = async (now: Date) => {
         >`avg(extract(epoch from ${firstResponses.firstAt} - ${firstResponses.reportedAt}) / 3600)::float`,
         count: count(),
       })
-      .from(firstResponses),
+      .from(firstResponses)
+      .where(isNotNull(firstResponses.firstAt)),
     db
       .select({
         average: sql<number | null>`avg(${reports.outcomeRating})::float`,
@@ -462,6 +492,11 @@ const getEngagementStats = async (now: Date) => {
     ratingDistribution,
     recentFeedback,
     byLanguage,
+    // Two-way contact (Phase 3)
+    adminMessages: metrics.admin_message,
+    passengerMessages: metrics.passenger_message,
+    myReportsSignins: metrics.my_reports_signin,
+    pushSubscriptions: metrics.push_subscribed,
   };
 };
 

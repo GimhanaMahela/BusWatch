@@ -10,6 +10,9 @@ import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
+import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
+import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
@@ -313,6 +316,50 @@ function AnalyticsView() {
                   ? `Average over ${engagement.respondedReports} answered reports`
                   : "No admin responses in this period"
               }
+            />
+          </Grid>
+
+          {/* ------------------------------------------------ Phase 3: two-way contact */}
+          <Grid size={12}>
+            <SectionHeading
+              title="Two-way contact"
+              subtitle={`Last ${engagement.periodDays} days. Time to first response counts status updates and messages.`}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Messages to passengers"
+              tone="primary"
+              icon={<ForumRoundedIcon />}
+              value={engagement.adminMessages}
+              hint="Questions and replies from the team"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Passenger replies"
+              tone="info"
+              icon={<ReplyRoundedIcon />}
+              value={engagement.passengerMessages}
+              hint="Sent from the tracking page"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="My reports sign-ins"
+              tone="secondary"
+              icon={<LockOpenRoundedIcon />}
+              value={engagement.myReportsSignins}
+              hint="With a one-time code by email or SMS"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Devices following reports"
+              tone="success"
+              icon={<NotificationsActiveRoundedIcon />}
+              value={engagement.pushSubscriptions}
+              hint="New browser notification sign-ups"
             />
           </Grid>
 

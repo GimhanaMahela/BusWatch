@@ -8,12 +8,17 @@ import {
   getAllReports,
   getReportById,
   getReportStats,
+  markMessagesReadByAdmin,
+  markMessagesReadByPassenger,
   rateOutcome,
+  sendAdminMessage,
+  sendPassengerMessage,
   setReportVisibility,
   trackReport,
   updateReportStatus,
 } from "@/api/reportApi";
 import type { ReportStatus } from "@/constants/reportConstants";
+import { getMyReports } from "@/api/passengerApi";
 import { createStory, deleteStory, listStories, updateStory } from "@/api/storyApi";
 import type { AdminRole } from "@/types/admin";
 import type { StoryInput } from "@/types/public";
@@ -28,6 +33,7 @@ export const queryKeys = {
   tracking: (receiptId: string) => ["tracking", receiptId.trim().toUpperCase()] as const,
   admins: ["admins"] as const,
   stories: ["stories"] as const,
+  myReports: (token: string) => ["myReports", token] as const,
 };
 
 export const useReportList = (params: ReportListParams) =>
@@ -61,6 +67,33 @@ export const useRateOutcome = (receiptId: string) => {
   });
 };
 
+/** Public: the passenger replies to the team; the conversation updates in place. */
+export const useSendPassengerMessage = (receiptId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => sendPassengerMessage(receiptId, body),
+    onSuccess: (report) => queryClient.setQueryData(queryKeys.tracking(receiptId), report),
+  });
+};
+
+/** Public: the passenger opened the conversation. "My reports" badges update next time. */
+export const useMarkReadByPassenger = (receiptId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => markMessagesReadByPassenger(receiptId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["myReports"] }),
+  });
+};
+
+/** "My reports" for a passenger session */
+export const useMyReports = (token: string | null) =>
+  useQuery({
+    queryKey: queryKeys.myReports(token ?? ""),
+    queryFn: () => getMyReports(token ?? ""),
+    enabled: Boolean(token),
+    retry: false, // a 401 means the session ended
+  });
+
 export const useAdmins = (enabled: boolean) =>
   useQuery({ queryKey: queryKeys.admins, queryFn: listAdmins, enabled });
 
@@ -87,6 +120,24 @@ export const useAddReportNote = (id: string) => {
   return useMutation({
     mutationFn: (text: string) => addReportNote(id, text),
     onSuccess: onUpdated,
+  });
+};
+
+export const useSendAdminMessage = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: (input: { body: string; notifyPassenger: boolean }) =>
+      sendAdminMessage(id, input.body, input.notifyPassenger),
+    onSuccess: onUpdated,
+  });
+};
+
+/** Admin opened a report with unread passenger messages: clear the badge in the list. */
+export const useMarkReadByAdmin = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => markMessagesReadByAdmin(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.reports }),
   });
 };
 

@@ -28,6 +28,30 @@ export interface ApiMessages {
     rateLink: string;
     thanks: string;
   };
+  codeEmail: {
+    subject: (code: string) => string;
+    intro: string;
+    expires: (minutes: number) => string;
+    ignore: string;
+  };
+  messageEmail: {
+    subject: (receiptId: string) => string;
+    intro: (receiptId: string) => string;
+    replyLink: string;
+  };
+  sms: {
+    code: (code: string, minutes: number) => string;
+    received: (receiptId: string) => string;
+    status: (receiptId: string, status: string) => string;
+    message: (receiptId: string) => string;
+    link: (url: string) => string;
+  };
+  push: {
+    statusTitle: string;
+    statusBody: (receiptId: string, status: string) => string;
+    messageTitle: string;
+    messageBody: (receiptId: string) => string;
+  };
   pdf: {
     subtitle: string;
     title: Record<ReportType, [string, string]>;
@@ -116,6 +140,32 @@ const en: ApiMessages = {
     ratePrompt: "Were you satisfied with how this was handled?",
     rateLink: "Rate the outcome (1 to 5 stars)",
     thanks: "Thank you for helping make public transport safer.",
+  },
+  codeEmail: {
+    subject: (code) => `${code} is your BusWatch sign-in code`,
+    intro: 'Use this code to open "My reports" on BusWatch:',
+    expires: (minutes) => `It works once and expires in ${minutes} minutes.`,
+    ignore:
+      "If you didn't ask for it, you can ignore this email. Nobody can sign in without the code.",
+  },
+  messageEmail: {
+    subject: (id) => `New message about your BusWatch report ${id}`,
+    intro: (id) => `The BusWatch team sent you a message about your report <strong>${id}</strong>:`,
+    replyLink: "Read and reply",
+  },
+  sms: {
+    code: (code, minutes) =>
+      `BusWatch: your sign-in code is ${code}. It expires in ${minutes} minutes. Never share it.`,
+    received: (id) => `BusWatch: we received your report. Your receipt ID is ${id}.`,
+    status: (id, status) => `BusWatch: your report ${id} is now "${status}".`,
+    message: (id) => `BusWatch: the team sent you a message about report ${id}.`,
+    link: (url) => ` Details: ${url}`,
+  },
+  push: {
+    statusTitle: "Your report was updated",
+    statusBody: (id, status) => `${id} is now: ${status}`,
+    messageTitle: "New message from BusWatch",
+    messageBody: (id) => `About your report ${id}. Tap to read and reply.`,
   },
   pdf: {
     subtitle: "Public Transport Monitoring System",
@@ -214,6 +264,34 @@ const si: ApiMessages = {
     rateLink: "ප්‍රතිඵලය ශ්‍රේණිගත කරන්න (තරු 1 සිට 5 දක්වා)",
     thanks: "පොදු ප්‍රවාහනය වඩාත් ආරක්ෂිත කිරීමට උදව් කළාට ස්තූතියි.",
   },
+  codeEmail: {
+    subject: (code) => `${code} ඔබේ BusWatch පිවිසුම් කේතයයි`,
+    intro: 'BusWatch හි "මගේ වාර්තා" විවෘත කිරීමට මෙම කේතය භාවිත කරන්න:',
+    expires: (minutes) =>
+      `එය එක් වරක් පමණක් ක්‍රියා කරන අතර මිනිත්තු ${minutes} කින් කල් ඉකුත් වේ.`,
+    ignore:
+      "ඔබ මෙය ඉල්ලුවේ නැත්නම්, මෙම ඊමේලය නොසලකා හරින්න. කේතය නොමැතිව කිසිවෙකුට පිවිසිය නොහැක.",
+  },
+  messageEmail: {
+    subject: (id) => `ඔබේ BusWatch වාර්තාව ${id} පිළිබඳ නව පණිවිඩයක්`,
+    intro: (id) =>
+      `BusWatch කණ්ඩායම ඔබේ වාර්තාව <strong>${id}</strong> පිළිබඳව ඔබට පණිවිඩයක් එවා ඇත:`,
+    replyLink: "කියවා පිළිතුරු දෙන්න",
+  },
+  sms: {
+    code: (code, minutes) =>
+      `BusWatch: ඔබේ පිවිසුම් කේතය ${code}. මිනිත්තු ${minutes} කින් කල් ඉකුත් වේ. කිසිවෙකුට නොදෙන්න.`,
+    received: (id) => `BusWatch: ඔබේ වාර්තාව අපට ලැබුණි. ඔබේ රිසිට්පත් අංකය ${id}.`,
+    status: (id, status) => `BusWatch: ඔබේ වාර්තාව ${id} දැන් "${status}".`,
+    message: (id) => `BusWatch: වාර්තාව ${id} පිළිබඳව කණ්ඩායම ඔබට පණිවිඩයක් එවා ඇත.`,
+    link: (url) => ` විස්තර: ${url}`,
+  },
+  push: {
+    statusTitle: "ඔබේ වාර්තාව යාවත්කාලීන විය",
+    statusBody: (id, status) => `${id} දැන්: ${status}`,
+    messageTitle: "BusWatch වෙතින් නව පණිවිඩයක්",
+    messageBody: (id) => `ඔබේ වාර්තාව ${id} ගැන. කියවා පිළිතුරු දීමට තට්ටු කරන්න.`,
+  },
   pdf: {
     subtitle: "පොදු ප්‍රවාහන නිරීක්ෂණ පද්ධතිය",
     title: { complaint: ["සිද්ධි", "වාර්තාව"], commendation: ["රියැදුරු", "ප්‍රශංසාව"] },
@@ -307,6 +385,33 @@ const ta: ApiMessages = {
     ratePrompt: "இது கையாளப்பட்ட விதத்தில் நீங்கள் திருப்தி அடைந்தீர்களா?",
     rateLink: "முடிவை மதிப்பிடுங்கள் (1 முதல் 5 நட்சத்திரங்கள்)",
     thanks: "பொதுப் போக்குவரத்தைப் பாதுகாப்பானதாக்க உதவியதற்கு நன்றி.",
+  },
+  codeEmail: {
+    subject: (code) => `${code} உங்கள் BusWatch உள்நுழைவுக் குறியீடு`,
+    intro: 'BusWatch இல் "எனது அறிக்கைகள்" பக்கத்தைத் திறக்க இந்தக் குறியீட்டைப் பயன்படுத்தவும்:',
+    expires: (minutes) => `இது ஒருமுறை மட்டுமே செயல்படும், ${minutes} நிமிடங்களில் காலாவதியாகும்.`,
+    ignore:
+      "நீங்கள் இதைக் கோரவில்லை என்றால், இந்த மின்னஞ்சலைப் புறக்கணிக்கலாம். குறியீடு இல்லாமல் யாரும் உள்நுழைய முடியாது.",
+  },
+  messageEmail: {
+    subject: (id) => `உங்கள் BusWatch அறிக்கை ${id} பற்றிய புதிய செய்தி`,
+    intro: (id) =>
+      `உங்கள் அறிக்கை <strong>${id}</strong> பற்றி BusWatch குழு உங்களுக்கு ஒரு செய்தி அனுப்பியுள்ளது:`,
+    replyLink: "படித்துப் பதிலளிக்கவும்",
+  },
+  sms: {
+    code: (code, minutes) =>
+      `BusWatch: உங்கள் உள்நுழைவுக் குறியீடு ${code}. ${minutes} நிமிடங்களில் காலாவதியாகும். யாருடனும் பகிர வேண்டாம்.`,
+    received: (id) => `BusWatch: உங்கள் அறிக்கை எங்களுக்குக் கிடைத்தது. உங்கள் ரசீது எண் ${id}.`,
+    status: (id, status) => `BusWatch: உங்கள் அறிக்கை ${id} இப்போது "${status}".`,
+    message: (id) => `BusWatch: அறிக்கை ${id} பற்றி குழு உங்களுக்கு ஒரு செய்தி அனுப்பியுள்ளது.`,
+    link: (url) => ` விவரங்கள்: ${url}`,
+  },
+  push: {
+    statusTitle: "உங்கள் அறிக்கை புதுப்பிக்கப்பட்டது",
+    statusBody: (id, status) => `${id} இப்போது: ${status}`,
+    messageTitle: "BusWatch இலிருந்து புதிய செய்தி",
+    messageBody: (id) => `உங்கள் அறிக்கை ${id} பற்றி. படித்துப் பதிலளிக்கத் தட்டவும்.`,
   },
   pdf: {
     subtitle: "பொதுப் போக்குவரத்து கண்காணிப்பு அமைப்பு",

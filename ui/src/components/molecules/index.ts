@@ -11,6 +11,7 @@ export { default as LocationPicker } from "./LocationPicker";
 export { default as MediaDropzone } from "./MediaDropzone";
 export { default as MonthlyTrendChart } from "./MonthlyTrendChart";
 export { default as PageHeader } from "./PageHeader";
+export { default as PhoneField } from "./PhoneField";
 export { default as ReceiptSearchForm } from "./ReceiptSearchForm";
 export { default as ResultCard } from "./ResultCard";
 export { default as SectionPanel } from "./SectionPanel";

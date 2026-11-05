@@ -7,6 +7,7 @@ import {
   REPORT_STATUSES,
   REPORT_TYPES,
 } from "../config/constants.js";
+import { normalisePhone } from "../utils/phone.js";
 
 // Multipart forms send every field as a string; blank means "not provided"
 const blankToUndefined = (value: unknown) =>
@@ -51,6 +52,20 @@ export const submitReportSchema = z
     passengerEmail: z.preprocess(
       blankToUndefined,
       z.email({ error: "Invalid email address." }).toLowerCase().optional(),
+    ),
+    // Optional mobile number for SMS updates and "My reports"; stored as +94771234567
+    passengerPhone: z.preprocess(
+      blankToUndefined,
+      z
+        .string()
+        .max(30)
+        .transform((value, ctx) => {
+          const phone = normalisePhone(value);
+          if (phone) return phone;
+          ctx.addIssue({ code: "custom", message: "Enter a mobile number like 077 123 4567." });
+          return z.NEVER;
+        })
+        .optional(),
     ),
     incidentAt: z.preprocess(
       blankToUndefined,

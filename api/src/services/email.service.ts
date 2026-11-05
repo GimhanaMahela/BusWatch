@@ -8,7 +8,8 @@ import {
 import { env, frontendUrl as FRONTEND_URL } from "../config/env.js";
 import { messagesFor } from "../i18n/messages.js";
 
-const isEmailConfigured = (): boolean => Boolean(env.EMAIL_SERVICE_HOST && env.EMAIL_SERVICE_USER);
+export const isEmailConfigured = (): boolean =>
+  Boolean(env.EMAIL_SERVICE_HOST && env.EMAIL_SERVICE_USER);
 
 const transporter = nodemailer.createTransport({
   host: env.EMAIL_SERVICE_HOST,
@@ -166,6 +167,68 @@ export const sendStatusUpdateEmail = async ({
       }
       ${trackUrl ? `<p style="font-size: 15px; text-align: center;"><a href="${trackUrl}" style="color: #0056b3;">${escapeHtml(t.timelineLink)}</a></p>` : ""}
       <p style="font-size: 14px; color: #777; text-align: center;">${escapeHtml(t.thanks)}</p>
+    `,
+    ),
+  });
+  return true;
+};
+
+/** Sends a "My reports" sign-in code. Returns false when email is not configured. */
+export const sendSignInCodeEmail = async ({
+  toEmail,
+  code,
+  minutes,
+  language = "en",
+}: {
+  toEmail: string;
+  code: string;
+  minutes: number;
+  language?: Language;
+}): Promise<boolean> => {
+  if (!isEmailConfigured()) return false;
+  const t = messagesFor(language).codeEmail;
+  await transporter.sendMail({
+    from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
+    to: toEmail,
+    subject: t.subject(code),
+    html: layout(
+      language,
+      `
+      <p style="font-size: 16px;">${escapeHtml(t.intro)}</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0056b3; text-align: center; background-color: #e0f2f7; padding: 14px; border-radius: 5px;">${escapeHtml(code)}</p>
+      <p style="font-size: 15px;">${escapeHtml(t.expires(minutes))}</p>
+      <p style="font-size: 14px; color: #777;">${escapeHtml(t.ignore)}</p>
+    `,
+    ),
+  });
+  return true;
+};
+
+/** Forwards an admin's message about a report. Returns false when email is not configured. */
+export const sendMessageEmail = async ({
+  toEmail,
+  receiptId,
+  body,
+  language = "en",
+}: {
+  toEmail: string;
+  receiptId: string;
+  body: string;
+  language?: Language;
+}): Promise<boolean> => {
+  if (!isEmailConfigured()) return false;
+  const t = messagesFor(language).messageEmail;
+  const replyUrl = trackingUrl(receiptId, "#messages");
+  await transporter.sendMail({
+    from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
+    to: toEmail,
+    subject: t.subject(receiptId),
+    html: layout(
+      language,
+      `
+      <p style="font-size: 16px;">${t.intro(escapeHtml(receiptId))}</p>
+      <p style="font-size: 16px; background-color: #ffffff; border-left: 4px solid #0056b3; padding: 12px 16px; border-radius: 4px;">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>
+      ${replyUrl ? `<div style="text-align: center; margin: 24px 0;"><a href="${replyUrl}" style="display: inline-block; background-color: #0056b3; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">${escapeHtml(t.replyLink)}</a></div>` : ""}
     `,
     ),
   });

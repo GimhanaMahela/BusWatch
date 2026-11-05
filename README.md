@@ -31,9 +31,25 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   ones never do), admins can exclude a disputed report, and submissions pass Cloudflare Turnstile when
   `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` are set.
 
+**Two-way contact**
+
+- **My reports** (`/my-reports`): no password. The passenger enters the email or mobile number they
+  reported with and gets a one-time code; the list shows every report and flags new team messages.
+- **Messages between admin and passenger**: admins ask for details from the report page ("Which seat
+  were you in?"); the passenger reads and replies on the tracking page, where the team appears as
+  "BusWatch team". Unread replies are flagged in the admin reports table.
+- **SMS or WhatsApp updates**: an optional mobile number on the forms. Receipts, status changes and new
+  messages are texted through Notify.lk or Twilio (`SMS_PROVIDER`). Texts link to the report and never
+  contain the team's message itself.
+- **Browser push notifications**: "Get notified on this device" on the tracking and receipt pages
+  (Web Push, `VAPID_*` keys). On iPhone it works once BusWatch is added to the Home Screen.
+
+Status changes and messages go out on every channel the passenger gave (email, SMS, push), in their
+language; the admin sees which ones reached them.
+
 The admin **Analytics** page tracks the Phase 1 success metrics: form completion rate, return visits to
 tracking, average outcome rating, reports from QR codes and time to first response (anonymous daily
-counts, no personal data).
+counts, no personal data), plus messages, passenger replies, My reports sign-ins and push sign-ups.
 
 | App           | What it is                                  |
 | ------------- | ------------------------------------------- |
@@ -56,6 +72,19 @@ npm run dev            # migrates the DB, then API on :5000 and UI on http://loc
 The UI calls the API at `/api` on its own origin; the Next.js server forwards those requests to the API.
 On first start the API creates a superadmin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Other admins are
 added from the dashboard's **Admins** dialog.
+
+### Optional services
+
+| Feature                  | Variables                                                | Without them                      |
+| ------------------------ | -------------------------------------------------------- | --------------------------------- |
+| Emails (receipts, codes) | `EMAIL_SERVICE_*`                                        | Skipped (codes printed in dev)    |
+| SMS / WhatsApp           | `SMS_PROVIDER` + `NOTIFYLK_*` or `TWILIO_*`              | Skipped (texts printed in dev)    |
+| Browser push             | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | The "Get notified" card is hidden |
+| CAPTCHA                  | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Submissions aren't checked        |
+
+Generate push keys once with `npx web-push generate-vapid-keys`. For WhatsApp through Twilio, set
+`TWILIO_FROM=whatsapp:+…`; messages a passenger didn't start need templates approved by WhatsApp, so
+start with SMS.
 
 ## Scripts
 

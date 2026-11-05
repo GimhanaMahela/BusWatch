@@ -8,6 +8,8 @@ import type { PublicReport } from "@/types/report";
 import TrackReportView from "./TrackReportView";
 
 vi.mock("@/api/reportApi", () => ({ trackReport: vi.fn(), rateOutcome: vi.fn() }));
+// Browser notifications are off unless the server has push keys
+vi.mock("@/api/pushApi", () => ({ getPushKey: () => Promise.resolve({ publicKey: null }) }));
 const mockedTrackReport = vi.mocked(trackReport);
 const mockedRateOutcome = vi.mocked(rateOutcome);
 
@@ -28,6 +30,8 @@ const report: PublicReport = {
   rating: null,
   feedback: null,
   ratedAt: null,
+  messages: [],
+  canReply: true,
 };
 
 describe("TrackReportView", () => {
@@ -118,5 +122,24 @@ describe("TrackReportView", () => {
     expect(screen.getAllByText("ප්‍රශංසාව ලැබුණා.")).toHaveLength(1);
     expect(screen.getByText("කාරුණික, උදව්කාරී කාර්ය මණ්ඩලය")).toBeInTheDocument();
     expect(screen.queryByText("ස්ථානය")).not.toBeInTheDocument();
+  });
+
+  it("shows the conversation with the team", async () => {
+    mockedTrackReport.mockResolvedValue({
+      ...report,
+      messages: [
+        {
+          id: "m1",
+          sender: "passenger",
+          body: "It was the 8.15 bus",
+          createdAt: "2026-10-02T08:00:00.000Z",
+          read: true,
+        },
+      ],
+    });
+    renderWithProviders(<TrackReportView receiptId="BW-2026-ABCDEF" />);
+    expect(await screen.findByText("It was the 8.15 bus")).toBeInTheDocument();
+    expect(screen.getByText("Seen by the team")).toBeInTheDocument();
+    expect(screen.getByLabelText("Your message")).toBeInTheDocument();
   });
 });

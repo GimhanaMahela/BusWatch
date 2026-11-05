@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 import cloudinary from "../config/cloudinary.js";
-import { RATEABLE_STATUSES, type ReportStatus, type ReportType } from "../config/constants.js";
+import {
+  RATEABLE_STATUSES,
+  REPLY_WINDOW_DAYS,
+  type ReportStatus,
+  type ReportType,
+} from "../config/constants.js";
 import type { UploadedMedia } from "../middleware/upload.middleware.js";
 import {
   addReportNote,
@@ -17,8 +22,11 @@ import {
   updateReportStatus as updateReportStatusRow,
   type ReportWithRelations,
 } from "../repositories/report.repository.js";
-import { incrementMetric } from "../repositories/metric.repository.js";
-import { sendReportReceiptEmail, sendStatusUpdateEmail } from "../services/email.service.js";
+import { countEvent } from "../repositories/metric.repository.js";
+import { messagesFor } from "../i18n/messages.js";
+import { sendReportReceiptEmail, trackingUrl } from "../services/email.service.js";
+import { sendSms } from "../services/sms.service.js";
+import { notifyPassenger as deliverToPassenger } from "../services/notification.service.js";
 import { generatePdfReceipt } from "../services/pdf-receipt.service.js";
 import { generateReceiptId } from "../utils/receipt-id.js";
 import { invalidateCache } from "../utils/ttl-cache.js";
@@ -59,17 +67,31 @@ export interface PublicTimelineEntry {
 const canRate = (type: ReportType, status: ReportStatus) =>
   type === "complaint" && (RATEABLE_STATUSES as readonly ReportStatus[]).includes(status);
 
-/** Counters must never break a request: log and carry on. */
-const countEvent = (event: Parameters<typeof incrementMetric>[0]) =>
-  incrementMetric(event).catch((error: unknown) =>
-    console.error(`Failed to count ${event}:`, error instanceof Error ? error.message : error),
-  );
+const CLOSED_STATUSES: readonly ReportStatus[] = ["resolved", "rejected"];
 
-/** What a passenger may see about their own report: no media, email or internal notes. */
-const toPublicView = (report: ReportWithRelations) => {
+/** Passengers can reply while a report is open and for a while after it was closed. */
+export const canReply = (report: ReportWithRelations, now = Date.now()) => {
+  if (!CLOSED_STATUSES.includes(report.status)) return true;
+  const closedAt = report.statusHistory.at(-1)?.changedAt ?? report.resolvedAt;
+  return !closedAt || now - closedAt.getTime() < REPLY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+};
+
+/**
+ * What a passenger may see about their own report: no media, contact details, internal notes or
+ * admin names (messages show "BusWatch team").
+ */
+export const toPublicView = (report: ReportWithRelations) => {
   const timeline: PublicTimelineEntry[] = report.statusHistory.map(
     ({ status, note, changedAt }) => ({ status, note: note ?? undefined, changedAt }),
   );
+  const messages = report.messages.map(({ id, sender, body, createdAt, readAt }) => ({
+    id,
+    sender,
+    body,
+    createdAt,
+    // For the passenger's own messages: has the team seen it yet?
+    read: readAt !== null,
+  }));
 
   return {
     receiptId: report.receiptId,
@@ -87,6 +109,8 @@ const toPublicView = (report: ReportWithRelations) => {
     rating: report.outcomeRating,
     feedback: report.outcomeFeedback,
     ratedAt: report.ratedAt,
+    messages,
+    canReply: canReply(report),
   };
 };
 
@@ -154,6 +178,23 @@ export const submitReport = async (
     }
   }
 
+  let smsSent = false;
+  if (saved.passengerPhone) {
+    const link = trackingUrl(receiptId);
+    const t = messagesFor(saved.language).sms;
+    try {
+      smsSent = await sendSms(
+        saved.passengerPhone,
+        t.received(receiptId) + (link ? t.link(link) : ""),
+      );
+    } catch (smsError) {
+      console.error(
+        "Failed to send receipt SMS:",
+        smsError instanceof Error ? smsError.message : smsError,
+      );
+    }
+  }
+
   const report = await findReportById(saved.id);
   res.status(201).json({
     msg: "Report submitted successfully!",
@@ -161,6 +202,7 @@ export const submitReport = async (
     receiptId,
     pdfUrl,
     emailSent,
+    smsSent,
   });
 };
 
@@ -284,26 +326,11 @@ export const updateReportStatus = async (
   const report = await findReportById(current.id);
   if (!report) throw new Error("Report disappeared during status update");
 
-  let emailSent = false;
-  if (notifyPassenger && report.passengerEmail) {
-    try {
-      emailSent = await sendStatusUpdateEmail({
-        toEmail: report.passengerEmail,
-        receiptId: report.receiptId,
-        status,
-        note,
-        type: report.type,
-        language: report.language,
-      });
-    } catch (emailError) {
-      console.error(
-        "Failed to send status update email:",
-        emailError instanceof Error ? emailError.message : emailError,
-      );
-    }
-  }
+  const delivery = notifyPassenger
+    ? await deliverToPassenger(report, { kind: "status", status, note })
+    : { email: false, sms: false, push: 0 };
 
-  res.json({ ...report, emailSent });
+  res.json({ ...report, emailSent: delivery.email, delivery });
 };
 
 // @desc    Add an internal note to a report (Admin only)

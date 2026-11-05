@@ -19,7 +19,9 @@
     "busTitle": "Bus {bus}",
     "busDescription": "Checked passenger reports and commendations for bus {bus}.",
     "routeTitle": "Route {route}",
-    "routeDescription": "Checked passenger reports and commendations for route {route}."
+    "routeDescription": "Checked passenger reports and commendations for route {route}.",
+    "myReportsTitle": "My reports",
+    "myReportsDescription": "See every report you sent with your email or mobile number. Sign in with a one-time code, no password."
   },
   "common": {
     "language": "Language",
@@ -45,7 +47,8 @@
     "closeMenu": "Close menu",
     "homeLink": "BusWatch home",
     "mainNav": "Main",
-    "impact": "Impact"
+    "impact": "Impact",
+    "myReports": "My reports"
   },
   "footer": {
     "tagline": "Your eye on public transport. Report incidents in minutes and follow every step until they are resolved.",
@@ -60,7 +63,8 @@
     "privacy": "Privacy policy",
     "terms": "Terms of service",
     "madeFor": "Made for safer journeys in Sri Lanka.",
-    "impact": "Our impact"
+    "impact": "Our impact",
+    "myReports": "My reports"
   },
   "install": {
     "button": "Install the app",
@@ -226,7 +230,11 @@
     "commendInstead": "Had a good experience instead? <link>Commend the driver</link>",
     "draftRestored": "We restored the report you didn't finish.",
     "discardDraft": "Start over",
-    "offlineBanner": "You're offline. Keep going: your report will be sent when you're back online."
+    "offlineBanner": "You're offline. Keep going: your report will be sent when you're back online.",
+    "phone": "Your mobile number (optional)",
+    "phoneHelp": "For SMS updates and to sign in to My reports. Never shown publicly.",
+    "phoneInvalid": "Enter a mobile number like 077 123 4567.",
+    "reviewPhone": "Mobile for updates"
   },
   "commend": {
     "eyebrow": "Good service",
@@ -244,7 +252,9 @@
     "send": "Send commendation",
     "failed": "Failed to send your commendation. Please try again.",
     "consent": "By sending this you agree to our <terms>terms</terms> and <privacy>privacy policy</privacy>.",
-    "reportInstead": "Something went wrong instead? <link>Report an incident</link>"
+    "reportInstead": "Something went wrong instead? <link>Report an incident</link>",
+    "phone": "Your mobile number (optional)",
+    "phoneHelp": "We'll text you when your commendation is passed on. Never shown publicly."
   },
   "success": {
     "title": "Report received. Thank you.",
@@ -256,7 +266,8 @@
     "track": "Track this report",
     "receiptPdf": "Receipt PDF",
     "another": "Report another incident",
-    "anotherCommendation": "Commend another driver"
+    "anotherCommendation": "Commend another driver",
+    "texted": "We've texted the receipt ID to your phone."
   },
   "offline": {
     "queuedTitle": "Saved on this device",
@@ -411,5 +422,62 @@
     "commendCta": "Commend this bus's crew",
     "back": "All results",
     "reportsCount": "{count, plural, one {# report} other {# reports}}"
+  },
+  "push": {
+    "title": "Get notified on this device",
+    "text": "We'll show a notification when your report is updated or the team sends you a message. No email or phone number needed.",
+    "enable": "Turn on notifications",
+    "disable": "Turn off",
+    "on": "Notifications are on for this report on this device.",
+    "denied": "Notifications are blocked for this site. Allow them in your browser settings, then try again.",
+    "unsupported": "This browser can't show notifications.",
+    "iosHint": "On iPhone or iPad, first add BusWatch to your Home Screen (Share, then Add to Home Screen) and open it from there.",
+    "unavailable": "Notifications aren't available yet.",
+    "failed": "Couldn't change notifications. Please try again."
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "Talk to the BusWatch team about this report.",
+    "empty": "No messages yet. If the team needs more details, they'll ask here, and you can add anything you remember.",
+    "team": "BusWatch team",
+    "you": "You",
+    "seen": "Seen by the team",
+    "label": "Your message",
+    "placeholder": "Write a message to the team",
+    "send": "Send",
+    "sent": "Sent. The team will reply here.",
+    "closed": "This report was closed a while ago, so replies are off. Please send a new report if something else happened.",
+    "privacy": "Don't share passwords or bank details. The team will never ask for them.",
+    "failed": "Couldn't send your message. Please try again.",
+    "newCount": "{count, plural, one {# new message} other {# new messages}}"
+  },
+  "myReports": {
+    "eyebrow": "My reports",
+    "title": "All your reports in one place",
+    "subtitle": "Sign in with the email or mobile number you gave when reporting. We'll send you a one-time code: no password to remember.",
+    "contactLabel": "Email or mobile number",
+    "contactPlaceholder": "you@example.com or 077 123 4567",
+    "sendCode": "Send me a code",
+    "codeSent": "If we have reports for {sentTo}, a 6-digit code is on its way. It expires in 10 minutes.",
+    "codeLabel": "6-digit code",
+    "verify": "Sign in",
+    "changeContact": "Use a different email or number",
+    "resend": "Send a new code",
+    "signedInAs": "Signed in as {contact}",
+    "signOut": "Sign out",
+    "listTitle": "Your reports",
+    "empty": "No reports found for this email or number.",
+    "emptyHint": "Reports appear here when you give your email or mobile number on the report form. You can still follow any report with its receipt ID.",
+    "lastUpdate": "Updated {time}",
+    "commendation": "Commendation",
+    "error": "Couldn't load your reports. Please try again.",
+    "expired": "Your session has ended. Please sign in again.",
+    "deviceTitle": "Reports on this device",
+    "deviceText": "Receipt IDs you sent or looked up on this device, even without signing in.",
+    "trackById": "Track a report by receipt ID",
+    "invalidCode": "That code is wrong or has expired. Check it, or ask for a new one.",
+    "contactInvalid": "Enter your email address or a mobile number like 077 123 4567.",
+    "smsUnavailable": "Codes by SMS aren't available yet. Please use your email address.",
+    "emailUnavailable": "Codes by email aren't available yet. Please use your mobile number."
   }
 }

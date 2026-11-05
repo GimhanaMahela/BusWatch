@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { BrandMark, ColorModeToggle, GradientButton, LanguageSwitcher } from "@/components/atoms";
 import { InstallAppButton } from "@/components/molecules";
@@ -25,6 +25,7 @@ import { InstallAppButton } from "@/components/molecules";
 const NAV_ITEMS = [
   { key: "home", href: "/" },
   { key: "track", href: "/track" },
+  { key: "myReports", href: "/my-reports" },
   { key: "commend", href: "/commend-a-driver" },
   { key: "impact", href: "/impact" },
   { key: "about", href: "/about-us" },
@@ -36,6 +37,10 @@ const isActive = (pathname: string, href: string) =>
 /** Sticky, translucent top bar for the public site. */
 function SiteHeader() {
   const t = useTranslations("header");
+  // Sinhala and Tamil labels are much longer than English and don't fit beside the actions in the
+  // ~1200px header, so those languages always use the menu button
+  const fullNav = useLocale() === "en";
+  const navShown = fullNav ? "flex" : "none";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -65,7 +70,7 @@ function SiteHeader() {
           <Box
             component="nav"
             aria-label={t("mainNav")}
-            sx={{ display: { xs: "none", lg: "flex" }, gap: 0.5, ml: 4 }}
+            sx={{ display: { xs: "none", lg: navShown }, gap: 0.5, ml: 4 }}
           >
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.href);
@@ -97,7 +102,8 @@ function SiteHeader() {
               href="/admin/login"
               color="inherit"
               sx={{
-                display: { xs: "none", lg: "inline-flex" },
+                // Also in the menu and the footer; shown here only where there is room
+                display: { xs: "none", xl: fullNav ? "inline-flex" : "none" },
                 color: "text.secondary",
                 whiteSpace: "nowrap",
               }}
@@ -113,7 +119,12 @@ function SiteHeader() {
             <IconButton
               aria-label={t("openMenu")}
               onClick={() => setOpen(true)}
-              sx={{ display: { lg: "none" }, border: 1, borderColor: "divider", borderRadius: 2.5 }}
+              sx={{
+                display: { lg: fullNav ? "none" : "inline-flex" },
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2.5,
+              }}
             >
               <MenuRoundedIcon fontSize="small" />
             </IconButton>

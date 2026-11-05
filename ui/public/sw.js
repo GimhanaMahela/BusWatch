@@ -6,6 +6,8 @@
  * - API calls, admin pages and React Server Component fetches always go to the network.
  * Reports written while offline are kept in IndexedDB by the page itself and sent when the
  * connection returns (see ui/src/lib/offlineStore.ts).
+ * - Push: shows "your report was updated" notifications and opens the report when tapped.
+ *   Development registers this file as /sw.js?mode=push-only, which skips all caching.
  *
  * Bump VERSION to drop every old cache on the next visit.
  */
@@ -15,6 +17,7 @@ const ASSET_CACHE = `buswatch-assets-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const NETWORK_TIMEOUT_MS = 4000;
 const MAX_ASSETS = 400;
+const PUSH_ONLY = new URL(self.location.href).searchParams.get("mode") === "push-only";
 
 // Pages a passenger may need on the bus. Their scripts and styles are cached alongside.
 const PRECACHE_PAGES = ["/", "/submit-report", "/commend-a-driver", "/track", OFFLINE_URL];
@@ -32,6 +35,10 @@ const cacheAssetsReferencedBy = async (html) => {
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
+      if (PUSH_ONLY) {
+        await self.skipWaiting();
+        return;
+      }
       const assets = await caches.open(ASSET_CACHE);
       await assets.addAll(PRECACHE_ASSETS).catch(() => undefined);
       const pages = await caches.open(PAGE_CACHE);
@@ -114,6 +121,7 @@ const networkFirstPage = async (event) => {
 };
 
 self.addEventListener("fetch", (event) => {
+  if (PUSH_ONLY) return;
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
@@ -131,4 +139,47 @@ self.addEventListener("fetch", (event) => {
   if (STATIC_ASSET.test(url.pathname)) {
     event.respondWith(cacheFirst(request));
   }
+});
+
+// ---------------------------------------------------------------- Push notifications
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const url = typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/track";
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(data.title || "BusWatch", {
+        body: data.body || "",
+        tag: data.tag,
+        renotify: Boolean(data.tag),
+        icon: "/logo192.png",
+        badge: "/logo192.png",
+        data: { url },
+      });
+      // An open tracking page refreshes itself
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      windows.forEach((client) => client.postMessage({ type: "report-updated", url }));
+    })(),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/track", self.location.origin);
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = windows.find((client) => new URL(client.url).pathname === url.pathname);
+      if (open) {
+        await open.focus();
+        return;
+      }
+      await self.clients.openWindow(url.href);
+    })(),
+  );
 });

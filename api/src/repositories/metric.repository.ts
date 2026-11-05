@@ -17,6 +17,12 @@ export const incrementMetric = async (event: MetricEvent) => {
     });
 };
 
+/** Like incrementMetric, but a counter must never break a request: log and carry on. */
+export const countEvent = (event: MetricEvent) =>
+  incrementMetric(event).catch((error: unknown) =>
+    console.error(`Failed to count ${event}:`, error instanceof Error ? error.message : error),
+  );
+
 /** Total per event since a day ("YYYY-MM-DD", inclusive); events never seen count as 0. */
 export const getMetricTotals = async (sinceDay: string): Promise<Record<MetricEvent, number>> => {
   const rows = await db
