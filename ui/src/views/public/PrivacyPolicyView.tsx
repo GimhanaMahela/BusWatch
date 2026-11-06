@@ -18,7 +18,12 @@ const SECTIONS: ContentSection[] = [
           may include, but is not limited to:
         </p>
         <ul>
-          <li>Email address (optional, for report receipts)</li>
+          <li>
+            Email address (optional, for report receipts, updates and signing in to My reports)
+          </li>
+          <li>
+            Mobile number (optional, for SMS or WhatsApp updates and signing in to My reports)
+          </li>
           <li>Location data (for incident reports)</li>
           <li>The language you used the site in, so emails and receipts reach you in it</li>
           <li>
@@ -57,6 +62,50 @@ const SECTIONS: ContentSection[] = [
           sent. If you do not accept cookies, you may not be able to use some portions of our
           Service.
         </p>
+        <h3>Public statistics</h3>
+        <p>
+          Our impact page and the bus and route scorecards show totals only: how many reports were
+          received and resolved, by category, by month and by area. Only reports our team has
+          checked are counted, and a bus or route is shown only once it has several of them. Map
+          areas cover about 5 km and need several reports before they appear. Your name, email,
+          receipt ID, description, photos and the exact time or place of your report are never
+          published. Stories about resolved cases are written by our team without passenger details.
+        </p>
+        <h3>Security check</h3>
+        <p>
+          To keep automated spam out of public figures, report submissions may pass through
+          Cloudflare Turnstile, which checks that a person is sending them. Cloudflare processes
+          technical data about your browser for this purpose only.
+        </p>
+        <h3>Messages, updates and My reports</h3>
+        <p>
+          Our team may send you messages about your report, for example to ask for a detail you
+          didn&apos;t include, and you can reply from the tracking page. Messages are stored with
+          your report and seen only by you (with your receipt ID) and our team. If you gave an email
+          address or mobile number, we use it to tell you about status changes and new messages.
+          Text messages are sent from our own phone through the SMS Gateway for Android app, or
+          through an SMS provider (such as Notify.lk or Twilio), which receives your number and the
+          text of that message only; texts never include what our team wrote, just a link to your
+          report.
+        </p>
+        <p>
+          To open My reports, we send a one-time code to the email address or mobile number you
+          reported with. We store only a scrambled form of the code, it expires after 10 minutes,
+          and we never tell anyone whether an email or number has reports. Your sign-in lasts 30
+          days on that device, or until you sign out.
+        </p>
+        <p>
+          If you turn on notifications for a report, your browser gives us an address its push
+          service (for example Google or Apple) uses to deliver them. We keep it only to notify you
+          about that report, and forget it when you turn notifications off or your browser withdraws
+          it.
+        </p>
+        <p>
+          If you follow a report on Telegram, we keep your Telegram chat ID (not your phone number
+          or name) to send you short updates with a link to your report, never what our team wrote.
+          Telegram delivers these messages under its own privacy policy. Send /stop to the BusWatch
+          bot and we delete your chat ID straight away.
+        </p>
         <h3>Data kept on your device</h3>
         <p>
           If you install BusWatch or lose your connection while writing a report, the unfinished
@@ -83,6 +132,9 @@ const SECTIONS: ContentSection[] = [
           <li>To monitor the usage of the Service</li>
           <li>To detect, prevent and address technical issues</li>
           <li>To provide you with a receipt for your submitted report (if email is provided)</li>
+          <li>
+            To keep you informed about your report and to let our team ask you for more details
+          </li>
         </ul>
       </>
     ),

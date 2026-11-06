@@ -161,6 +161,45 @@ browser is back online. The worker only registers in production builds.
 **Metrics.** `trackEvent()` (`api/metricsApi.ts`) counts anonymous events (form started, tracking
 visit, QR scan, share, ...) as daily totals in `daily_metrics`. Submissions are counted by the API.
 
+**Public results.** `/api/public/*` (`public.repository.ts`) returns aggregates only, and every query
+applies the same rules: a report counts once an admin has checked it (`PUBLIC_STATUSES`: reviewed,
+escalated, resolved) and not hidden it (`hiddenFromPublic`); buses and routes need `MIN_PUBLIC_REPORTS`
+checked reports for a scorecard; heatmap cells need `MIN_HEATMAP_REPORTS`. Responses are cached in
+memory for five minutes (`utils/ttl-cache.ts`, cleared when admins change stories or visibility) and
+the Next pages cache their fetches for the same time (`lib/serverApi.ts`). Never add receipt IDs,
+descriptions, contact details or exact times to these endpoints. The heatmap is plain SVG over a
+Natural Earth outline (`constants/sriLankaOutline.ts`), so no map key or third-party tracking is needed.
+
+**Two-way contact.** `notification.service.ts` sends a status change or team message to the passenger
+on every channel they gave: email (`email.service.ts`), SMS (`sms.service.ts`: an Android phone running SMS
+Gateway for Android, Notify.lk or Twilio, picked by `SMS_PROVIDER`), Telegram (`telegram.service.ts`)
+and Web Push (`push.service.ts`, one `push_subscriptions` row per device and
+report). Each channel is best-effort and the result (`delivery`) goes back to the admin. Messages live in
+`report_messages` with a `readAt` per side. The passenger's key to a report stays its receipt ID, as for
+ratings; replies close `REPLY_WINDOW_DAYS` after the report does.
+`GET /api/passenger/channels` tells the UI which channels are on, so it hides the phone field without
+SMS and the Telegram card without a bot.
+
+Telegram: the tracking page fetches a `t.me/<bot>?start=<token>` link, where the token is the receipt ID,
+an expiry and an HMAC (valid a day). Pressing Start sends `/start <token>` to the bot; the chat is saved
+in `telegram_subscriptions` (private chats only) and `/stop` deletes it. The API receives bot messages by
+long polling, started from `server.ts`, or by webhook (`POST /api/telegram/webhook`, checked against
+`TELEGRAM_WEBHOOK_SECRET`) on serverless hosts. Chats that block the bot are forgotten.
+
+"My reports" uses passwordless sessions: `passenger_codes` stores an HMAC of each 6-digit code (10 min,
+5 tries, 3 codes per contact per 15 min), and `POST /api/passenger/code` answers the same whether or
+not the contact has reports. The session is a JWT with its own audience, sent as `x-passenger-token`;
+`requireAuth` rejects any token without an admin claim, so the two sessions never mix. Phone numbers are
+stored in E.164 (`utils/phone.ts`, mirrored in `ui/src/lib/phone.ts`).
+
+The service worker shows push notifications and posts `report-updated` to open tabs so the tracking
+page refreshes. In development `lib/push.ts` registers it as `/sw.js?mode=push-only`, which skips the
+page cache.
+
+**CAPTCHA.** `verifyTurnstile` runs on report submission when `TURNSTILE_SECRET_KEY` is set. The browser
+fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
+offline outbox; a failed check keeps the report in the outbox instead of dropping it.
+
 ## Cross-cutting conventions
 
 - Status, category, type and language enums in `api/src/config/constants.ts` must match

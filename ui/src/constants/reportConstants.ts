@@ -44,6 +44,11 @@ export type Language = (typeof LANGUAGES)[number]["value"];
 export const languageLabel = (value?: string): string =>
   LANGUAGES.find((l) => l.value === value)?.label ?? "English";
 
+/** Reports count in public figures only once an admin has checked them (and not hidden them) */
+export const PUBLIC_STATUSES = ["reviewed", "escalated", "resolved"] as const;
+/** Keep in sync with MIN_PUBLIC_REPORTS in the API: the fairness threshold for scorecards */
+export const MIN_PUBLIC_REPORTS = 3;
+
 /** Statuses after which a passenger may rate the outcome of a complaint */
 export const RATEABLE_STATUSES = ["resolved", "rejected"] as const;
 

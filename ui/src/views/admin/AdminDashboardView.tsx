@@ -5,6 +5,7 @@ import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FilterAltOffRoundedIcon from "@mui/icons-material/FilterAltOffRounded";
+import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import HourglassTopRoundedIcon from "@mui/icons-material/HourglassTopRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
@@ -149,9 +150,22 @@ function AdminDashboardView() {
       headerName: "Receipt ID",
       minWidth: 170,
       flex: 0.9,
-      renderCell: ({ value }) => (
-        <Box component="span" sx={mono}>
-          {value as string}
+      renderCell: ({ value, row }) => (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, height: "100%" }}>
+          <Box component="span" sx={mono}>
+            {value as string}
+          </Box>
+          {Boolean(row.unreadMessages) && (
+            <Tooltip
+              title={`${row.unreadMessages} unread message${row.unreadMessages === 1 ? "" : "s"} from the passenger`}
+            >
+              <ForumRoundedIcon
+                color="primary"
+                sx={{ fontSize: 18 }}
+                aria-label="Unread passenger messages"
+              />
+            </Tooltip>
+          )}
         </Box>
       ),
     },

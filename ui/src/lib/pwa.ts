@@ -31,11 +31,15 @@ export const initPwa = () => {
 
   // Development servers rebuild constantly; caching their output would only get in the way
   if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-    window.addEventListener("load", () => {
+    const register = () => {
       navigator.serviceWorker.register("/sw.js").catch((error: unknown) => {
         console.warn("Service worker registration failed:", error);
       });
-    });
+    };
+    // Registering after load keeps it off the critical path. This module runs during hydration,
+    // which is often after the load event already fired, so check rather than only listen.
+    if (document.readyState === "complete") register();
+    else window.addEventListener("load", register, { once: true });
   }
 };
 

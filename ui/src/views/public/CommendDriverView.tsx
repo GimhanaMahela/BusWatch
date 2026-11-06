@@ -35,13 +35,14 @@ import {
 } from "react";
 import { toApiError } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
-import { CategoryPicker } from "@/components/molecules";
+import { CategoryPicker, PhoneField } from "@/components/molecules";
 import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
 import {
   COMMENDATION_CATEGORIES,
   type CommendationCategory,
   type Language,
 } from "@/constants/reportConstants";
+import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useFormDraft from "@/hooks/useFormDraft";
 import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
@@ -59,6 +60,7 @@ interface CommendForm {
   incidentAt: string;
   location: string;
   passengerEmail: string;
+  passengerPhone: string;
   website: string;
 }
 
@@ -70,6 +72,7 @@ const EMPTY_FORM: CommendForm = {
   incidentAt: "",
   location: "",
   passengerEmail: "",
+  passengerPhone: "",
   website: "", // Honeypot
 };
 
@@ -96,6 +99,8 @@ const startIcon = (icon: ReactNode) => ({
 /** "Commend a driver": one short step, no evidence, location optional. */
 function CommendDriverView() {
   const t = useTranslations("commend");
+  // No phone field when no SMS gateway is set up: there would be nothing to send to it
+  const smsAvailable = useSmsAvailable();
   const ts = useTranslations("submit");
   const tCategory = useTranslations("categories");
   const locale = useLocale() as Language;
@@ -167,9 +172,12 @@ function CommendDriverView() {
       );
       await discard();
       if (outcome.kind === "sent") {
-        const { receiptId, pdfUrl, emailSent } = outcome.response;
+        const { receiptId, pdfUrl, emailSent, smsSent } = outcome.response;
         rememberReceipt(receiptId);
-        setResult({ kind: "sent", receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent) } });
+        setResult({
+          kind: "sent",
+          receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent), smsSent: Boolean(smsSent) },
+        });
       } else {
         setResult({ kind: "queued" });
       }
@@ -362,6 +370,16 @@ function CommendDriverView() {
           helperText={t("emailHelp")}
           slotProps={startIcon(<EmailRoundedIcon color="action" />)}
         />
+        {smsAvailable && (
+          <PhoneField
+            name="passengerPhone"
+            label={t("phone")}
+            helperText={t("phoneHelp")}
+            invalidText={ts("phoneInvalid")}
+            value={formData.passengerPhone}
+            onChange={handleChange}
+          />
+        )}
         <input
           type="text"
           name="website"

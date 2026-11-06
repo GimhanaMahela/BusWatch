@@ -11,6 +11,9 @@ import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
 import PlayCircleRoundedIcon from "@mui/icons-material/PlayCircleRounded";
 import PublishedWithChangesRoundedIcon from "@mui/icons-material/PublishedWithChangesRounded";
+import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
@@ -29,6 +32,7 @@ import {
   IconButton,
   MenuItem,
   Rating,
+  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -37,7 +41,11 @@ import { useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
+import { AdminMessagesPanel } from "@/components/organisms";
+import { describeDelivery } from "@/components/organisms/AdminMessagesPanel";
 import {
+  MIN_PUBLIC_REPORTS,
+  PUBLIC_STATUSES,
   STATUSES,
   categoryLabel,
   languageLabel,
@@ -45,7 +53,12 @@ import {
 } from "@/constants/reportConstants";
 import { busQuery } from "@/lib/busNumber";
 import useAuth from "@/hooks/useAuth";
-import { useAddReportNote, useReport, useUpdateReportStatus } from "@/hooks/useReportQueries";
+import {
+  useAddReportNote,
+  useReport,
+  useSetReportVisibility,
+  useUpdateReportStatus,
+} from "@/hooks/useReportQueries";
 import { formatDateTime, timeAgo } from "@/lib/format";
 
 type Media = { kind: "image" | "video"; url: string };
@@ -205,6 +218,7 @@ function ReportDetailsView({ id }: { id: string }) {
   const report = reportQuery.data;
   const updateStatus = useUpdateReportStatus(id);
   const addNote = useAddReportNote(id);
+  const visibility = useSetReportVisibility(id);
 
   // null = "keep the current status" until the admin picks another one
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | null>(null);
@@ -226,7 +240,7 @@ function ReportDetailsView({ id }: { id: string }) {
           setSelectedStatus(null);
           setStatusNote("");
           setStatusSuccess(
-            updated.emailSent ? "Status updated and the passenger was emailed." : "Status updated.",
+            notifyPassenger ? describeDelivery(updated.delivery) : "Status updated.",
           );
         },
       },
@@ -272,6 +286,8 @@ function ReportDetailsView({ id }: { id: string }) {
   ];
   const hasPin = report.latitude != null && report.longitude != null;
   const commendation = report.type === "commendation";
+  const checked = (PUBLIC_STATUSES as readonly string[]).includes(report.status);
+  const countsPublicly = checked && !report.hiddenFromPublic;
 
   return (
     <>
@@ -402,6 +418,9 @@ function ReportDetailsView({ id }: { id: string }) {
               <DetailRow label="Passenger email">
                 {report.passengerEmail || "Not provided"}
               </DetailRow>
+              <DetailRow label="Passenger mobile">
+                {report.passengerPhone || "Not provided"}
+              </DetailRow>
               <DetailRow label="Language">{languageLabel(report.language)}</DetailRow>
               <DetailRow label="Sent from">
                 {report.source === "qr" ? "QR sticker in the bus" : "Website"}
@@ -420,6 +439,8 @@ function ReportDetailsView({ id }: { id: string }) {
               </Button>
             )}
           </SectionPanel>
+
+          <AdminMessagesPanel report={report} />
 
           <SectionPanel
             title="Evidence"
@@ -551,7 +572,7 @@ function ReportDetailsView({ id }: { id: string }) {
                   multiline
                   minRows={3}
                   label="Message to the passenger"
-                  helperText="Optional. Shown on the public tracking page and in the email."
+                  helperText="Optional. Shown on the public tracking page and in the email. For questions, use Messages instead."
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
                   slotProps={{ htmlInput: { maxLength: 2000 } }}
@@ -559,16 +580,11 @@ function ReportDetailsView({ id }: { id: string }) {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={notifyPassenger && Boolean(report.passengerEmail)}
+                      checked={notifyPassenger}
                       onChange={(e) => setNotifyPassenger(e.target.checked)}
-                      disabled={!report.passengerEmail}
                     />
                   }
-                  label={
-                    report.passengerEmail
-                      ? "Email the passenger about this update"
-                      : "No passenger email on file"
-                  }
+                  label="Notify the passenger (email, SMS and browser notifications they signed up for)"
                   slotProps={{ typography: { variant: "body2" } }}
                 />
                 <GradientButton
@@ -587,6 +603,58 @@ function ReportDetailsView({ id }: { id: string }) {
                 {statusSuccess && !updateStatus.error && (
                   <Alert severity="success">{statusSuccess}</Alert>
                 )}
+              </Box>
+            </SectionPanel>
+
+            <SectionPanel
+              title="Public results"
+              subtitle="Impact page, map and scorecards"
+              icon={<PublicRoundedIcon fontSize="small" />}
+            >
+              <Alert severity={countsPublicly ? "success" : "info"} sx={{ mb: 2 }}>
+                {countsPublicly
+                  ? "Counted in public figures (totals only, never its details)."
+                  : report.hiddenFromPublic
+                    ? "Hidden from public figures by an admin."
+                    : "Not counted publicly until an admin marks it reviewed, escalated or resolved."}
+              </Alert>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={Boolean(report.hiddenFromPublic)}
+                    onChange={(e) => visibility.mutate(e.target.checked)}
+                    disabled={visibility.isPending}
+                  />
+                }
+                label="Exclude from public figures"
+                slotProps={{ typography: { variant: "body2" } }}
+              />
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 2 }}>
+                Use for disputed or duplicate reports. Scorecards appear once a bus or route has{" "}
+                {MIN_PUBLIC_REPORTS} counted reports.
+              </Typography>
+              {visibility.error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {errorMessage(visibility.error, "Failed to change visibility")}
+                </Alert>
+              )}
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AutoStoriesRoundedIcon />}
+                  href={`/admin/stories?report=${report.id}`}
+                >
+                  Write a story
+                </Button>
+                <Button
+                  size="small"
+                  startIcon={<OpenInNewRoundedIcon />}
+                  href={`/bus/${encodeURIComponent(report.busNumber)}`}
+                  target="_blank"
+                >
+                  Bus scorecard
+                </Button>
               </Box>
             </SectionPanel>
 

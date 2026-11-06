@@ -64,7 +64,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       className={`${sans.variable} ${sinhala.variable} ${tamil.variable}`}
       suppressHydrationWarning
     >
-      <body>
+      {/* Browser extensions (e.g. ColorZilla's cz-shortcut-listen) add attributes to <body> before
+          React loads; ignore those. Only this element's own attributes are exempt. */}
+      <body suppressHydrationWarning>
         {/* Applies the saved light/dark choice before first paint (no flash) */}
         <InitColorSchemeScript attribute="class" />
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>

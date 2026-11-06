@@ -44,10 +44,17 @@ import {
 import { toApiError } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
 import { GradientButton } from "@/components/atoms";
-import { CategoryPicker, DetailRow, LocationPicker, MediaDropzone } from "@/components/molecules";
+import {
+  CategoryPicker,
+  DetailRow,
+  LocationPicker,
+  MediaDropzone,
+  PhoneField,
+} from "@/components/molecules";
 import type { LatLng } from "@/components/molecules/LocationPicker";
 import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
 import { CATEGORIES, type ComplaintCategory, type Language } from "@/constants/reportConstants";
+import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useFormDraft from "@/hooks/useFormDraft";
 import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
@@ -69,6 +76,7 @@ interface ReportForm {
   location: string;
   description: string;
   passengerEmail: string;
+  passengerPhone: string;
   website: string;
 }
 
@@ -81,6 +89,7 @@ const EMPTY_FORM: ReportForm = {
   location: "",
   description: "",
   passengerEmail: "",
+  passengerPhone: "",
   website: "", // Honeypot: hidden from people, bots tend to fill it in
 };
 
@@ -100,6 +109,7 @@ const isEmptyDraft = ({ form, images, videos, coords }: Draft) =>
   !form.location.trim() &&
   !form.incidentAt &&
   !form.passengerEmail.trim() &&
+  !form.passengerPhone.trim() &&
   !coords &&
   images.length === 0 &&
   videos.length === 0;
@@ -126,6 +136,8 @@ const startIcon = (icon: ReactNode) => ({
 
 function SubmitReportView() {
   const t = useTranslations("submit");
+  // No phone field when no SMS gateway is set up: there would be nothing to send to it
+  const smsAvailable = useSmsAvailable();
   const tc = useTranslations("common");
   const tCategory = useTranslations("categories");
   const tMedia = useTranslations("media");
@@ -218,9 +230,12 @@ function SubmitReportView() {
       );
       await discard();
       if (outcome.kind === "sent") {
-        const { receiptId, pdfUrl, emailSent } = outcome.response;
+        const { receiptId, pdfUrl, emailSent, smsSent } = outcome.response;
         rememberReceipt(receiptId);
-        setResult({ kind: "sent", receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent) } });
+        setResult({
+          kind: "sent",
+          receipt: { receiptId, pdfUrl, emailSent: Boolean(emailSent), smsSent: Boolean(smsSent) },
+        });
       } else {
         setResult({ kind: "queued" });
       }
@@ -403,6 +418,16 @@ function SubmitReportView() {
         helperText={t("emailHelp")}
         slotProps={startIcon(<EmailRoundedIcon color="action" />)}
       />
+      {smsAvailable && (
+        <PhoneField
+          name="passengerPhone"
+          label={t("phone")}
+          helperText={t("phoneHelp")}
+          invalidText={t("phoneInvalid")}
+          value={formData.passengerPhone}
+          onChange={handleChange}
+        />
+      )}
       {/* Honeypot field: invisible to people and screen readers */}
       <input
         type="text"
@@ -438,6 +463,7 @@ function SubmitReportView() {
           {t("evidenceCount", { photos: images.length, videos: videos.length })}
         </DetailRow>
         <DetailRow label={t("reviewEmail")}>{formData.passengerEmail || t("none")}</DetailRow>
+        <DetailRow label={t("reviewPhone")}>{formData.passengerPhone || t("none")}</DetailRow>
       </Box>
       <Typography variant="subtitle2" sx={{ mt: 2.5, mb: 0.5 }}>
         {t("reviewDescription")}

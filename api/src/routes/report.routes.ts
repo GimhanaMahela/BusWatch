@@ -1,7 +1,17 @@
 import { Router } from "express";
+import * as messageController from "../controllers/message.controller.js";
+import * as pushController from "../controllers/push.controller.js";
 import * as reportController from "../controllers/report.controller.js";
+import * as telegramController from "../controllers/telegram.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
-import { rateLimiter, submitLimiter, trackLimiter } from "../middleware/rate-limit.middleware.js";
+import {
+  messageLimiter,
+  pushLimiter,
+  rateLimiter,
+  submitLimiter,
+  trackLimiter,
+} from "../middleware/rate-limit.middleware.js";
+import { verifyTurnstile } from "../middleware/turnstile.middleware.js";
 import { reportMediaUpload } from "../middleware/upload.middleware.js";
 import { validateBody, validateUuidParam } from "../middleware/validate.middleware.js";
 import {
@@ -10,6 +20,13 @@ import {
   submitReportSchema,
   updateStatusSchema,
 } from "../validators/report.validator.js";
+import {
+  adminMessageSchema,
+  passengerMessageSchema,
+  pushSubscriptionSchema,
+  pushUnsubscribeSchema,
+} from "../validators/passenger.validator.js";
+import { visibilitySchema } from "../validators/story.validator.js";
 
 const router = Router();
 const validId = validateUuidParam("id");
@@ -19,6 +36,7 @@ router.post(
   "/",
   submitLimiter,
   reportMediaUpload,
+  verifyTurnstile,
   validateBody(submitReportSchema),
   reportController.submitReport,
 );
@@ -29,6 +47,33 @@ router.post(
   validateBody(rateOutcomeSchema),
   reportController.rateOutcome,
 );
+// Messages with the team, and browser push for this report
+router.post(
+  "/track/:receiptId/messages",
+  messageLimiter,
+  validateBody(passengerMessageSchema),
+  messageController.sendPassengerMessage,
+);
+router.post("/track/:receiptId/messages/read", trackLimiter, messageController.markReadByPassenger);
+router.post(
+  "/track/:receiptId/push",
+  pushLimiter,
+  validateBody(pushSubscriptionSchema),
+  pushController.subscribe,
+);
+router.post(
+  "/track/:receiptId/push/unsubscribe",
+  pushLimiter,
+  validateBody(pushUnsubscribeSchema),
+  pushController.unsubscribe,
+);
+router.post(
+  "/track/:receiptId/push/status",
+  pushLimiter,
+  validateBody(pushUnsubscribeSchema),
+  pushController.status,
+);
+router.get("/track/:receiptId/telegram", pushLimiter, telegramController.followLink);
 
 // --- Admin --- (specific paths stay above "/:id" so they are not treated as an ID)
 router.get("/", requireAuth, reportController.getAllReports);
@@ -49,6 +94,21 @@ router.post(
   validateBody(addNoteSchema),
   reportController.addNote,
 );
+router.put(
+  "/:id/visibility",
+  requireAuth,
+  validId,
+  validateBody(visibilitySchema),
+  reportController.setVisibility,
+);
+router.post(
+  "/:id/messages",
+  requireAuth,
+  validId,
+  validateBody(adminMessageSchema),
+  messageController.sendAdminMessage,
+);
+router.post("/:id/messages/read", requireAuth, validId, messageController.markReadByAdmin);
 router.delete("/:id", requireAuth, validId, reportController.deleteReport);
 
 export default router;

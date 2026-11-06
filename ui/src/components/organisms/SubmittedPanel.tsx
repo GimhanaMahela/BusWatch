@@ -11,12 +11,15 @@ import { useState } from "react";
 import { trackEvent } from "@/api/metricsApi";
 import { GradientButton } from "@/components/atoms";
 import { ResultCard, ShareButton } from "@/components/molecules";
+import PushToggle from "./PushToggle";
+import TelegramFollow from "./TelegramFollow";
 import type { ReportType } from "@/constants/reportConstants";
 
 export interface Receipt {
   receiptId: string;
   pdfUrl: string | null;
   emailSent: boolean;
+  smsSent?: boolean;
 }
 
 /** Shown after a report or commendation was sent: receipt ID, tracking, PDF and sharing. */
@@ -59,6 +62,7 @@ function SubmittedPanel({
         {commendation && `${t("commendText")} `}
         {t("saveId")}
         {receipt.emailSent && ` ${t("emailed")}`}
+        {receipt.smsSent && ` ${t("texted")}`}
       </Typography>
 
       <Box
@@ -116,6 +120,8 @@ function SubmittedPanel({
           onShared={() => trackEvent("report_shared")}
         />
       </Box>
+      <PushToggle receiptId={receipt.receiptId} compact />
+      <TelegramFollow receiptId={receipt.receiptId} compact />
       <Button onClick={onReset} sx={{ mt: 2 }}>
         {commendation ? t("anotherCommendation") : t("another")}
       </Button>

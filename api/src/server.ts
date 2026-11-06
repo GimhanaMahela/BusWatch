@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { checkDatabaseConnection } from "./db/client.js";
 import { env } from "./config/env.js";
 import { createInitialAdmin } from "./services/admin-bootstrap.service.js";
+import { startTelegramBot } from "./services/telegram.service.js";
 
 const app = createApp();
 
@@ -16,6 +17,11 @@ checkDatabaseConnection()
     );
     process.exit(1);
   });
+
+// Telegram updates are best-effort: a wrong bot token must not stop the API
+startTelegramBot().catch((error: unknown) => {
+  console.error("Telegram bot not started:", error instanceof Error ? error.message : error);
+});
 
 // On Vercel the exported app is invoked as a serverless function; elsewhere we listen
 if (!env.VERCEL) {

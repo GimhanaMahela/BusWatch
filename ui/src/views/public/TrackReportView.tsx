@@ -23,7 +23,12 @@ import { ApiError, errorMessage } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
 import { StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, ReceiptSearchForm, ShareButton } from "@/components/molecules";
-import { OutcomeRating } from "@/components/organisms";
+import {
+  OutcomeRating,
+  PushToggle,
+  ReportConversation,
+  TelegramFollow,
+} from "@/components/organisms";
 import { HeroBand } from "@/components/templates";
 import type { ReportStatus } from "@/constants/reportConstants";
 import useIsClient from "@/hooks/useIsClient";
@@ -136,6 +141,16 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
     if (returning) trackEvent("tracking_return_view");
   }, [loadedReceipt]);
 
+  // A push notification arrived while this page is open: show the update straight away
+  useEffect(() => {
+    if (!receiptId || !("serviceWorker" in navigator)) return;
+    const onMessage = (event: MessageEvent<{ type?: string }>) => {
+      if (event.data?.type === "report-updated") void refetch();
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [receiptId, refetch]);
+
   // Arriving from the "rate the outcome" link in the resolution email
   useEffect(() => {
     if (report?.canRate && window.location.hash === "#rate") {
@@ -193,122 +208,129 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
         {report && !loading && (
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 7 }}>
-              <Card sx={{ p: { xs: 2.5, sm: 4 } }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 2,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                      {t("receiptId")}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        fontFamily: "ui-monospace, monospace",
-                        fontWeight: 800,
-                        fontSize: "1.5rem",
-                      }}
-                    >
-                      {report.receiptId}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-                    {commendation && (
-                      <Chip
-                        icon={<ThumbUpAltRoundedIcon />}
-                        label={t("commendation")}
-                        color="success"
-                        variant="outlined"
-                        size="small"
-                      />
-                    )}
-                    <StatusChip status={report.status} label={tStatus(report.status)} />
-                  </Box>
-                </Box>
-                <Typography color="text.secondary" sx={{ mt: 2 }}>
-                  {t(`${descriptions}.${report.status}`)}
-                </Typography>
-                {report.status === "rejected" ? (
-                  <Alert severity="info" icon={<DoNotDisturbOnRoundedIcon />} sx={{ mt: 3 }}>
-                    {t("closed")}
-                  </Alert>
-                ) : (
-                  <StatusPipeline status={report.status} />
-                )}
-
-                <Typography variant="subtitle1" component="h2" sx={{ mt: 5, mb: 2 }}>
-                  {t("timeline")}
-                </Typography>
-                <Box component="ol" sx={{ listStyle: "none", p: 0, m: 0 }}>
-                  {[...report.timeline].reverse().map((entry, index, list) => {
-                    const systemNote =
-                      entry.note && entry.note in SYSTEM_NOTES
-                        ? t(SYSTEM_NOTES[entry.note as keyof typeof SYSTEM_NOTES])
-                        : entry.note;
-                    return (
-                      <Box
-                        component="li"
-                        key={`${entry.changedAt}-${index}`}
-                        sx={{ display: "flex", gap: 2 }}
+              <Stack spacing={3}>
+                <Card sx={{ p: { xs: 2.5, sm: 4 } }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 2,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        {t("receiptId")}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontFamily: "ui-monospace, monospace",
+                          fontWeight: 800,
+                          fontSize: "1.5rem",
+                        }}
                       >
+                        {report.receiptId}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                      {commendation && (
+                        <Chip
+                          icon={<ThumbUpAltRoundedIcon />}
+                          label={t("commendation")}
+                          color="success"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      <StatusChip status={report.status} label={tStatus(report.status)} />
+                    </Box>
+                  </Box>
+                  <Typography color="text.secondary" sx={{ mt: 2 }}>
+                    {t(`${descriptions}.${report.status}`)}
+                  </Typography>
+                  {report.status === "rejected" ? (
+                    <Alert severity="info" icon={<DoNotDisturbOnRoundedIcon />} sx={{ mt: 3 }}>
+                      {t("closed")}
+                    </Alert>
+                  ) : (
+                    <StatusPipeline status={report.status} />
+                  )}
+
+                  <Typography variant="subtitle1" component="h2" sx={{ mt: 5, mb: 2 }}>
+                    {t("timeline")}
+                  </Typography>
+                  <Box component="ol" sx={{ listStyle: "none", p: 0, m: 0 }}>
+                    {[...report.timeline].reverse().map((entry, index, list) => {
+                      const systemNote =
+                        entry.note && entry.note in SYSTEM_NOTES
+                          ? t(SYSTEM_NOTES[entry.note as keyof typeof SYSTEM_NOTES])
+                          : entry.note;
+                      return (
                         <Box
-                          sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+                          component="li"
+                          key={`${entry.changedAt}-${index}`}
+                          sx={{ display: "flex", gap: 2 }}
                         >
                           <Box
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              display: "grid",
-                              placeItems: "center",
-                              flexShrink: 0,
-                              color: index === 0 ? "common.white" : "primary.main",
-                              bgcolor:
-                                index === 0
-                                  ? "primary.main"
-                                  : "rgba(var(--mui-palette-primary-mainChannel) / 0.12)",
-                            }}
+                            sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
                           >
-                            <CheckRoundedIcon sx={{ fontSize: 16 }} />
-                          </Box>
-                          {index < list.length - 1 && (
-                            <Box sx={{ width: 2, flex: 1, bgcolor: "divider", my: 0.5 }} />
-                          )}
-                        </Box>
-                        <Box sx={{ pb: 3, minWidth: 0 }}>
-                          <Typography sx={{ fontWeight: 700 }}>{tStatus(entry.status)}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDateTime(entry.changedAt)}
-                          </Typography>
-                          {systemNote && (
-                            <Typography
-                              variant="body2"
+                            <Box
                               sx={{
-                                mt: 1,
-                                p: 1.5,
-                                borderRadius: 2,
-                                bgcolor: "action.hover",
-                                whiteSpace: "pre-line",
+                                width: 28,
+                                height: 28,
+                                borderRadius: "50%",
+                                display: "grid",
+                                placeItems: "center",
+                                flexShrink: 0,
+                                color: index === 0 ? "common.white" : "primary.main",
+                                bgcolor:
+                                  index === 0
+                                    ? "primary.main"
+                                    : "rgba(var(--mui-palette-primary-mainChannel) / 0.12)",
                               }}
                             >
-                              {systemNote}
+                              <CheckRoundedIcon sx={{ fontSize: 16 }} />
+                            </Box>
+                            {index < list.length - 1 && (
+                              <Box sx={{ width: 2, flex: 1, bgcolor: "divider", my: 0.5 }} />
+                            )}
+                          </Box>
+                          <Box sx={{ pb: 3, minWidth: 0 }}>
+                            <Typography sx={{ fontWeight: 700 }}>
+                              {tStatus(entry.status)}
                             </Typography>
-                          )}
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDateTime(entry.changedAt)}
+                            </Typography>
+                            {systemNote && (
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  mt: 1,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  bgcolor: "action.hover",
+                                  whiteSpace: "pre-line",
+                                }}
+                              >
+                                {systemNote}
+                              </Typography>
+                            )}
+                          </Box>
                         </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Card>
+                      );
+                    })}
+                  </Box>
+                </Card>
+                <ReportConversation report={report} />
+              </Stack>
             </Grid>
             <Grid size={{ xs: 12, md: 5 }}>
               <Stack spacing={3}>
                 {report.canRate && <OutcomeRating key={report.ratedAt ?? "new"} report={report} />}
+                <PushToggle receiptId={report.receiptId} />
+                <TelegramFollow receiptId={report.receiptId} />
                 <Card sx={{ p: { xs: 2.5, sm: 3 } }}>
                   <Typography variant="subtitle1" component="h2" sx={{ mb: 1 }}>
                     {t("details")}

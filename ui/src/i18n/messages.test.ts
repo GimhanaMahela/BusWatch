@@ -54,8 +54,12 @@ describe.each([
     const copied = Object.entries(english).filter(
       ([key, value]) => translated[key] === value && /[a-z]{4,}/.test(value),
     );
-    // Brand names and the language list are the same in every language
-    expect(copied.map(([key]) => key)).toEqual(["footer.buswatch", "home.promiseLanguages"]);
+    // Brand names, the language list and the example email are the same in every language
+    expect(copied.map(([key]) => key)).toEqual([
+      "footer.buswatch",
+      "home.promiseLanguages",
+      "myReports.contactPlaceholderEmail",
+    ]);
   });
 });
 
