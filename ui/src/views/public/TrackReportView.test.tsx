@@ -36,6 +36,7 @@ const report: PublicReport = {
   ratedAt: null,
   messages: [],
   canReply: true,
+  confirmations: 0,
 };
 
 describe("TrackReportView", () => {

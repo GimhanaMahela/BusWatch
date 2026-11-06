@@ -111,6 +111,8 @@ export const toPublicView = (report: ReportWithRelations) => {
     ratedAt: report.ratedAt,
     messages,
     canReply: canReply(report),
+    // Other passengers who said "me too" (a count only)
+    confirmations: report.confirmations.length,
   };
 };
 

@@ -25,6 +25,7 @@ import {
 } from "../config/constants.js";
 import { db } from "../db/client.js";
 import {
+  reportConfirmations,
   reportMessages,
   reportNotes,
   reports,
@@ -64,6 +65,11 @@ const findOneWithRelations = (where: SQL) =>
           readAt: true,
         },
         orderBy: [asc(reportMessages.createdAt)],
+      },
+      // "Me too" confirmations from other passengers (never the device hash)
+      confirmations: {
+        columns: { id: true, comment: true, language: true, source: true, createdAt: true },
+        orderBy: [asc(reportConfirmations.createdAt)],
       },
     },
   });
@@ -156,9 +162,15 @@ export const listReports = async ({
       AND ${reportMessages.sender} = 'passenger' AND ${reportMessages.readAt} IS NULL
   )`;
 
+  // Other passengers who confirmed the incident ("Me too")
+  const confirmationCount = sql<number>`(
+    SELECT count(*)::int FROM ${reportConfirmations}
+    WHERE ${reportConfirmations.reportId} = ${outerReportId}
+  )`;
+
   const [rows, total] = await Promise.all([
     db
-      .select({ ...getTableColumns(reports), unreadMessages })
+      .select({ ...getTableColumns(reports), unreadMessages, confirmationCount })
       .from(reports)
       .where(where)
       .orderBy(desc(reports.reportedAt))
@@ -498,6 +510,9 @@ const getEngagementStats = async (now: Date) => {
     myReportsSignins: metrics.my_reports_signin,
     pushSubscriptions: metrics.push_subscribed,
     telegramLinks: metrics.telegram_linked,
+    // Wider ecosystem (Phase 4)
+    confirmationsOffered: metrics.confirmation_offered,
+    reportConfirmations: metrics.report_confirmed,
   };
 };
 

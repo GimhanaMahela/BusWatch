@@ -106,6 +106,13 @@ const SECTIONS: ContentSection[] = [
           Telegram delivers these messages under its own privacy policy. Send /stop to the BusWatch
           bot and we delete your chat ID straight away.
         </p>
+        <p>
+          If you confirm another passenger&apos;s report (&quot;Did you see this too?&quot;), we
+          keep your optional comment for our team and a one-way code made from your internet address
+          and browser, so the same device can&apos;t confirm a report twice. The code can&apos;t be
+          turned back into your internet address. We never ask for your name or contact details when
+          you confirm, and other passengers only ever see a count.
+        </p>
         <h3>Data kept on your device</h3>
         <p>
           If you install BusWatch or lose your connection while writing a report, the unfinished

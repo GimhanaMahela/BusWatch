@@ -6,6 +6,7 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
@@ -439,6 +440,35 @@ function ReportDetailsView({ id }: { id: string }) {
               </Button>
             )}
           </SectionPanel>
+
+          {report.confirmations && report.confirmations.length > 0 && (
+            <SectionPanel
+              title={`Confirmed by ${report.confirmations.length} other passenger${report.confirmations.length === 1 ? "" : "s"}`}
+              subtitle="They saw the same incident and said “me too” instead of filing a duplicate. Anonymous."
+              icon={<GroupsRoundedIcon fontSize="small" />}
+            >
+              <Box sx={{ display: "grid", gap: 1.5 }}>
+                {report.confirmations.map((confirmation) => (
+                  <Box
+                    key={confirmation.id}
+                    sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDateTime(confirmation.createdAt)} ·{" "}
+                      {languageLabel(confirmation.language)}
+                      {confirmation.source === "qr" ? " · QR sticker" : ""}
+                    </Typography>
+                    <Typography
+                      sx={{ whiteSpace: "pre-line", mt: 0.5 }}
+                      color={confirmation.comment ? "text.primary" : "text.secondary"}
+                    >
+                      {confirmation.comment || "No comment."}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </SectionPanel>
+          )}
 
           <AdminMessagesPanel report={report} />
 

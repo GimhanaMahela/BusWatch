@@ -31,3 +31,6 @@ export const signInLimiter = limiter(15, 20, "Too many sign-in attempts. Please 
 export const messageLimiter = limiter(15, 20, "Too many messages. Please try again later.");
 export const pushLimiter = limiter(15, 60, "Too many requests. Please try again later.");
 export const passengerLimiter = limiter(15, 120, "Too many requests. Please try again later.");
+
+// Wider ecosystem (Phase 4)
+export const confirmLimiter = limiter(15, 10, "Too many confirmations. Please try again later.");

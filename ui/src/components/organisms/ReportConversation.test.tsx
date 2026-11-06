@@ -28,6 +28,7 @@ const report: PublicReport = {
   feedback: null,
   ratedAt: null,
   canReply: true,
+  confirmations: 0,
   messages: [
     {
       id: "m1",

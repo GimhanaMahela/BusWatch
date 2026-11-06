@@ -1,7 +1,9 @@
 export { default as AdminGuard } from "./AdminGuard";
 export { default as AdminMessagesPanel } from "./AdminMessagesPanel";
 export { default as AdminNavigation } from "./AdminNavigation";
+export { default as ConfirmedPanel } from "./ConfirmedPanel";
 export { default as ManageAdminsDialog } from "./ManageAdminsDialog";
+export { default as MeTooDialog } from "./MeTooDialog";
 export { default as OfflineOutbox } from "./OfflineOutbox";
 export { default as OutcomeRating } from "./OutcomeRating";
 export { default as PushToggle } from "./PushToggle";

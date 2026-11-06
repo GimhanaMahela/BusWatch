@@ -1,10 +1,12 @@
 import { Router } from "express";
+import * as confirmationController from "../controllers/confirmation.controller.js";
 import * as messageController from "../controllers/message.controller.js";
 import * as pushController from "../controllers/push.controller.js";
 import * as reportController from "../controllers/report.controller.js";
 import * as telegramController from "../controllers/telegram.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import {
+  confirmLimiter,
   messageLimiter,
   pushLimiter,
   rateLimiter,
@@ -20,6 +22,7 @@ import {
   submitReportSchema,
   updateStatusSchema,
 } from "../validators/report.validator.js";
+import { confirmReportSchema } from "../validators/confirmation.validator.js";
 import {
   adminMessageSchema,
   passengerMessageSchema,
@@ -74,6 +77,16 @@ router.post(
   pushController.status,
 );
 router.get("/track/:receiptId/telegram", pushLimiter, telegramController.followLink);
+// "Me too": find a report about the same bus, category and day, and confirm it
+router.get("/similar", trackLimiter, confirmationController.findSimilar);
+router.post(
+  "/:id/confirmations",
+  confirmLimiter,
+  validId,
+  verifyTurnstile,
+  validateBody(confirmReportSchema),
+  confirmationController.confirmReport,
+);
 
 // --- Admin --- (specific paths stay above "/:id" so they are not treated as an ID)
 router.get("/", requireAuth, reportController.getAllReports);

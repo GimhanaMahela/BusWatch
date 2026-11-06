@@ -52,6 +52,26 @@ export interface Delivery {
   telegram: number;
 }
 
+/** A "me too" confirmation from another passenger, as admins see it */
+export interface ReportConfirmation {
+  id: string;
+  comment: string | null;
+  language: Language;
+  source: "web" | "qr";
+  createdAt: string;
+}
+
+export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
+
+/** A complaint about the same bus, category and day, offered to confirm instead of re-reporting */
+export interface SimilarReport {
+  id: string;
+  routeNumber: string;
+  /** Only when the original passenger gave an incident time */
+  partOfDay: PartOfDay | null;
+  confirmations: number;
+}
+
 /** Full report as admins see it */
 export interface Report {
   id: string;
@@ -85,6 +105,10 @@ export interface Report {
   messages?: ReportMessage[];
   /** Report lists only: passenger messages no admin has read yet */
   unreadMessages?: number;
+  /** "Me too" confirmations from other passengers (details page) */
+  confirmations?: ReportConfirmation[];
+  /** Report lists only: how many other passengers confirmed it */
+  confirmationCount?: number;
 }
 
 /** What the public tracking endpoint returns */
@@ -108,6 +132,8 @@ export interface PublicReport {
   messages: PublicMessage[];
   /** False once the report has been closed for a while */
   canReply: boolean;
+  /** Other passengers who confirmed it ("me too") */
+  confirmations: number;
 }
 
 export interface SubmitReportFields {
@@ -213,6 +239,9 @@ export interface EngagementStats {
   myReportsSignins: number;
   pushSubscriptions: number;
   telegramLinks: number;
+  // Wider ecosystem (Phase 4)
+  confirmationsOffered: number;
+  reportConfirmations: number;
 }
 
 /** A report in "My reports" */

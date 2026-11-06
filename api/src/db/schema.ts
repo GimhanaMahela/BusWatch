@@ -193,6 +193,28 @@ export const telegramSubscriptions = pgTable(
   (t) => [uniqueIndex().on(t.reportId, t.chatId), index().on(t.chatId)],
 );
 
+/**
+ * "Me too" confirmations: another passenger saw the same incident and backed up the report
+ * instead of filing a duplicate. Anonymous: no contact details are asked for.
+ */
+export const reportConfirmations = pgTable(
+  "report_confirmations",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reportId: uuid()
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    comment: text(), // what they saw, for admins only
+    language: language().notNull().default("en"),
+    source: reportSource().notNull().default("web"),
+    // Keyed hash of the device's IP address and browser, so a device confirms a report only once.
+    // It can't be turned back into an IP address and is never shown.
+    deviceHash: text().notNull(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.reportId, t.deviceHash), index().on(t.reportId, t.createdAt)],
+);
+
 export interface StoryTranslation {
   title: string;
   body: string;
@@ -238,6 +260,11 @@ export const reportsRelations = relations(reports, ({ many }) => ({
   statusHistory: many(reportStatusChanges),
   notes: many(reportNotes),
   messages: many(reportMessages),
+  confirmations: many(reportConfirmations),
+}));
+
+export const reportConfirmationsRelations = relations(reportConfirmations, ({ one }) => ({
+  report: one(reports, { fields: [reportConfirmations.reportId], references: [reports.id] }),
 }));
 
 export const reportMessagesRelations = relations(reportMessages, ({ one }) => ({

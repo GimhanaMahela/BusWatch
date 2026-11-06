@@ -196,7 +196,17 @@ The service worker shows push notifications and posts `report-updated` to open t
 page refreshes. In development `lib/push.ts` registers it as `/sw.js?mode=push-only`, which skips the
 page cache.
 
-**CAPTCHA.** `verifyTurnstile` runs on report submission when `TURNSTILE_SECRET_KEY` is set. The browser
+**"Me too" confirmations.** `GET /api/reports/similar?busNumber&category&at` returns up to
+`CONFIRMATION.maxMatches` complaints with the same bus (compared without spaces, dashes or case),
+category and incident day in Sri Lankan time, from the last `CONFIRMATION.maxAgeDays` days, excluding
+rejected and hidden reports. It returns only an ID, the route, a rough time of day and the confirmation
+count: never the description, location, receipt ID or exact time. `POST /api/reports/:id/confirmations`
+(Turnstile, honeypot, `confirmLimiter`) stores a row in `report_confirmations` with an optional comment
+and an HMAC of the IP address and user agent; a unique index allows one confirmation per device per
+report. Admins get the list on the report and a `confirmationCount` in report lists; the tracking page
+gets a count only.
+
+**CAPTCHA.** `verifyTurnstile` runs on report submission and "me too" confirmations when `TURNSTILE_SECRET_KEY` is set. The browser
 fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
 offline outbox; a failed check keeps the report in the outbox instead of dropping it.
 

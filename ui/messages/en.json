@@ -318,7 +318,8 @@
       "escalated": "Your kind words have been passed on to the bus operator.",
       "resolved": "Your commendation has been shared with the operator. Thank you!",
       "rejected": "This commendation was closed."
-    }
+    },
+    "confirmedByOthers": "{count, plural, one {# other passenger} other {# other passengers}} confirmed seeing this too. That gives your report more weight."
   },
   "rating": {
     "title": "How did we do?",
@@ -487,5 +488,29 @@
     "contactInvalid": "Enter your email address or a mobile number like 077 123 4567.",
     "smsUnavailable": "Codes by SMS aren't available yet. Please use your email address.",
     "emailUnavailable": "Codes by email aren't available yet. Please use your mobile number."
+  },
+  "meToo": {
+    "title": "Did you see this too?",
+    "intro": "{count, plural, one {A passenger has} other {# passengers have}} already reported bus {bus} for {category} on the same day. If it's the same incident, add your confirmation instead of a new report.",
+    "chooseReport": "Which report matches what you saw?",
+    "reportNumber": "Report {number}",
+    "route": "Route {route}",
+    "partOfDay": {
+      "morning": "in the morning",
+      "afternoon": "in the afternoon",
+      "evening": "in the evening",
+      "night": "at night"
+    },
+    "alreadyConfirmed": "{count, plural, one {confirmed by # other} other {confirmed by # others}}",
+    "comment": "What did you see? (optional)",
+    "commentHelp": "Only the BusWatch team sees this.",
+    "anonymous": "Confirming is anonymous: you won't get a receipt or updates. If you'd like to follow the case, send your own report instead.",
+    "decline": "No, mine is different",
+    "confirm": "Yes, add my confirmation",
+    "failed": "Could not add your confirmation. Please try again.",
+    "thanksTitle": "Thanks for confirming",
+    "thanksText": "Your confirmation was added to the report about bus {bus}. Reports backed up by several passengers carry more weight with the team.",
+    "home": "Back to home",
+    "reportDifferent": "Report a different incident"
   }
 }

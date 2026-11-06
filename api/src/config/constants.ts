@@ -116,6 +116,8 @@ export const METRIC_EVENTS = [
   "passenger_message",
   "push_subscribed",
   "telegram_linked",
+  "confirmation_offered",
+  "report_confirmed",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -131,6 +133,7 @@ export const CLIENT_METRIC_EVENTS = [
   "app_installed",
   "impact_view",
   "scorecard_view",
+  "confirmation_offered",
 ] as const satisfies readonly MetricEvent[];
 
 // ---------------------------------------------------------------- Two-way contact (Phase 3)
@@ -160,6 +163,24 @@ export const PASSENGER_SESSION_DAYS = 30;
 export const REPLY_WINDOW_DAYS = 30;
 
 export const MAX_MESSAGE_LENGTH = 2000;
+
+// ---------------------------------------------------------------- Wider ecosystem (Phase 4)
+
+/**
+ * "Me too" confirmations: a passenger about to report the same bus, category and day is offered
+ * the existing report to confirm instead of filing a duplicate.
+ */
+export const CONFIRMATION = {
+  /** Only incidents from the last this-many days are offered or can be confirmed */
+  maxAgeDays: 14,
+  /** Matching reports offered at most */
+  maxMatches: 3,
+  maxCommentLength: 1000,
+} as const;
+
+/** Rough time of day shown with a match, so the passenger can tell if it's the same incident. */
+export const PARTS_OF_DAY = ["morning", "afternoon", "evening", "night"] as const;
+export type PartOfDay = (typeof PARTS_OF_DAY)[number];
 
 export const ADMIN_ROLES = ["superadmin", "admin"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];

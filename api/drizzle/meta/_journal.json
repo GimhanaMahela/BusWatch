@@ -36,6 +36,13 @@
       "when": 1793887456210,
       "tag": "0004_android_sms_and_telegram",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793967178287,
+      "tag": "0005_phase4_me_too_confirmations",
+      "breakpoints": true
     }
   ]
 }

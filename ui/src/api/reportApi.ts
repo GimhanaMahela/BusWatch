@@ -5,6 +5,7 @@ import type {
   ReportListParams,
   ReportListResponse,
   ReportStats,
+  SimilarReport,
   SubmitReportFields,
   SubmitReportResponse,
 } from "@/types/report";
@@ -97,3 +98,23 @@ export const sendPassengerMessage = (receiptId: string, body: string) =>
 /** Public: the passenger has seen the team's messages */
 export const markMessagesReadByPassenger = (receiptId: string) =>
   call<{ msg: string }>(apiClient.post(`${trackPath(receiptId)}/messages/read`));
+
+// ---------------------------------------------------------------- "Me too" (Phase 4)
+
+/** Public: complaints about the same bus, category and day (`at` defaults to now on the server) */
+export const findSimilarReports = (params: { busNumber: string; category: string; at?: string }) =>
+  call<{ matches: SimilarReport[] }>(apiClient.get("/reports/similar", { params }));
+
+/** Public: confirm another passenger's report instead of filing a duplicate */
+export const confirmReport = async (
+  id: string,
+  fields: { comment?: string; language?: string; source?: "web" | "qr"; website?: string },
+) => {
+  const captcha = await getTurnstileToken();
+  return call<{ confirmations: number }>(
+    apiClient.post(`/reports/${id}/confirmations`, {
+      ...fields,
+      ...(captcha ? { "cf-turnstile-response": captcha } : {}),
+    }),
+  );
+};

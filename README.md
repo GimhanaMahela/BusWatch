@@ -47,12 +47,20 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
 - **Browser push notifications**: "Get notified on this device" on the tracking and receipt pages
   (Web Push, `VAPID_*` keys). On iPhone it works once BusWatch is added to the Home Screen.
 
+**Wider ecosystem**
+
+- **"Me too" confirmations**: after "What happened", the report form looks for complaints about the
+  same bus, category and day. If there are any, it asks "Did you see this too?" and the passenger can
+  back up the existing report (with an optional comment for the team) instead of filing a duplicate.
+  Anonymous, one per device; the original passenger sees the count on their tracking page and admins
+  see each confirmation on the report.
+
 Status changes and messages go out on every channel the passenger gave (email, SMS, push, Telegram), in their
 language; the admin sees which ones reached them.
 
 The admin **Analytics** page tracks the Phase 1 success metrics: form completion rate, return visits to
 tracking, average outcome rating, reports from QR codes and time to first response (anonymous daily
-counts, no personal data), plus messages, passenger replies, My reports sign-ins and push sign-ups.
+counts, no personal data), plus messages, passenger replies, My reports sign-ins, push sign-ups and "me too" confirmations.
 
 | App           | What it is                                  |
 | ------------- | ------------------------------------------- |

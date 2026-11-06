@@ -6,6 +6,7 @@ import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import DirectionsBusRoundedIcon from "@mui/icons-material/DirectionsBusRounded";
 import DonutLargeRoundedIcon from "@mui/icons-material/DonutLargeRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
@@ -370,6 +371,19 @@ function AnalyticsView() {
               icon={<TelegramIcon />}
               value={engagement.telegramLinks}
               hint="Chats that pressed Start on the bot"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="“Me too” confirmations"
+              tone="success"
+              icon={<GroupsRoundedIcon />}
+              value={engagement.reportConfirmations}
+              hint={
+                engagement.confirmationsOffered
+                  ? `${engagement.confirmationsOffered} passengers were offered a matching report`
+                  : "Passengers backing up an existing report"
+              }
             />
           </Grid>
 

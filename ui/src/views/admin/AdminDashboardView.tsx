@@ -6,6 +6,7 @@ import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import FilterAltOffRoundedIcon from "@mui/icons-material/FilterAltOffRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HourglassTopRoundedIcon from "@mui/icons-material/HourglassTopRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
@@ -164,6 +165,26 @@ function AdminDashboardView() {
                 sx={{ fontSize: 18 }}
                 aria-label="Unread passenger messages"
               />
+            </Tooltip>
+          )}
+          {Boolean(row.confirmationCount) && (
+            <Tooltip
+              title={`Confirmed by ${row.confirmationCount} other passenger${row.confirmationCount === 1 ? "" : "s"}`}
+            >
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.25,
+                  color: "success.main",
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+                aria-label={`Confirmed by ${row.confirmationCount} other passengers`}
+              >
+                <GroupsRoundedIcon sx={{ fontSize: 18 }} />+{row.confirmationCount}
+              </Box>
             </Tooltip>
           )}
         </Box>

@@ -43,6 +43,7 @@ import {
 } from "react";
 import { toApiError } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
+import { findSimilarReports } from "@/api/reportApi";
 import { GradientButton } from "@/components/atoms";
 import {
   CategoryPicker,
@@ -52,7 +53,13 @@ import {
   PhoneField,
 } from "@/components/molecules";
 import type { LatLng } from "@/components/molecules/LocationPicker";
-import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
+import {
+  ConfirmedPanel,
+  MeTooDialog,
+  QueuedPanel,
+  SubmittedPanel,
+  type Receipt,
+} from "@/components/organisms";
 import { CATEGORIES, type ComplaintCategory, type Language } from "@/constants/reportConstants";
 import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useFormDraft from "@/hooks/useFormDraft";
@@ -60,6 +67,7 @@ import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
 import { submitOrQueue } from "@/lib/offlineSubmit";
 import { rememberReceipt } from "@/lib/trackingHistory";
+import type { SimilarReport } from "@/types/report";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // Must match the backend upload limit
 const MAX_IMAGES = 5;
@@ -121,7 +129,7 @@ const STEPS = [
   { label: "stepReview", hint: "stepReviewHint" },
 ] as const;
 
-type Result = { kind: "sent"; receipt: Receipt } | { kind: "queued" };
+type Result = { kind: "sent"; receipt: Receipt } | { kind: "queued" } | { kind: "confirmed" };
 
 // Value for <input type="datetime-local" max=...> in the user's local time
 const nowForDateTimeInput = () => {
@@ -161,6 +169,10 @@ function SubmitReportView() {
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  // "Me too": reports about the same bus, category and day, offered before the evidence step
+  const [similar, setSimilar] = useState<SimilarReport[] | null>(null);
+  const [checkingSimilar, setCheckingSimilar] = useState(false);
+  const declinedSimilar = useRef("");
 
   // Success metrics: QR scans, and how many people start the form (vs. finish it)
   const started = useRef(false);
@@ -248,6 +260,48 @@ function SubmitReportView() {
     }
   };
 
+  const similarKey = `${formData.busNumber}|${formData.category}|${formData.incidentAt}`;
+
+  /** After "What happened": did other passengers already report this bus for the same thing? */
+  const checkSimilar = async () => {
+    if (!online || !formData.category || declinedSimilar.current === similarKey) {
+      goTo(2);
+      return;
+    }
+    setCheckingSimilar(true);
+    let matches: SimilarReport[] = [];
+    try {
+      ({ matches } = await findSimilarReports({
+        busNumber: formData.busNumber,
+        category: formData.category,
+        at: formData.incidentAt ? new Date(formData.incidentAt).toISOString() : undefined,
+      }));
+    } catch {
+      // Best-effort: never stop a passenger from reporting
+    } finally {
+      setCheckingSimilar(false);
+    }
+    if (matches.length) {
+      trackEvent("confirmation_offered");
+      setSimilar(matches);
+    } else {
+      goTo(2);
+    }
+  };
+
+  const declineSimilar = () => {
+    declinedSimilar.current = similarKey;
+    setSimilar(null);
+    goTo(2);
+  };
+
+  const confirmedSimilar = () => {
+    setSimilar(null);
+    void discard();
+    setResult({ kind: "confirmed" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Each step is its own <form>, so the browser checks required fields before moving on
   const handleStepSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -255,7 +309,8 @@ function SubmitReportView() {
       setCategoryError(true);
       return;
     }
-    if (step < STEPS.length - 1) goTo(step + 1);
+    if (step === 1) void checkSimilar();
+    else if (step < STEPS.length - 1) goTo(step + 1);
     else void send();
   };
 
@@ -266,6 +321,8 @@ function SubmitReportView() {
     setImages([]);
     setVideos([]);
     setResult(null);
+    setSimilar(null);
+    declinedSimilar.current = "";
     setStep(0);
     started.current = false;
   };
@@ -274,6 +331,9 @@ function SubmitReportView() {
     return <SubmittedPanel receipt={result.receipt} type="complaint" onReset={reset} />;
   }
   if (result?.kind === "queued") return <QueuedPanel type="complaint" onReset={reset} />;
+  if (result?.kind === "confirmed") {
+    return <ConfirmedPanel busNumber={formData.busNumber} onReset={reset} />;
+  }
 
   const commendHref = `/commend-a-driver${busQuery(formData.busNumber || qrBus, formData.routeNumber, fromQr ? "qr" : undefined)}`;
 
@@ -574,7 +634,7 @@ function SubmitReportView() {
                 <GradientButton
                   type="submit"
                   size="large"
-                  loading={submitting}
+                  loading={submitting || checkingSimilar}
                   endIcon={last ? <TaskAltRoundedIcon /> : <ArrowForwardRoundedIcon />}
                 >
                   {last ? t("send") : tc("continue")}
@@ -584,6 +644,20 @@ function SubmitReportView() {
           </Card>
         </Grid>
       </Grid>
+
+      {similar && formData.category && (
+        <MeTooDialog
+          matches={similar}
+          busNumber={formData.busNumber.toUpperCase()}
+          categoryLabel={tCategory(formData.category)}
+          description={formData.description}
+          language={locale}
+          source={source}
+          website={formData.website}
+          onConfirmed={confirmedSimilar}
+          onDecline={declineSimilar}
+        />
+      )}
 
       <Snackbar
         open={Boolean(errorText)}

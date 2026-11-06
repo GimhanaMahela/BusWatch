@@ -2,6 +2,7 @@
 
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import DoNotDisturbOnRoundedIcon from "@mui/icons-material/DoNotDisturbOnRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
@@ -255,6 +256,11 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                     </Alert>
                   ) : (
                     <StatusPipeline status={report.status} />
+                  )}
+                  {report.confirmations > 0 && (
+                    <Alert severity="success" icon={<GroupsRoundedIcon />} sx={{ mt: 3 }}>
+                      {t("confirmedByOthers", { count: report.confirmations })}
+                    </Alert>
                   )}
 
                   <Typography variant="subtitle1" component="h2" sx={{ mt: 5, mb: 2 }}>
