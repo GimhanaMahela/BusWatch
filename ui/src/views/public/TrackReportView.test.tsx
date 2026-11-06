@@ -37,6 +37,7 @@ const report: PublicReport = {
   messages: [],
   canReply: true,
   confirmations: 0,
+  operatorResponses: [],
 };
 
 describe("TrackReportView", () => {

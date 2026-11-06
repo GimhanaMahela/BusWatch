@@ -3,6 +3,7 @@
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import DoNotDisturbOnRoundedIcon from "@mui/icons-material/DoNotDisturbOnRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
@@ -256,6 +257,29 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                     </Alert>
                   ) : (
                     <StatusPipeline status={report.status} />
+                  )}
+                  {report.operatorResponses.length > 0 && (
+                    <Box sx={{ mt: 3, display: "grid", gap: 1.5 }}>
+                      {report.operatorResponses.map((response) => (
+                        <Alert
+                          key={response.createdAt}
+                          severity="info"
+                          icon={<StorefrontRoundedIcon />}
+                        >
+                          <Typography variant="subtitle2" component="p">
+                            {response.organisation
+                              ? t("operatorRespondedNamed", { name: response.organisation })
+                              : t("operatorResponded")}
+                          </Typography>
+                          <Typography variant="body2" sx={{ whiteSpace: "pre-line", mt: 0.5 }}>
+                            {response.body}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDateTime(response.createdAt)}
+                          </Typography>
+                        </Alert>
+                      ))}
+                    </Box>
                   )}
                   {report.confirmations > 0 && (
                     <Alert severity="success" icon={<GroupsRoundedIcon />} sx={{ mt: 3 }}>

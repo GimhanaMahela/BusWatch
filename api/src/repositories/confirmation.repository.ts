@@ -7,16 +7,12 @@ import {
 } from "../config/constants.js";
 import { db } from "../db/client.js";
 import { reportConfirmations, reports } from "../db/schema.js";
+import { normaliseBusNumber, normalisedReportBus as normalisedBus } from "../utils/bus-number.js";
 
 // "Me too" confirmations (Phase 4). Days follow Sri Lankan time, like the daily metrics.
 
 /** The day the incident happened (or, without an incident time, the day it was reported). */
 const incidentDay = sql`(coalesce(${reports.incidentAt}, ${reports.reportedAt}) AT TIME ZONE 'Asia/Colombo')::date`;
-
-/** "NB-1234", "nb 1234" and "NB1234" are the same bus. */
-const normalisedBus = sql`regexp_replace(upper(${reports.busNumber}), '[^[:alnum:]]', '', 'g')`;
-export const normaliseBusNumber = (busNumber: string) =>
-  busNumber.toUpperCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 /**
  * Reports other passengers may confirm: complaints that weren't rejected or hidden by an admin,

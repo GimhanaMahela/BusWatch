@@ -77,6 +77,10 @@ export const rateOutcome = (receiptId: string, rating: number, feedback = "") =>
 export const setReportVisibility = (id: string, hiddenFromPublic: boolean) =>
   call<Report>(apiClient.put(`/reports/${id}/visibility`, { hiddenFromPublic }));
 
+/** Admin: show or hide a bus operator's response on the passenger's tracking page */
+export const setOperatorResponseVisibility = (id: string, responseId: string, hidden: boolean) =>
+  call<Report>(apiClient.put(`/reports/${id}/operator-responses/${responseId}`, { hidden }));
+
 // ---------------------------------------------------------------- Messages (Phase 3)
 
 /** Admin: message the passenger; they are notified by email, SMS and push when `notify` is on */

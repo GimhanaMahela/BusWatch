@@ -72,6 +72,16 @@ export interface SimilarReport {
   confirmations: number;
 }
 
+/** What a bus operator said they did about a report (operator portal) */
+export interface AdminOperatorResponse {
+  id: string;
+  body: string;
+  organisation: string | null;
+  /** Kept off the passenger's tracking page by an admin */
+  hidden: boolean;
+  createdAt: string;
+}
+
 /** Full report as admins see it */
 export interface Report {
   id: string;
@@ -109,6 +119,10 @@ export interface Report {
   confirmations?: ReportConfirmation[];
   /** Report lists only: how many other passengers confirmed it */
   confirmationCount?: number;
+  /** Responses from the bus operator */
+  operatorResponses?: AdminOperatorResponse[];
+  /** Details page: operator accounts that run this bus */
+  operators?: { id: string; email: string; organisation: string | null }[];
 }
 
 /** What the public tracking endpoint returns */
@@ -134,6 +148,8 @@ export interface PublicReport {
   canReply: boolean;
   /** Other passengers who confirmed it ("me too") */
   confirmations: number;
+  /** What the bus operator said they did */
+  operatorResponses: { body: string; organisation: string | null; createdAt: string }[];
 }
 
 export interface SubmitReportFields {

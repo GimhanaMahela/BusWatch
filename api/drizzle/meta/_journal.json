@@ -43,6 +43,13 @@
       "when": 1793967178287,
       "tag": "0005_phase4_me_too_confirmations",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793968711671,
+      "tag": "0006_phase4_operator_portal",
+      "breakpoints": true
     }
   ]
 }

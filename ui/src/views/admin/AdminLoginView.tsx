@@ -19,11 +19,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { BrandMark, ColorModeToggle, GradientButton } from "@/components/atoms";
 import useAuth from "@/hooks/useAuth";
+import { isOperator } from "@/types/admin";
 import busHero from "../../../public/bus-hero.jpg";
 
 // Only follow same-site paths after login (never an absolute URL from the query string)
 const safeNext = (value: string | null) =>
-  value && value.startsWith("/admin/") && !value.startsWith("//") ? value : "/admin/dashboard";
+  value && /^\/(admin|operator)(\/|$)/.test(value) ? value : "/admin/dashboard";
 
 function AdminLoginView() {
   const [email, setEmail] = useState("");
@@ -33,12 +34,20 @@ function AdminLoginView() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated, loading: sessionLoading } = useAuth();
+  const { login, isAuthenticated, loading: sessionLoading, admin } = useAuth();
   const next = safeNext(searchParams.get("next"));
+  // Bus operators have their own portal
+  const destination = isOperator(admin)
+    ? next.startsWith("/operator")
+      ? next
+      : "/operator"
+    : next.startsWith("/operator")
+      ? "/admin/dashboard"
+      : next;
 
   useEffect(() => {
-    if (isAuthenticated) router.replace(next);
-  }, [isAuthenticated, next, router]);
+    if (isAuthenticated) router.replace(destination);
+  }, [isAuthenticated, destination, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

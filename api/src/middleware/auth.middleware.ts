@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
-import type { AdminRole } from "../config/constants.js";
+import { STAFF_ROLES, type AdminRole } from "../config/constants.js";
 import { env } from "../config/env.js";
 import { PASSENGER_SESSION_DAYS } from "../config/constants.js";
 import type { PassengerContact } from "../repositories/passenger.repository.js";
@@ -20,8 +20,8 @@ export const signPassengerToken = (contact: PassengerContact) =>
     expiresIn: `${PASSENGER_SESSION_DAYS}d`,
   });
 
-/** Requires a valid admin JWT in the x-auth-token header. */
-export const requireAuth: RequestHandler = (req, res, next) => {
+/** Any signed-in account (BusWatch team or bus operator): a valid JWT in x-auth-token. */
+export const requireAccount: RequestHandler = (req, res, next) => {
   const token = req.header("x-auth-token");
   if (!token) {
     res.status(401).json({ msg: "No token, authorization denied" });
@@ -36,6 +36,34 @@ export const requireAuth: RequestHandler = (req, res, next) => {
   } catch {
     res.status(401).json({ msg: "Token is not valid" });
   }
+};
+
+const isStaff = (role?: AdminRole) =>
+  (STAFF_ROLES as readonly (AdminRole | undefined)[]).includes(role);
+
+/**
+ * The BusWatch team only (superadmins and admins). Every admin-console route uses this, so bus
+ * operators can never reach passenger details, other fleets or internal notes.
+ */
+export const requireAuth: RequestHandler = (req, res, next) => {
+  requireAccount(req, res, () => {
+    if (!isStaff(req.admin?.role)) {
+      res.status(403).json({ msg: "You do not have permission to do this" });
+      return;
+    }
+    next();
+  });
+};
+
+/** Bus operators only (the operator portal). */
+export const requireOperator: RequestHandler = (req, res, next) => {
+  requireAccount(req, res, () => {
+    if (req.admin?.role !== "operator") {
+      res.status(403).json({ msg: "This page is for bus operators." });
+      return;
+    }
+    next();
+  });
 };
 
 /** Use after requireAuth to restrict a route to specific roles. */

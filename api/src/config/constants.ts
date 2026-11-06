@@ -118,6 +118,7 @@ export const METRIC_EVENTS = [
   "telegram_linked",
   "confirmation_offered",
   "report_confirmed",
+  "operator_response",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -182,8 +183,19 @@ export const CONFIRMATION = {
 export const PARTS_OF_DAY = ["morning", "afternoon", "evening", "night"] as const;
 export type PartOfDay = (typeof PARTS_OF_DAY)[number];
 
-export const ADMIN_ROLES = ["superadmin", "admin"] as const;
+/**
+ * "operator" is a bus owner or company (Phase 4 operator portal): they sign in on the same page but
+ * only see checked reports about their own fleet, never the admin console.
+ */
+export const ADMIN_ROLES = ["superadmin", "admin", "operator"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
+
+/** The BusWatch team: everyone except operators. */
+export const STAFF_ROLES = ["superadmin", "admin"] as const satisfies readonly AdminRole[];
+
+export const MAX_OPERATOR_RESPONSE_LENGTH = 2000;
+/** Buses one operator account can be given */
+export const MAX_FLEET_SIZE = 500;
 
 export const UPLOAD_LIMITS = {
   maxImages: 5,

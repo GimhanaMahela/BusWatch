@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listAdmins, createAdmin } from "@/api/authApi";
+import { createAdmin, listAdmins, updateOperatorFleet, type NewAccount } from "@/api/authApi";
 import {
   addReportNote,
   deleteReport,
@@ -13,6 +13,7 @@ import {
   rateOutcome,
   sendAdminMessage,
   sendPassengerMessage,
+  setOperatorResponseVisibility,
   setReportVisibility,
   trackReport,
   updateReportStatus,
@@ -20,7 +21,6 @@ import {
 import type { ReportStatus } from "@/constants/reportConstants";
 import { getMyReports } from "@/api/passengerApi";
 import { createStory, deleteStory, listStories, updateStory } from "@/api/storyApi";
-import type { AdminRole } from "@/types/admin";
 import type { StoryInput } from "@/types/public";
 import type { Report, ReportListParams } from "@/types/report";
 
@@ -149,6 +149,16 @@ export const useSetReportVisibility = (id: string) => {
   });
 };
 
+/** Admin: show or hide a bus operator's response from the passenger */
+export const useSetOperatorResponseVisibility = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: ({ responseId, hidden }: { responseId: string; hidden: boolean }) =>
+      setOperatorResponseVisibility(id, responseId, hidden),
+    onSuccess: onUpdated,
+  });
+};
+
 // ---------------------------------------------------------------- Resolved case stories
 
 export const useStories = () => useQuery({ queryKey: queryKeys.stories, queryFn: listStories });
@@ -182,8 +192,17 @@ export const useDeleteReport = () => {
 export const useCreateAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { email: string; password: string; role: AdminRole }) =>
-      createAdmin(input.email, input.password, input.role),
+    mutationFn: (account: NewAccount) => createAdmin(account),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admins }),
+  });
+};
+
+/** Superadmin: change an operator's buses and name */
+export const useUpdateOperatorFleet = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; busNumbers: string[]; organisation?: string }) =>
+      updateOperatorFleet(input.id, input.busNumbers, input.organisation),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admins }),
   });
 };

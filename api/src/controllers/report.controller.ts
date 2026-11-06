@@ -31,6 +31,11 @@ import { generatePdfReceipt } from "../services/pdf-receipt.service.js";
 import { generateReceiptId } from "../utils/receipt-id.js";
 import { invalidateCache } from "../utils/ttl-cache.js";
 import type { VisibilityInput } from "../validators/story.validator.js";
+import type { ResponseVisibilityInput } from "../validators/operator.validator.js";
+import {
+  findOperatorsForBus,
+  setOperatorResponseHidden,
+} from "../repositories/operator.repository.js";
 import {
   listReportsQuerySchema,
   type AddNoteInput,
@@ -113,6 +118,10 @@ export const toPublicView = (report: ReportWithRelations) => {
     canReply: canReply(report),
     // Other passengers who said "me too" (a count only)
     confirmations: report.confirmations.length,
+    // The bus operator's responses, unless an admin hid them
+    operatorResponses: report.operatorResponses
+      .filter((response) => !response.hidden)
+      .map(({ body, organisation, createdAt }) => ({ body, organisation, createdAt })),
   };
 };
 
@@ -290,7 +299,8 @@ export const getReportById = async (req: Request<IdParams>, res: Response) => {
     res.status(404).json({ msg: "Report not found" });
     return;
   }
-  res.json(report);
+  // Which operator accounts run this bus (they see it once an admin has checked it)
+  res.json({ ...report, operators: await findOperatorsForBus(report.busNumber) });
 };
 
 // @desc    Get report by Receipt ID (Admin only)
@@ -389,4 +399,20 @@ export const deleteReport = async (req: Request<IdParams>, res: Response) => {
   ]);
 
   res.json({ msg: "Report removed" });
+};
+
+// @desc    Show or hide a bus operator's response on the passenger's tracking page (Admin only)
+// @route   PUT /api/reports/:id/operator-responses/:responseId
+// @access  Private (Admin)
+export const setOperatorResponseVisibility = async (
+  req: Request<IdParams & { responseId: string }, object, ResponseVisibilityInput>,
+  res: Response,
+) => {
+  const { id, responseId } = req.params;
+  if (!(await setOperatorResponseHidden(id, responseId, req.body.hidden))) {
+    res.status(404).json({ msg: "Response not found" });
+    return;
+  }
+  const report = await findReportById(id);
+  res.json(report ? { ...report, operators: await findOperatorsForBus(report.busNumber) } : null);
 };

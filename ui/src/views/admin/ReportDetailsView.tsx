@@ -7,6 +7,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
@@ -57,6 +58,7 @@ import useAuth from "@/hooks/useAuth";
 import {
   useAddReportNote,
   useReport,
+  useSetOperatorResponseVisibility,
   useSetReportVisibility,
   useUpdateReportStatus,
 } from "@/hooks/useReportQueries";
@@ -220,6 +222,7 @@ function ReportDetailsView({ id }: { id: string }) {
   const updateStatus = useUpdateReportStatus(id);
   const addNote = useAddReportNote(id);
   const visibility = useSetReportVisibility(id);
+  const responseVisibility = useSetOperatorResponseVisibility(id);
 
   // null = "keep the current status" until the admin picks another one
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | null>(null);
@@ -687,6 +690,71 @@ function ReportDetailsView({ id }: { id: string }) {
                 </Button>
               </Box>
             </SectionPanel>
+
+            {(Boolean(report.operators?.length) || Boolean(report.operatorResponses?.length)) && (
+              <SectionPanel
+                title="Bus operator"
+                subtitle={
+                  report.operators?.length
+                    ? `Run by ${report.operators.map((o) => o.organisation ?? o.email).join(", ")}. They see this report once it's reviewed, escalated or resolved, without passenger details.`
+                    : undefined
+                }
+                icon={<StorefrontRoundedIcon fontSize="small" />}
+              >
+                {report.operatorResponses?.length ? (
+                  <Box sx={{ display: "grid", gap: 1.5 }}>
+                    {report.operatorResponses.map((response) => (
+                      <Box
+                        key={response.id}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "action.hover",
+                          opacity: response.hidden ? 0.65 : 1,
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {response.organisation ?? "Operator"} ·{" "}
+                          {formatDateTime(response.createdAt)}
+                        </Typography>
+                        <Typography sx={{ whiteSpace: "pre-line", mt: 0.5 }}>
+                          {response.body}
+                        </Typography>
+                        <FormControlLabel
+                          sx={{ mt: 0.5 }}
+                          control={
+                            <Switch
+                              size="small"
+                              checked={!response.hidden}
+                              disabled={responseVisibility.isPending}
+                              onChange={(e) =>
+                                responseVisibility.mutate({
+                                  responseId: response.id,
+                                  hidden: !e.target.checked,
+                                })
+                              }
+                            />
+                          }
+                          label={
+                            response.hidden ? "Hidden from the passenger" : "Shown to the passenger"
+                          }
+                          slotProps={{ typography: { variant: "caption" } }}
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    The operator hasn&apos;t responded yet.
+                  </Typography>
+                )}
+                {responseVisibility.error && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {errorMessage(responseVisibility.error, "Failed to change the response")}
+                  </Alert>
+                )}
+              </SectionPanel>
+            )}
 
             <SectionPanel title="Activity" icon={<HistoryRoundedIcon fontSize="small" />}>
               {report.statusHistory && report.statusHistory.length > 0 ? (

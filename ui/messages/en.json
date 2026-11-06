@@ -319,7 +319,9 @@
       "resolved": "Your commendation has been shared with the operator. Thank you!",
       "rejected": "This commendation was closed."
     },
-    "confirmedByOthers": "{count, plural, one {# other passenger} other {# other passengers}} confirmed seeing this too. That gives your report more weight."
+    "confirmedByOthers": "{count, plural, one {# other passenger} other {# other passengers}} confirmed seeing this too. That gives your report more weight.",
+    "operatorResponded": "Response from the bus operator",
+    "operatorRespondedNamed": "Response from the bus operator, {name}"
   },
   "rating": {
     "title": "How did we do?",

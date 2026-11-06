@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes.js";
 import metricRoutes from "./metric.routes.js";
+import operatorRoutes from "./operator.routes.js";
 import passengerRoutes from "./passenger.routes.js";
 import publicRoutes from "./public.routes.js";
 import pushRoutes from "./push.routes.js";
@@ -18,5 +19,6 @@ router.use("/stories", storyRoutes);
 router.use("/passenger", passengerRoutes);
 router.use("/push", pushRoutes);
 router.use("/telegram", telegramRoutes);
+router.use("/operator", operatorRoutes);
 
 export default router;

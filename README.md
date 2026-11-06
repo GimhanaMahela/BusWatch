@@ -55,6 +55,13 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   Anonymous, one per device; the original passenger sees the count on their tracking page and admins
   see each confirmation on the report.
 
+- **Operator portal** (`/operator`): a superadmin adds a bus owner or company as an _operator_ account
+  with their bus numbers. Operators sign in on the admin login page and land in their own portal: an
+  overview of their fleet and the reports about their buses that admins have checked (never pending,
+  rejected or hidden ones, and never the passenger's contact details, receipt ID, notes or messages).
+  They can publish a response ("We retrained the driver"), which the passenger sees on the tracking
+  page with the operator's name; admins can hide a response.
+
 Status changes and messages go out on every channel the passenger gave (email, SMS, push, Telegram), in their
 language; the admin sees which ones reached them.
 

@@ -29,6 +29,7 @@ const report: PublicReport = {
   ratedAt: null,
   canReply: true,
   confirmations: 0,
+  operatorResponses: [],
   messages: [
     {
       id: "m1",

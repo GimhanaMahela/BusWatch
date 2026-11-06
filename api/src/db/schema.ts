@@ -49,8 +49,22 @@ export const admins = pgTable("admins", {
   email: text().notNull().unique(), // stored lower-case
   passwordHash: text().notNull(),
   role: adminRole().notNull().default("admin"),
+  // Operators: the company or owner name passengers see next to their responses
+  organisation: text(),
   createdAt: timestamptz().notNull().defaultNow(),
 });
+
+/** Operator portal: the buses an operator account owns (bus numbers normalised, e.g. "NB1234"). */
+export const operatorBuses = pgTable(
+  "operator_buses",
+  {
+    operatorId: uuid()
+      .notNull()
+      .references(() => admins.id, { onDelete: "cascade" }),
+    busNumber: text().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.operatorId, t.busNumber] }), index().on(t.busNumber)],
+);
 
 export const reports = pgTable(
   "reports",
@@ -215,6 +229,26 @@ export const reportConfirmations = pgTable(
   (t) => [uniqueIndex().on(t.reportId, t.deviceHash), index().on(t.reportId, t.createdAt)],
 );
 
+/**
+ * Operator portal: what the bus owner says they did about a report ("Driver suspended for a week").
+ * Shown to the passenger on the tracking page unless an admin hides it.
+ */
+export const operatorResponses = pgTable(
+  "operator_responses",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reportId: uuid()
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    operatorId: uuid().references(() => admins.id, { onDelete: "set null" }),
+    organisation: text(), // name at the time, so it survives the account
+    body: text().notNull(),
+    hidden: boolean().notNull().default(false),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [index().on(t.reportId, t.createdAt)],
+);
+
 export interface StoryTranslation {
   title: string;
   body: string;
@@ -261,6 +295,11 @@ export const reportsRelations = relations(reports, ({ many }) => ({
   notes: many(reportNotes),
   messages: many(reportMessages),
   confirmations: many(reportConfirmations),
+  operatorResponses: many(operatorResponses),
+}));
+
+export const operatorResponsesRelations = relations(operatorResponses, ({ one }) => ({
+  report: one(reports, { fields: [operatorResponses.reportId], references: [reports.id] }),
 }));
 
 export const reportConfirmationsRelations = relations(reportConfirmations, ({ one }) => ({

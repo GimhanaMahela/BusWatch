@@ -19,7 +19,7 @@ export const useTestDatabase = () => {
 
 export const createAdminAndLogin = async (
   email = "root@test.com",
-  role: "superadmin" | "admin" = "superadmin",
+  role: "superadmin" | "admin" | "operator" = "superadmin",
 ) => {
   const password = "supersecret1";
   await createAdmin({ email, password, role });

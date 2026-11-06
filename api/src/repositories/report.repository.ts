@@ -25,6 +25,7 @@ import {
 } from "../config/constants.js";
 import { db } from "../db/client.js";
 import {
+  operatorResponses,
   reportConfirmations,
   reportMessages,
   reportNotes,
@@ -70,6 +71,11 @@ const findOneWithRelations = (where: SQL) =>
       confirmations: {
         columns: { id: true, comment: true, language: true, source: true, createdAt: true },
         orderBy: [asc(reportConfirmations.createdAt)],
+      },
+      // What the bus operator said they did (operator portal)
+      operatorResponses: {
+        columns: { id: true, body: true, organisation: true, hidden: true, createdAt: true },
+        orderBy: [asc(operatorResponses.createdAt)],
       },
     },
   });

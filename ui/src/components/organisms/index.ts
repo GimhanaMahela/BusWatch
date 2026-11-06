@@ -5,6 +5,7 @@ export { default as ConfirmedPanel } from "./ConfirmedPanel";
 export { default as ManageAdminsDialog } from "./ManageAdminsDialog";
 export { default as MeTooDialog } from "./MeTooDialog";
 export { default as OfflineOutbox } from "./OfflineOutbox";
+export { default as OperatorTopBar } from "./OperatorTopBar";
 export { default as OutcomeRating } from "./OutcomeRating";
 export { default as PushToggle } from "./PushToggle";
 export { default as QueuedPanel } from "./QueuedPanel";

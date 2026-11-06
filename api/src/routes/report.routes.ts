@@ -30,6 +30,7 @@ import {
   pushUnsubscribeSchema,
 } from "../validators/passenger.validator.js";
 import { visibilitySchema } from "../validators/story.validator.js";
+import { responseVisibilitySchema } from "../validators/operator.validator.js";
 
 const router = Router();
 const validId = validateUuidParam("id");
@@ -122,6 +123,14 @@ router.post(
   messageController.sendAdminMessage,
 );
 router.post("/:id/messages/read", requireAuth, validId, messageController.markReadByAdmin);
+router.put(
+  "/:id/operator-responses/:responseId",
+  requireAuth,
+  validId,
+  validateUuidParam("responseId"),
+  validateBody(responseVisibilitySchema),
+  reportController.setOperatorResponseVisibility,
+);
 router.delete("/:id", requireAuth, validId, reportController.deleteReport);
 
 export default router;

@@ -206,6 +206,15 @@ and an HMAC of the IP address and user agent; a unique index allows one confirma
 report. Admins get the list on the report and a `confirmationCount` in report lists; the tracking page
 gets a count only.
 
+**Operator portal.** Operators are rows in `admins` with role `operator`, an `organisation` name and
+their buses in `operator_buses` (normalised with `utils/bus-number.ts`). `requireAuth` admits only
+`STAFF_ROLES`, so every admin-console route is closed to operators by default; `requireOperator` guards
+`/api/operator/*` and `requireAccount` (any account) only `GET /api/auth`. The operator queries in
+`operator.repository.ts` apply the public fairness rule (`PUBLIC_STATUSES`, not `hiddenFromPublic`)
+and select an explicit column list without contact details, receipt IDs, media, notes or messages.
+Responses live in `operator_responses`; the tracking page shows those not `hidden`. In the UI,
+`AdminGuard area="operator"` guards `/operator` and sends each kind of account to its own area.
+
 **CAPTCHA.** `verifyTurnstile` runs on report submission and "me too" confirmations when `TURNSTILE_SECRET_KEY` is set. The browser
 fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
 offline outbox; a failed check keeps the report in the outbox instead of dropping it.
