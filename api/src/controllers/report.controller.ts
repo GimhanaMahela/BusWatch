@@ -1,4 +1,6 @@
 import type { Request, Response } from "express";
+import { env } from "../config/env.js";
+import { analyseInBackground } from "./ai.controller.js";
 import cloudinary from "../config/cloudinary.js";
 import {
   RATEABLE_STATUSES,
@@ -147,6 +149,7 @@ export const submitReport = async (
     fields.type === "commendation" ? "Commendation received." : "Report received.",
   );
   await countEvent(saved.type === "commendation" ? "commendation_submitted" : "report_submitted");
+  if (env.AI_AUTO_ANALYSE) analyseInBackground(saved);
 
   // Everything below is best-effort: the report is already saved, so a PDF or
   // email failure must not turn into an error response (the passenger would resubmit).

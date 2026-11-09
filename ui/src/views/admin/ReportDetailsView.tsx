@@ -43,7 +43,7 @@ import { useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
-import { AdminMessagesPanel } from "@/components/organisms";
+import { AdminMessagesPanel, AiAssistantPanel } from "@/components/organisms";
 import { describeDelivery } from "@/components/organisms/AdminMessagesPanel";
 import {
   MIN_PUBLIC_REPORTS,
@@ -472,6 +472,8 @@ function ReportDetailsView({ id }: { id: string }) {
               </Box>
             </SectionPanel>
           )}
+
+          <AiAssistantPanel report={report} />
 
           <AdminMessagesPanel report={report} />
 

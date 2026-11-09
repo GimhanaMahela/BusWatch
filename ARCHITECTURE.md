@@ -215,6 +215,17 @@ and select an explicit column list without contact details, receipt IDs, media, 
 Responses live in `operator_responses`; the tracking page shows those not `hidden`. In the UI,
 `AdminGuard area="operator"` guards `/operator` and sends each kind of account to its own area.
 
+**AI help for admins.** `services/ai.service.ts` calls Claude through `@anthropic-ai/sdk`
+(`client.beta.messages.parse` with a Zod schema via `betaZodOutputFormat`, and server-side refusal
+fallbacks). `analyseReport` returns `AiInsights` (stored in `reports.ai_insights`); the report text is
+fenced in `<report>` tags and the system prompt treats it as data, never instructions, and a suggested
+category outside the report type's list is discarded. `blurImages` asks Claude for face and number
+plate boxes in each Cloudinary photo (fractions of the image) and builds a Cloudinary URL with
+`e_blur_faces` plus one `e_blur_region` per box; the URLs go in `reports.blurred_images`, the only
+photos the operator portal returns. Routes: `GET /api/reports/ai/status`, `POST /:id/ai/analyse`,
+`POST /:id/ai/blur` (staff, `aiLimiter`) and `PUT /:id/category`. Failures become 502/503 with a
+message, never a 500. Tests mock the SDK module, so the service code runs without network calls.
+
 **CAPTCHA.** `verifyTurnstile` runs on report submission and "me too" confirmations when `TURNSTILE_SECRET_KEY` is set. The browser
 fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
 offline outbox; a failed check keeps the report in the outbox instead of dropping it.

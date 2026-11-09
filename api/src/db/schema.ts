@@ -27,6 +27,7 @@ import {
   REPORT_SOURCES,
   REPORT_STATUSES,
   REPORT_TYPES,
+  type ReportCategory,
 } from "../config/constants.js";
 
 // Column names are snake_case in the database; Drizzle maps them from the camelCase keys
@@ -98,6 +99,11 @@ export const reports = pgTable(
     ratedAt: timestamptz(),
     // An admin can keep a disputed report out of public totals, maps and scorecards
     hiddenFromPublic: boolean().notNull().default(false),
+    // AI help for admins: suggested category, English translation and summary (admins only)
+    aiInsights: jsonb().$type<AiInsights>(),
+    // Copies of the photos with faces and number plates blurred (null until an admin runs it).
+    // Operators only ever see these.
+    blurredImages: text().array(),
   },
   (t) => [
     index().on(t.reportedAt.desc()),
@@ -110,6 +116,21 @@ export const reports = pgTable(
     check("outcome_rating_range", sql`${t.outcomeRating} BETWEEN 1 AND 5`),
   ],
 );
+
+export interface AiInsights {
+  detectedLanguage: "en" | "si" | "ta" | "other";
+  /** English translation when the description isn't in English */
+  englishTranslation: string | null;
+  /** Short summary for long descriptions */
+  summary: string | null;
+  suggestedCategory: ReportCategory;
+  categoryConfidence: "low" | "medium" | "high";
+  categoryReason: string;
+  /** Things an admin should look at before acting or publishing */
+  flags: ("personal_details" | "abusive_language" | "possible_emergency" | "not_a_bus_issue")[];
+  model: string;
+  generatedAt: string;
+}
 
 export const reportStatusChanges = pgTable(
   "report_status_changes",

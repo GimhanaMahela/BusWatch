@@ -157,3 +157,9 @@ export const rateOutcomeSchema = z.object({
 });
 
 export type RateOutcomeInput = z.infer<typeof rateOutcomeSchema>;
+
+export const updateCategorySchema = z.object({
+  category: z.enum(REPORT_CATEGORIES, { error: "Invalid category." }),
+});
+
+export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;

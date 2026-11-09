@@ -16,6 +16,10 @@ export interface FleetReport {
   description: string;
   /** Other passengers who said "me too" */
   confirmations: number;
+  /** Photos with faces and number plates blurred by the BusWatch team (never the originals) */
+  images: string[];
+  /** English translation when the passenger wrote in Sinhala or Tamil */
+  translation: string | null;
   /** List only: responses the operator has posted */
   responses?: number;
 }

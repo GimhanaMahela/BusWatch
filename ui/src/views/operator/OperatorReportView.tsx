@@ -77,6 +77,35 @@ function OperatorReportView({ id }: { id: string }) {
             <Typography sx={{ whiteSpace: "pre-line", lineHeight: 1.75 }}>
               {r.description}
             </Typography>
+            {r.translation && (
+              <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}>
+                <Typography variant="caption" color="text.secondary">
+                  English translation (automatic)
+                </Typography>
+                <Typography sx={{ whiteSpace: "pre-line" }}>{r.translation}</Typography>
+              </Box>
+            )}
+            {r.images.length > 0 && (
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 2 }}>
+                {r.images.map((url, index) => (
+                  <Box
+                    key={url}
+                    component="a"
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ width: 120, height: 90, borderRadius: 2, overflow: "hidden" }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary photo */}
+                    <img
+                      src={url}
+                      alt={`Photo ${index + 1} (faces and number plates blurred)`}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            )}
             <Box
               sx={{
                 mt: 3,

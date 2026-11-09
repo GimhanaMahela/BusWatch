@@ -62,6 +62,12 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   They can publish a response ("We retrained the driver"), which the passenger sees on the tracking
   page with the operator's name; admins can hide a response.
 
+- **AI help for admins** (optional, `ANTHROPIC_API_KEY`): an AI assistant panel on each report suggests
+  a category (one click to apply), translates Sinhala and Tamil into English, summarises long reports
+  and flags emergencies, personal details or abuse. "Blur faces and plates" makes Cloudinary copies of
+  the photos with faces and number plates blurred; operators only ever see those. Uses Claude
+  (`AI_MODEL`, default `claude-opus-5-5`); `AI_AUTO_ANALYSE=true` analyses each new report on arrival.
+
 Status changes and messages go out on every channel the passenger gave (email, SMS, push, Telegram), in their
 language; the admin sees which ones reached them.
 
@@ -98,6 +104,7 @@ added from the dashboard's **Admins** dialog.
 | Emails (receipts, codes) | `EMAIL_SERVICE_*`                                            | Skipped (codes printed in dev)                    |
 | SMS / WhatsApp           | `SMS_PROVIDER` + `ANDROID_SMS_*`, `NOTIFYLK_*` or `TWILIO_*` | Phone field hidden (in dev: shown, texts printed) |
 | Telegram                 | `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_WEBHOOK_SECRET` hosted)    | The Telegram card is hidden                       |
+| AI help for admins       | `ANTHROPIC_API_KEY`                                          | The AI assistant panel is hidden                  |
 | Browser push             | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`     | The "Get notified" card is hidden                 |
 | CAPTCHA                  | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`     | Submissions aren't checked                        |
 

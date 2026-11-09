@@ -9,7 +9,7 @@ import type {
   SubmitReportFields,
   SubmitReportResponse,
 } from "@/types/report";
-import type { ReportStatus } from "@/constants/reportConstants";
+import type { ReportCategory, ReportStatus } from "@/constants/reportConstants";
 import apiClient, { call } from "@/api/apiClient";
 import { getTurnstileToken } from "@/lib/turnstile";
 
@@ -80,6 +80,23 @@ export const setReportVisibility = (id: string, hiddenFromPublic: boolean) =>
 /** Admin: show or hide a bus operator's response on the passenger's tracking page */
 export const setOperatorResponseVisibility = (id: string, responseId: string, hidden: boolean) =>
   call<Report>(apiClient.put(`/reports/${id}/operator-responses/${responseId}`, { hidden }));
+
+// ---------------------------------------------------------------- AI help for admins (Phase 4)
+
+export const getAiStatus = () => call<{ enabled: boolean }>(apiClient.get("/reports/ai/status"));
+
+/** Suggest a category, translate and summarise (takes a few seconds) */
+export const analyseReportWithAi = (id: string) =>
+  call<Report>(apiClient.post(`/reports/${id}/ai/analyse`, undefined, { timeout: 120_000 }));
+
+/** Blur faces and number plates in the report's photos */
+export const blurReportPhotos = (id: string) =>
+  call<Report & { blurredRegions: number }>(
+    apiClient.post(`/reports/${id}/ai/blur`, undefined, { timeout: 180_000 }),
+  );
+
+export const setReportCategory = (id: string, category: ReportCategory) =>
+  call<Report>(apiClient.put(`/reports/${id}/category`, { category }));
 
 // ---------------------------------------------------------------- Messages (Phase 3)
 

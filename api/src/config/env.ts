@@ -64,6 +64,19 @@ const EnvSchema = z.object({
     z.string().regex(/^[\w-]{1,256}$/, "Use letters, digits, _ and -"),
   ),
 
+  // AI help for admins (Phase 4): category suggestions, translation, summaries, and blurring faces
+  // and number plates in photos. Off when unset.
+  ANTHROPIC_API_KEY: optional(z.string()),
+  AI_MODEL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().default("claude-opus-5-5"),
+  ),
+  // "true": analyse every new report straight after it is submitted (otherwise admins click Analyse)
+  AI_AUTO_ANALYSE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   EMAIL_ALLOW_SELF_SIGNED: z
     .enum(["true", "false"])
     .default("false")

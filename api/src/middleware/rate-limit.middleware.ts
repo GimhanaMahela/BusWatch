@@ -34,3 +34,5 @@ export const passengerLimiter = limiter(15, 120, "Too many requests. Please try 
 
 // Wider ecosystem (Phase 4)
 export const confirmLimiter = limiter(15, 10, "Too many confirmations. Please try again later.");
+// Each AI request costs money: generous for a team, but stops a runaway loop
+export const aiLimiter = limiter(15, 60, "Too many AI requests. Please wait a few minutes.");

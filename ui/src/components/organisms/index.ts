@@ -1,3 +1,4 @@
+export { default as AiAssistantPanel } from "./AiAssistantPanel";
 export { default as AdminGuard } from "./AdminGuard";
 export { default as AdminMessagesPanel } from "./AdminMessagesPanel";
 export { default as AdminNavigation } from "./AdminNavigation";

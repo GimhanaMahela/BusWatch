@@ -86,6 +86,10 @@ const operatorColumns = {
   status: reports.status,
   resolvedAt: reports.resolvedAt,
   description: reports.description,
+  // Only photos with faces and number plates blurred; none until an admin has run the blur
+  images: sql<string[]>`coalesce(${reports.blurredImages}, '{}')`,
+  // English translation from AI help, when the passenger wrote in Sinhala or Tamil
+  translation: sql<string | null>`${reports.aiInsights} ->> 'englishTranslation'`,
 };
 
 const confirmationCount = sql<number>`(

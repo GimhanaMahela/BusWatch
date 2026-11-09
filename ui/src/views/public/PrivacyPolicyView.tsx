@@ -113,6 +113,21 @@ const SECTIONS: ContentSection[] = [
           turned back into your internet address. We never ask for your name or contact details when
           you confirm, and other passengers only ever see a count.
         </p>
+        <p>
+          To handle reports faster, our team may use an AI service (Claude, by Anthropic) to
+          translate a report into English, suggest a category, summarise it, or find faces and
+          number plates in photos so they can be blurred. Only the report&apos;s text, bus and route
+          details and photos are sent, never your email address or mobile number. The results are
+          suggestions for our team and are not shown publicly.
+        </p>
+        <h3>Bus operators</h3>
+        <p>
+          Bus owners and companies that join BusWatch can see reports about their own buses once our
+          team has checked them: the bus, route, category, location, time and description, and only
+          photos with faces and number plates blurred. They never see your name, email address,
+          mobile number, receipt ID or your messages with our team. If an operator responds, you see
+          their response on your tracking page.
+        </p>
         <h3>Data kept on your device</h3>
         <p>
           If you install BusWatch or lose your connection while writing a report, the unfinished

@@ -4,6 +4,10 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { createAdmin, listAdmins, updateOperatorFleet, type NewAccount } from "@/api/authApi";
 import {
   addReportNote,
+  analyseReportWithAi,
+  blurReportPhotos,
+  getAiStatus,
+  setReportCategory,
   deleteReport,
   getAllReports,
   getReportById,
@@ -18,7 +22,7 @@ import {
   trackReport,
   updateReportStatus,
 } from "@/api/reportApi";
-import type { ReportStatus } from "@/constants/reportConstants";
+import type { ReportCategory, ReportStatus } from "@/constants/reportConstants";
 import { getMyReports } from "@/api/passengerApi";
 import { createStory, deleteStory, listStories, updateStory } from "@/api/storyApi";
 import type { StoryInput } from "@/types/public";
@@ -155,6 +159,29 @@ export const useSetOperatorResponseVisibility = (id: string) => {
   return useMutation({
     mutationFn: ({ responseId, hidden }: { responseId: string; hidden: boolean }) =>
       setOperatorResponseVisibility(id, responseId, hidden),
+    onSuccess: onUpdated,
+  });
+};
+
+// ---------------------------------------------------------------- AI help for admins
+
+export const useAiStatus = () =>
+  useQuery({ queryKey: ["ai", "status"], queryFn: getAiStatus, staleTime: Infinity });
+
+export const useAnalyseReport = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({ mutationFn: () => analyseReportWithAi(id), onSuccess: onUpdated });
+};
+
+export const useBlurReportPhotos = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({ mutationFn: () => blurReportPhotos(id), onSuccess: onUpdated });
+};
+
+export const useSetReportCategory = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: (category: ReportCategory) => setReportCategory(id, category),
     onSuccess: onUpdated,
   });
 };

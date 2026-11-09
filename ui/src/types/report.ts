@@ -82,6 +82,19 @@ export interface AdminOperatorResponse {
   createdAt: string;
 }
 
+/** AI help for admins: advice only, never shown to passengers */
+export interface AiInsights {
+  detectedLanguage: "en" | "si" | "ta" | "other";
+  englishTranslation: string | null;
+  summary: string | null;
+  suggestedCategory: ReportCategory;
+  categoryConfidence: "low" | "medium" | "high";
+  categoryReason: string;
+  flags: ("personal_details" | "abusive_language" | "possible_emergency" | "not_a_bus_issue")[];
+  model: string;
+  generatedAt: string;
+}
+
 /** Full report as admins see it */
 export interface Report {
   id: string;
@@ -121,6 +134,9 @@ export interface Report {
   confirmationCount?: number;
   /** Responses from the bus operator */
   operatorResponses?: AdminOperatorResponse[];
+  aiInsights?: AiInsights | null;
+  /** Photos with faces and number plates blurred (what operators see) */
+  blurredImages?: string[] | null;
   /** Details page: operator accounts that run this bus */
   operators?: { id: string; email: string; organisation: string | null }[];
 }

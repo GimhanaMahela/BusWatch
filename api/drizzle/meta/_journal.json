@@ -50,6 +50,13 @@
       "when": 1793968711671,
       "tag": "0006_phase4_operator_portal",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793969472857,
+      "tag": "0007_phase4_ai_help",
+      "breakpoints": true
     }
   ]
 }

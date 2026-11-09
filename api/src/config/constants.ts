@@ -119,6 +119,8 @@ export const METRIC_EVENTS = [
   "confirmation_offered",
   "report_confirmed",
   "operator_response",
+  "ai_analysis",
+  "ai_blur",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -194,6 +196,9 @@ export type AdminRole = (typeof ADMIN_ROLES)[number];
 export const STAFF_ROLES = ["superadmin", "admin"] as const satisfies readonly AdminRole[];
 
 export const MAX_OPERATOR_RESPONSE_LENGTH = 2000;
+
+/** AI help: descriptions longer than this get a summary */
+export const AI_SUMMARY_MIN_LENGTH = 400;
 /** Buses one operator account can be given */
 export const MAX_FLEET_SIZE = 500;
 

@@ -118,7 +118,9 @@ describe("Operator portal", () => {
     expect(res.body.total).toBe(1);
     const [report] = res.body.reports;
     expect(report.id).toBe(mine.id);
-    for (const secret of ["receiptId", "passengerEmail", "passengerPhone", "images", "notes"]) {
+    // Unblurred photos are never shown: only copies an admin blurred with AI help
+    expect(report.images).toEqual([]);
+    for (const secret of ["receiptId", "passengerEmail", "passengerPhone", "videos", "notes"]) {
       expect(report).not.toHaveProperty(secret);
     }
 

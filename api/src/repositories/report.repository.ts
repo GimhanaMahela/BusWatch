@@ -31,6 +31,7 @@ import {
   reportNotes,
   reports,
   reportStatusChanges,
+  type AiInsights,
   type NewReportRow,
   type ReportRow,
 } from "../db/schema.js";
@@ -221,6 +222,21 @@ export const setReportHiddenFromPublic = async (id: string, hiddenFromPublic: bo
     .where(eq(reports.id, id))
     .returning({ id: reports.id });
   return updated.length > 0;
+};
+
+/** AI help: stores the latest analysis (admins only). */
+export const setAiInsights = async (id: string, aiInsights: AiInsights) => {
+  await db.update(reports).set({ aiInsights }).where(eq(reports.id, id));
+};
+
+/** AI help: the photos with faces and number plates blurred (what operators see). */
+export const setBlurredImages = async (id: string, blurredImages: string[]) => {
+  await db.update(reports).set({ blurredImages }).where(eq(reports.id, id));
+};
+
+/** An admin corrects the category (e.g. after an AI suggestion). */
+export const setReportCategory = async (id: string, category: ReportCategory) => {
+  await db.update(reports).set({ category }).where(eq(reports.id, id));
 };
 
 /** Returns false when the report does not exist. */
