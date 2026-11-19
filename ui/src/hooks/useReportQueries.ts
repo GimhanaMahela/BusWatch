@@ -1,18 +1,31 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listAdmins, createAdmin } from "@/api/authApi";
+import { createAdmin, listAdmins, updateOperatorFleet, type NewAccount } from "@/api/authApi";
 import {
   addReportNote,
+  analyseReportWithAi,
+  blurReportPhotos,
+  getAiStatus,
+  setReportCategory,
   deleteReport,
   getAllReports,
   getReportById,
   getReportStats,
+  markMessagesReadByAdmin,
+  markMessagesReadByPassenger,
+  rateOutcome,
+  sendAdminMessage,
+  sendPassengerMessage,
+  setOperatorResponseVisibility,
+  setReportVisibility,
   trackReport,
   updateReportStatus,
 } from "@/api/reportApi";
-import type { ReportStatus } from "@/constants/reportConstants";
-import type { AdminRole } from "@/types/admin";
+import type { ReportCategory, ReportStatus } from "@/constants/reportConstants";
+import { getMyReports } from "@/api/passengerApi";
+import { createStory, deleteStory, listStories, updateStory } from "@/api/storyApi";
+import type { StoryInput } from "@/types/public";
 import type { Report, ReportListParams } from "@/types/report";
 
 /** Query keys in one place so mutations can invalidate the right caches */
@@ -23,6 +36,8 @@ export const queryKeys = {
   stats: ["reports", "stats"] as const,
   tracking: (receiptId: string) => ["tracking", receiptId.trim().toUpperCase()] as const,
   admins: ["admins"] as const,
+  stories: ["stories"] as const,
+  myReports: (token: string) => ["myReports", token] as const,
 };
 
 export const useReportList = (params: ReportListParams) =>
@@ -44,6 +59,43 @@ export const useTrackedReport = (receiptId: string | undefined) =>
     queryFn: () => trackReport(receiptId ?? ""),
     enabled: !!receiptId,
     retry: false, // a 404 means "no such receipt", not a transient failure
+  });
+
+/** Public: the passenger rates the outcome; the tracking page updates in place. */
+export const useRateOutcome = (receiptId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { rating: number; feedback: string }) =>
+      rateOutcome(receiptId, input.rating, input.feedback),
+    onSuccess: (report) => queryClient.setQueryData(queryKeys.tracking(receiptId), report),
+  });
+};
+
+/** Public: the passenger replies to the team; the conversation updates in place. */
+export const useSendPassengerMessage = (receiptId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => sendPassengerMessage(receiptId, body),
+    onSuccess: (report) => queryClient.setQueryData(queryKeys.tracking(receiptId), report),
+  });
+};
+
+/** Public: the passenger opened the conversation. "My reports" badges update next time. */
+export const useMarkReadByPassenger = (receiptId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => markMessagesReadByPassenger(receiptId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["myReports"] }),
+  });
+};
+
+/** "My reports" for a passenger session */
+export const useMyReports = (token: string | null) =>
+  useQuery({
+    queryKey: queryKeys.myReports(token ?? ""),
+    queryFn: () => getMyReports(token ?? ""),
+    enabled: Boolean(token),
+    retry: false, // a 401 means the session ended
   });
 
 export const useAdmins = (enabled: boolean) =>
@@ -75,6 +127,87 @@ export const useAddReportNote = (id: string) => {
   });
 };
 
+export const useSendAdminMessage = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: (input: { body: string; notifyPassenger: boolean }) =>
+      sendAdminMessage(id, input.body, input.notifyPassenger),
+    onSuccess: onUpdated,
+  });
+};
+
+/** Admin opened a report with unread passenger messages: clear the badge in the list. */
+export const useMarkReadByAdmin = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => markMessagesReadByAdmin(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.reports }),
+  });
+};
+
+export const useSetReportVisibility = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: (hiddenFromPublic: boolean) => setReportVisibility(id, hiddenFromPublic),
+    onSuccess: onUpdated,
+  });
+};
+
+/** Admin: show or hide a bus operator's response from the passenger */
+export const useSetOperatorResponseVisibility = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: ({ responseId, hidden }: { responseId: string; hidden: boolean }) =>
+      setOperatorResponseVisibility(id, responseId, hidden),
+    onSuccess: onUpdated,
+  });
+};
+
+// ---------------------------------------------------------------- AI help for admins
+
+export const useAiStatus = () =>
+  useQuery({ queryKey: ["ai", "status"], queryFn: getAiStatus, staleTime: Infinity });
+
+export const useAnalyseReport = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({ mutationFn: () => analyseReportWithAi(id), onSuccess: onUpdated });
+};
+
+export const useBlurReportPhotos = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({ mutationFn: () => blurReportPhotos(id), onSuccess: onUpdated });
+};
+
+export const useSetReportCategory = (id: string) => {
+  const onUpdated = useReportUpdated();
+  return useMutation({
+    mutationFn: (category: ReportCategory) => setReportCategory(id, category),
+    onSuccess: onUpdated,
+  });
+};
+
+// ---------------------------------------------------------------- Resolved case stories
+
+export const useStories = () => useQuery({ queryKey: queryKeys.stories, queryFn: listStories });
+
+/** Creates a story, or updates one when `id` is given. */
+export const useSaveStory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id?: string; input: Partial<StoryInput> }) =>
+      id ? updateStory(id, input) : createStory(input as StoryInput),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+  });
+};
+
+export const useDeleteStory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteStory,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.stories }),
+  });
+};
+
 export const useDeleteReport = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -86,8 +219,17 @@ export const useDeleteReport = () => {
 export const useCreateAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { email: string; password: string; role: AdminRole }) =>
-      createAdmin(input.email, input.password, input.role),
+    mutationFn: (account: NewAccount) => createAdmin(account),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admins }),
+  });
+};
+
+/** Superadmin: change an operator's buses and name */
+export const useUpdateOperatorFleet = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; busNumbers: string[]; organisation?: string }) =>
+      updateOperatorFleet(input.id, input.busNumbers, input.organisation),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admins }),
   });
 };

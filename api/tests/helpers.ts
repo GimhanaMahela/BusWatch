@@ -11,13 +11,15 @@ export { db };
 /** Empties every table before each test (the PGlite database itself is per test file). */
 export const useTestDatabase = () => {
   beforeEach(async () => {
-    await db.execute(sql`TRUNCATE admins, reports RESTART IDENTITY CASCADE`);
+    await db.execute(
+      sql`TRUNCATE admins, reports, daily_metrics, passenger_codes, whatsapp_chats, whatsapp_inbound, fare_tables, fare_routes, trip_shares RESTART IDENTITY CASCADE`,
+    );
   });
 };
 
 export const createAdminAndLogin = async (
   email = "root@test.com",
-  role: "superadmin" | "admin" = "superadmin",
+  role: "superadmin" | "admin" | "operator" = "superadmin",
 ) => {
   const password = "supersecret1";
   await createAdmin({ email, password, role });

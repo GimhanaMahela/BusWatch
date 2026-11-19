@@ -4,6 +4,7 @@ import {
   count,
   desc,
   eq,
+  getTableColumns,
   gte,
   ilike,
   inArray,
@@ -14,19 +15,34 @@ import {
   type SQL,
 } from "drizzle-orm";
 import {
+  LANGUAGES,
   OPEN_STATUSES,
   REPORT_STATUSES,
+  type Language,
   type ReportCategory,
   type ReportStatus,
+  type ReportType,
 } from "../config/constants.js";
 import { db } from "../db/client.js";
 import {
+  operatorResponses,
+  reportConfirmations,
+  reportMessages,
   reportNotes,
   reports,
   reportStatusChanges,
+  type AiInsights,
   type NewReportRow,
   type ReportRow,
 } from "../db/schema.js";
+import { getMetricTotals } from "./metric.repository.js";
+
+/**
+ * The outer query's report id inside a correlated subquery. Drizzle leaves column names
+ * unqualified when selecting from one table, so a plain ${reports.id} there would mean the
+ * subquery table's own "id".
+ */
+export const outerReportId = sql`${sql.identifier("reports")}.${sql.identifier("id")}`;
 
 /** Loads one report with its timeline and internal notes, oldest first. */
 const findOneWithRelations = (where: SQL) =>
@@ -40,6 +56,27 @@ const findOneWithRelations = (where: SQL) =>
       notes: {
         columns: { id: true, text: true, author: true, createdAt: true },
         orderBy: [asc(reportNotes.createdAt)],
+      },
+      messages: {
+        columns: {
+          id: true,
+          sender: true,
+          body: true,
+          author: true,
+          createdAt: true,
+          readAt: true,
+        },
+        orderBy: [asc(reportMessages.createdAt)],
+      },
+      // "Me too" confirmations from other passengers (never the device hash)
+      confirmations: {
+        columns: { id: true, comment: true, language: true, source: true, createdAt: true },
+        orderBy: [asc(reportConfirmations.createdAt)],
+      },
+      // What the bus operator said they did (operator portal)
+      operatorResponses: {
+        columns: { id: true, body: true, organisation: true, hidden: true, createdAt: true },
+        orderBy: [asc(operatorResponses.createdAt)],
       },
     },
   });
@@ -70,17 +107,35 @@ export const setReportPdfUrl = async (id: string, pdfUrl: string) => {
   await db.update(reports).set({ pdfUrl }).where(eq(reports.id, id));
 };
 
+/** Stores the passenger's 1–5 rating of how their report was handled (they may change it). */
+export const setOutcomeRating = async (id: string, rating: number, feedback?: string) => {
+  await db
+    .update(reports)
+    .set({ outcomeRating: rating, outcomeFeedback: feedback ?? null, ratedAt: new Date() })
+    .where(eq(reports.id, id));
+};
+
 export interface ReportFilter {
   page: number;
   limit: number;
   status?: ReportStatus | "open";
   category?: ReportCategory;
+  type?: ReportType;
   q?: string;
   from?: Date | null;
   to?: Date | null;
 }
 
-export const listReports = async ({ page, limit, status, category, q, from, to }: ReportFilter) => {
+export const listReports = async ({
+  page,
+  limit,
+  status,
+  category,
+  type,
+  q,
+  from,
+  to,
+}: ReportFilter) => {
   const conditions: (SQL | undefined)[] = [
     status === "open"
       ? inArray(reports.status, [...OPEN_STATUSES])
@@ -88,6 +143,7 @@ export const listReports = async ({ page, limit, status, category, q, from, to }
         ? eq(reports.status, status)
         : undefined,
     category ? eq(reports.category, category) : undefined,
+    type ? eq(reports.type, type) : undefined,
     from ? gte(reports.reportedAt, from) : undefined,
     to ? lte(reports.reportedAt, to) : undefined,
   ];
@@ -106,9 +162,22 @@ export const listReports = async ({ page, limit, status, category, q, from, to }
   }
   const where = and(...conditions);
 
+  // Passenger messages no admin has read yet ("waiting for a reply" in the reports table)
+  const unreadMessages = sql<number>`(
+    SELECT count(*)::int FROM ${reportMessages}
+    WHERE ${reportMessages.reportId} = ${outerReportId}
+      AND ${reportMessages.sender} = 'passenger' AND ${reportMessages.readAt} IS NULL
+  )`;
+
+  // Other passengers who confirmed the incident ("Me too")
+  const confirmationCount = sql<number>`(
+    SELECT count(*)::int FROM ${reportConfirmations}
+    WHERE ${reportConfirmations.reportId} = ${outerReportId}
+  )`;
+
   const [rows, total] = await Promise.all([
     db
-      .select()
+      .select({ ...getTableColumns(reports), unreadMessages, confirmationCount })
       .from(reports)
       .where(where)
       .orderBy(desc(reports.reportedAt))
@@ -145,6 +214,31 @@ export const updateReportStatus = async (
     return { previousStatus: current.status };
   });
 
+/** Keeps a report in or out of public totals, maps and scorecards. Returns false if not found. */
+export const setReportHiddenFromPublic = async (id: string, hiddenFromPublic: boolean) => {
+  const updated = await db
+    .update(reports)
+    .set({ hiddenFromPublic })
+    .where(eq(reports.id, id))
+    .returning({ id: reports.id });
+  return updated.length > 0;
+};
+
+/** AI help: stores the latest analysis (admins only). */
+export const setAiInsights = async (id: string, aiInsights: AiInsights) => {
+  await db.update(reports).set({ aiInsights }).where(eq(reports.id, id));
+};
+
+/** AI help: the photos with faces and number plates blurred (what operators see). */
+export const setBlurredImages = async (id: string, blurredImages: string[]) => {
+  await db.update(reports).set({ blurredImages }).where(eq(reports.id, id));
+};
+
+/** An admin corrects the category (e.g. after an AI suggestion). */
+export const setReportCategory = async (id: string, category: ReportCategory) => {
+  await db.update(reports).set({ category }).where(eq(reports.id, id));
+};
+
 /** Returns false when the report does not exist. */
 export const addReportNote = async (id: string, text: string, author?: string) => {
   if (!(await db.$count(reports, eq(reports.id, id)))) return false;
@@ -161,12 +255,27 @@ export const deleteReport = async (id: string): Promise<ReportRow | null> => {
 // ---------------------------------------------------------------- Analytics
 
 const countInt = sql<number>`count(*)::int`;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const getReportStats = async () => {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+const statusCounts = (rows: { status: ReportStatus; count: number }[]) => {
+  const byStatus = Object.fromEntries(REPORT_STATUSES.map((s) => [s, 0])) as Record<
+    ReportStatus,
+    number
+  >;
+  for (const { status, count: n } of rows) byStatus[status] = n;
+  return byStatus;
+};
+
+const round1 = (value: number | null | undefined) =>
+  value == null ? null : Math.round(value * 10) / 10;
+
+/** Complaint analytics. Commendations are counted separately so praise never inflates a bus's
+ *  complaint numbers (or flags it as a repeat offender). */
+const getComplaintStats = async (now: Date) => {
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
   const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
   const month = sql<string>`to_char(date_trunc('month', ${reports.reportedAt}), 'YYYY-MM')`;
+  const isComplaint = eq(reports.type, "complaint");
 
   const [
     total,
@@ -179,22 +288,28 @@ export const getReportStats = async () => {
     repeatOffenders,
     [resolution],
   ] = await Promise.all([
-    db.$count(reports),
-    db.$count(reports, gte(reports.reportedAt, thirtyDaysAgo)),
-    db.select({ status: reports.status, count: countInt }).from(reports).groupBy(reports.status),
+    db.$count(reports, isComplaint),
+    db.$count(reports, and(isComplaint, gte(reports.reportedAt, thirtyDaysAgo))),
+    db
+      .select({ status: reports.status, count: countInt })
+      .from(reports)
+      .where(isComplaint)
+      .groupBy(reports.status),
     db
       .select({ category: reports.category, count: countInt })
       .from(reports)
+      .where(isComplaint)
       .groupBy(reports.category)
       .orderBy(desc(countInt)),
     db
       .select({ month, count: countInt })
       .from(reports)
-      .where(gte(reports.reportedAt, twelveMonthsAgo))
+      .where(and(isComplaint, gte(reports.reportedAt, twelveMonthsAgo)))
       .groupBy(month),
     db
       .select({ routeNumber: reports.routeNumber, count: countInt })
       .from(reports)
+      .where(isComplaint)
       .groupBy(reports.routeNumber)
       .orderBy(desc(countInt), asc(reports.routeNumber))
       .limit(10),
@@ -205,6 +320,7 @@ export const getReportStats = async () => {
         count: countInt,
       })
       .from(reports)
+      .where(isComplaint)
       .groupBy(reports.busNumber)
       .orderBy(desc(countInt), asc(reports.busNumber))
       .limit(10),
@@ -215,7 +331,7 @@ export const getReportStats = async () => {
         lastReportedAt: sql<Date>`max(${reports.reportedAt})`.mapWith(reports.reportedAt),
       })
       .from(reports)
-      .where(gte(reports.reportedAt, thirtyDaysAgo))
+      .where(and(isComplaint, gte(reports.reportedAt, thirtyDaysAgo)))
       .groupBy(reports.busNumber)
       .having(sql`count(*) >= 3`)
       .orderBy(desc(countInt)),
@@ -227,7 +343,7 @@ export const getReportStats = async () => {
         count: count(),
       })
       .from(reports)
-      .where(and(eq(reports.status, "resolved"), isNotNull(reports.resolvedAt))),
+      .where(and(isComplaint, eq(reports.status, "resolved"), isNotNull(reports.resolvedAt))),
   ]);
 
   // Fill in empty months so the trend has no gaps
@@ -238,14 +354,8 @@ export const getReportStats = async () => {
     return { month: key, count: monthCounts.get(key) ?? 0 };
   });
 
-  const byStatus = Object.fromEntries(REPORT_STATUSES.map((s) => [s, 0])) as Record<
-    ReportStatus,
-    number
-  >;
-  for (const { status, count: n } of byStatusRows) byStatus[status] = n;
-
+  const byStatus = statusCounts(byStatusRows);
   const resolvedWithTiming = resolution?.count ?? 0;
-  const avgHours = resolution?.avgHours;
   return {
     total,
     last30Days,
@@ -256,8 +366,215 @@ export const getReportStats = async () => {
     topRoutes,
     topBuses,
     repeatOffenders,
-    avgResolutionHours:
-      resolvedWithTiming && avgHours != null ? Math.round(avgHours * 10) / 10 : null,
+    avgResolutionHours: resolvedWithTiming ? round1(resolution?.avgHours) : null,
     resolvedWithTiming,
   };
+};
+
+/** "Commend a driver" analytics, shown in their own section. */
+const getCommendationStats = async (now: Date) => {
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+  const isCommendation = eq(reports.type, "commendation");
+
+  const [total, last30Days, byStatusRows, byCategory, topBuses] = await Promise.all([
+    db.$count(reports, isCommendation),
+    db.$count(reports, and(isCommendation, gte(reports.reportedAt, thirtyDaysAgo))),
+    db
+      .select({ status: reports.status, count: countInt })
+      .from(reports)
+      .where(isCommendation)
+      .groupBy(reports.status),
+    db
+      .select({ category: reports.category, count: countInt })
+      .from(reports)
+      .where(isCommendation)
+      .groupBy(reports.category)
+      .orderBy(desc(countInt)),
+    db
+      .select({
+        busNumber: reports.busNumber,
+        busName: sql<string | null>`max(${reports.busName})`,
+        count: countInt,
+      })
+      .from(reports)
+      .where(isCommendation)
+      .groupBy(reports.busNumber)
+      .orderBy(desc(countInt), asc(reports.busNumber))
+      .limit(10),
+  ]);
+
+  const byStatus = statusCounts(byStatusRows);
+  return {
+    total,
+    last30Days,
+    open: OPEN_STATUSES.reduce((sum, s) => sum + byStatus[s], 0),
+    byStatus,
+    byCategory,
+    topBuses,
+  };
+};
+
+/**
+ * The Phase 1 success metrics over the last 30 days: form completion, return visits to tracking,
+ * outcome ratings, reports from QR codes and time to first response.
+ */
+const getEngagementStats = async (now: Date) => {
+  const since = new Date(now.getTime() - 30 * DAY_MS);
+  const sinceDay = since.toISOString().slice(0, 10);
+
+  // First admin action on each recent report: a status change by an admin (the automatic
+  // "Report received." entry has no author) or a message to the passenger, whichever came first
+  const firstResponses = db
+    .select({
+      reportedAt: reports.reportedAt,
+      firstAt: sql<Date | null>`least(
+        (SELECT min(${reportStatusChanges.changedAt}) FROM ${reportStatusChanges}
+          WHERE ${reportStatusChanges.reportId} = ${outerReportId}
+            AND ${reportStatusChanges.changedBy} IS NOT NULL),
+        (SELECT min(${reportMessages.createdAt}) FROM ${reportMessages}
+          WHERE ${reportMessages.reportId} = ${outerReportId} AND ${reportMessages.sender} = 'admin')
+      )`.as("first_at"),
+    })
+    .from(reports)
+    .where(gte(reports.reportedAt, since))
+    .as("first_responses");
+
+  const rated = and(eq(reports.type, "complaint"), isNotNull(reports.outcomeRating));
+
+  const [
+    metrics,
+    qrReports,
+    webReports,
+    [firstResponse],
+    [ratingSummary],
+    ratingRows,
+    recentFeedback,
+    languageRows,
+  ] = await Promise.all([
+    getMetricTotals(sinceDay),
+    db.$count(reports, and(eq(reports.source, "qr"), gte(reports.reportedAt, since))),
+    db.$count(reports, and(eq(reports.source, "web"), gte(reports.reportedAt, since))),
+    db
+      .select({
+        avgHours: sql<
+          number | null
+        >`avg(extract(epoch from ${firstResponses.firstAt} - ${firstResponses.reportedAt}) / 3600)::float`,
+        count: count(),
+      })
+      .from(firstResponses)
+      .where(isNotNull(firstResponses.firstAt)),
+    db
+      .select({
+        average: sql<number | null>`avg(${reports.outcomeRating})::float`,
+        count: count(),
+      })
+      .from(reports)
+      .where(rated),
+    db
+      .select({ rating: reports.outcomeRating, count: countInt })
+      .from(reports)
+      .where(rated)
+      .groupBy(reports.outcomeRating),
+    db
+      .select({
+        id: reports.id,
+        receiptId: reports.receiptId,
+        rating: reports.outcomeRating,
+        feedback: reports.outcomeFeedback,
+        ratedAt: reports.ratedAt,
+      })
+      .from(reports)
+      .where(and(rated, isNotNull(reports.outcomeFeedback)))
+      .orderBy(desc(reports.ratedAt))
+      .limit(5),
+    db
+      .select({ language: reports.language, count: countInt })
+      .from(reports)
+      .where(gte(reports.reportedAt, since))
+      .groupBy(reports.language),
+  ]);
+
+  const formStarts = metrics.report_form_started + metrics.commendation_form_started;
+  const formSubmits = metrics.report_submitted + metrics.commendation_submitted;
+  const ratingDistribution = [1, 2, 3, 4, 5].map((rating) => ({
+    rating,
+    count: ratingRows.find((r) => r.rating === rating)?.count ?? 0,
+  }));
+  const byLanguage = Object.fromEntries(LANGUAGES.map((l) => [l, 0])) as Record<Language, number>;
+  for (const { language, count: n } of languageRows) byLanguage[language] = n;
+
+  return {
+    periodDays: 30,
+    formStarts,
+    formSubmits,
+    // Capped at 100%: offline drafts can be sent on a later day than they were started
+    formCompletionRate: formStarts
+      ? Math.min(Math.round((formSubmits / formStarts) * 100), 100)
+      : null,
+    trackingViews: metrics.tracking_view,
+    trackingReturnViews: metrics.tracking_return_view,
+    qrScans: metrics.qr_scan,
+    qrReports,
+    webReports,
+    shares: metrics.report_shared,
+    offlineQueued: metrics.offline_report_queued,
+    appInstalls: metrics.app_installed,
+    avgFirstResponseHours: round1(firstResponse?.avgHours),
+    respondedReports: firstResponse?.count ?? 0,
+    avgRating: round1(ratingSummary?.average),
+    ratingsCount: ratingSummary?.count ?? 0,
+    ratingDistribution,
+    recentFeedback,
+    byLanguage,
+    // Two-way contact (Phase 3)
+    adminMessages: metrics.admin_message,
+    passengerMessages: metrics.passenger_message,
+    myReportsSignins: metrics.my_reports_signin,
+    pushSubscriptions: metrics.push_subscribed,
+    telegramLinks: metrics.telegram_linked,
+    whatsappMessages: metrics.whatsapp_message,
+    whatsappLinks: metrics.whatsapp_linked,
+    // Wider ecosystem (Phase 4)
+    confirmationsOffered: metrics.confirmation_offered,
+    reportConfirmations: metrics.report_confirmed,
+    // Passenger safety (Phase 5)
+    faresChecked: metrics.fare_checked,
+    safetyReports: metrics.safety_report_submitted,
+    tripsShared: metrics.trip_share_started,
+    emergencyShown: metrics.emergency_shown,
+  };
+};
+
+/** "Lost something?" reports: how many, and how many were found. */
+const getLostItemStats = async (now: Date) => {
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+  const isLost = eq(reports.type, "lost_item");
+  const [total, last30Days, byStatusRows] = await Promise.all([
+    db.$count(reports, isLost),
+    db.$count(reports, and(isLost, gte(reports.reportedAt, thirtyDaysAgo))),
+    db
+      .select({ status: reports.status, count: countInt })
+      .from(reports)
+      .where(isLost)
+      .groupBy(reports.status),
+  ]);
+  const byStatus = statusCounts(byStatusRows);
+  return {
+    total,
+    last30Days,
+    open: OPEN_STATUSES.reduce((sum, s) => sum + byStatus[s], 0),
+    found: byStatus.resolved,
+    byStatus,
+  };
+};
+
+export const getReportStats = async () => {
+  const now = new Date();
+  const [complaints, commendations, lostItems, engagement] = await Promise.all([
+    getComplaintStats(now),
+    getCommendationStats(now),
+    getLostItemStats(now),
+    getEngagementStats(now),
+  ]);
+  return { ...complaints, commendations, lostItems, engagement };
 };

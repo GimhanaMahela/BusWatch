@@ -6,11 +6,22 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
 import PlayCircleRoundedIcon from "@mui/icons-material/PlayCircleRounded";
 import PublishedWithChangesRoundedIcon from "@mui/icons-material/PublishedWithChangesRounded";
+import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
+import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import StickyNote2RoundedIcon from "@mui/icons-material/StickyNote2Rounded";
 import {
@@ -19,11 +30,14 @@ import {
   Box,
   Button,
   Checkbox,
+  Chip,
   Dialog,
   FormControlLabel,
   Grid,
   IconButton,
   MenuItem,
+  Rating,
+  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -32,9 +46,28 @@ import { useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
-import { STATUSES, categoryLabel, type ReportStatus } from "@/constants/reportConstants";
+import { AdminMessagesPanel, AiAssistantPanel } from "@/components/organisms";
+import { describeDelivery } from "@/components/organisms/AdminMessagesPanel";
+import {
+  MIN_PUBLIC_REPORTS,
+  PUBLIC_STATUSES,
+  STATUSES,
+  accessibilityLabel,
+  categoryLabel,
+  safetyKindLabel,
+  serviceClassLabel,
+  languageLabel,
+  type ReportStatus,
+} from "@/constants/reportConstants";
+import { busQuery } from "@/lib/busNumber";
 import useAuth from "@/hooks/useAuth";
-import { useAddReportNote, useReport, useUpdateReportStatus } from "@/hooks/useReportQueries";
+import {
+  useAddReportNote,
+  useReport,
+  useSetOperatorResponseVisibility,
+  useSetReportVisibility,
+  useUpdateReportStatus,
+} from "@/hooks/useReportQueries";
 import { formatDateTime, timeAgo } from "@/lib/format";
 
 type Media = { kind: "image" | "video"; url: string };
@@ -194,6 +227,8 @@ function ReportDetailsView({ id }: { id: string }) {
   const report = reportQuery.data;
   const updateStatus = useUpdateReportStatus(id);
   const addNote = useAddReportNote(id);
+  const visibility = useSetReportVisibility(id);
+  const responseVisibility = useSetOperatorResponseVisibility(id);
 
   // null = "keep the current status" until the admin picks another one
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | null>(null);
@@ -215,7 +250,7 @@ function ReportDetailsView({ id }: { id: string }) {
           setSelectedStatus(null);
           setStatusNote("");
           setStatusSuccess(
-            updated.emailSent ? "Status updated and the passenger was emailed." : "Status updated.",
+            notifyPassenger ? describeDelivery(updated.delivery) : "Status updated.",
           );
         },
       },
@@ -260,6 +295,11 @@ function ReportDetailsView({ id }: { id: string }) {
     ...report.videos.map((url) => ({ kind: "video" as const, url })),
   ];
   const hasPin = report.latitude != null && report.longitude != null;
+  const commendation = report.type === "commendation";
+  const lost = report.type === "lost_item";
+  const details = report.details;
+  const checked = (PUBLIC_STATUSES as readonly string[]).includes(report.status);
+  const countsPublicly = checked && !report.hiddenFromPublic;
 
   return (
     <>
@@ -295,6 +335,43 @@ function ReportDetailsView({ id }: { id: string }) {
           </Tooltip>
         </Box>
         <StatusChip status={report.status} />
+        {commendation && (
+          <Chip
+            icon={<ThumbUpAltRoundedIcon />}
+            label="Commendation"
+            color="success"
+            variant="outlined"
+            size="small"
+          />
+        )}
+        {lost && (
+          <Chip
+            icon={<TravelExploreRoundedIcon />}
+            label="Lost item"
+            color="info"
+            variant="outlined"
+            size="small"
+          />
+        )}
+        {details?.safety && (
+          <Chip
+            icon={<ShieldRoundedIcon />}
+            label="Safety mode (quick report)"
+            color="secondary"
+            size="small"
+          />
+        )}
+        {report.source === "whatsapp" && (
+          <Chip icon={<WhatsAppIcon />} label="From WhatsApp" variant="outlined" size="small" />
+        )}
+        {report.source === "qr" && (
+          <Chip
+            icon={<QrCode2RoundedIcon />}
+            label="From QR sticker"
+            variant="outlined"
+            size="small"
+          />
+        )}
       </Box>
       <Typography color="text.secondary" sx={{ mb: 4 }}>
         {categoryLabel(report.category)} · reported {timeAgo(report.reportedAt)}
@@ -302,7 +379,51 @@ function ReportDetailsView({ id }: { id: string }) {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }} sx={{ display: "grid", gap: 3, alignContent: "start" }}>
-          <SectionPanel title="Incident" icon={<DescriptionRoundedIcon fontSize="small" />}>
+          {report.outcomeRating != null && (
+            <SectionPanel
+              title="Passenger's rating of the outcome"
+              subtitle={report.ratedAt ? `Rated ${timeAgo(report.ratedAt)}` : undefined}
+              icon={<StarRoundedIcon fontSize="small" />}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Rating value={report.outcomeRating} readOnly />
+                <Typography sx={{ fontWeight: 700 }}>{report.outcomeRating} / 5</Typography>
+              </Box>
+              {report.outcomeFeedback && (
+                <Typography
+                  sx={{
+                    mt: 1.5,
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: "action.hover",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {report.outcomeFeedback}
+                </Typography>
+              )}
+            </SectionPanel>
+          )}
+
+          <SectionPanel
+            title={commendation ? "Commendation" : lost ? "Lost item" : "Incident"}
+            icon={
+              commendation ? (
+                <ThumbUpAltRoundedIcon fontSize="small" />
+              ) : (
+                <DescriptionRoundedIcon fontSize="small" />
+              )
+            }
+            action={
+              <Button
+                size="small"
+                startIcon={<QrCode2RoundedIcon />}
+                href={`/admin/qr-codes${busQuery(report.busNumber, report.routeNumber)}`}
+              >
+                Print QR sticker
+              </Button>
+            }
+          >
             <Typography sx={{ whiteSpace: "pre-line", lineHeight: 1.75 }}>
               {report.description}
             </Typography>
@@ -321,13 +442,55 @@ function ReportDetailsView({ id }: { id: string }) {
               <DetailRow label="Route">{report.routeNumber}</DetailRow>
               {report.busName && <DetailRow label="Bus name">{report.busName}</DetailRow>}
               <DetailRow label="Category">{categoryLabel(report.category)}</DetailRow>
-              <DetailRow label="Location">{report.location}</DetailRow>
+              {details?.accessibility && (
+                <DetailRow label="Accessibility issues">
+                  {details.accessibility.map(accessibilityLabel).join(", ")}
+                </DetailRow>
+              )}
+              {details?.safety && (
+                <DetailRow label="What happened (ticked)">
+                  {details.safety.kinds.length
+                    ? details.safety.kinds.map(safetyKindLabel).join(", ")
+                    : "Nothing ticked"}
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Official fare">
+                  Rs. {details.fare.officialFare} · {details.fare.from} → {details.fare.to} (
+                  {details.fare.stages} stage{details.fare.stages === 1 ? "" : "s"},{" "}
+                  {serviceClassLabel(details.fare.serviceClass)}, route {details.fare.routeNumber}
+                  {details.fare.effectiveFrom && `, fares from ${details.fare.effectiveFrom}`})
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Passenger paid">
+                  {details.fare.chargedFare === null
+                    ? "Not given"
+                    : `Rs. ${details.fare.chargedFare}${
+                        details.fare.chargedFare > details.fare.officialFare
+                          ? ` (Rs. ${details.fare.chargedFare - details.fare.officialFare} over)`
+                          : ""
+                      }`}
+                </DetailRow>
+              )}
+              <DetailRow label="Location">{report.location || "Not given"}</DetailRow>
               {report.incidentAt && (
                 <DetailRow label="Incident time">{formatDateTime(report.incidentAt)}</DetailRow>
               )}
               <DetailRow label="Reported">{formatDateTime(report.reportedAt)}</DetailRow>
               <DetailRow label="Passenger email">
                 {report.passengerEmail || "Not provided"}
+              </DetailRow>
+              <DetailRow label="Passenger mobile">
+                {report.passengerPhone || "Not provided"}
+              </DetailRow>
+              <DetailRow label="Language">{languageLabel(report.language)}</DetailRow>
+              <DetailRow label="Sent from">
+                {
+                  { qr: "QR sticker in the bus", whatsapp: "WhatsApp bot", web: "Website" }[
+                    report.source
+                  ]
+                }
               </DetailRow>
             </Box>
             {hasPin && (
@@ -343,6 +506,39 @@ function ReportDetailsView({ id }: { id: string }) {
               </Button>
             )}
           </SectionPanel>
+
+          {report.confirmations && report.confirmations.length > 0 && (
+            <SectionPanel
+              title={`Confirmed by ${report.confirmations.length} other passenger${report.confirmations.length === 1 ? "" : "s"}`}
+              subtitle="They saw the same incident and said “me too” instead of filing a duplicate. Anonymous."
+              icon={<GroupsRoundedIcon fontSize="small" />}
+            >
+              <Box sx={{ display: "grid", gap: 1.5 }}>
+                {report.confirmations.map((confirmation) => (
+                  <Box
+                    key={confirmation.id}
+                    sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDateTime(confirmation.createdAt)} ·{" "}
+                      {languageLabel(confirmation.language)}
+                      {confirmation.source === "qr" ? " · QR sticker" : ""}
+                    </Typography>
+                    <Typography
+                      sx={{ whiteSpace: "pre-line", mt: 0.5 }}
+                      color={confirmation.comment ? "text.primary" : "text.secondary"}
+                    >
+                      {confirmation.comment || "No comment."}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </SectionPanel>
+          )}
+
+          <AiAssistantPanel report={report} />
+
+          <AdminMessagesPanel report={report} />
 
           <SectionPanel
             title="Evidence"
@@ -474,7 +670,7 @@ function ReportDetailsView({ id }: { id: string }) {
                   multiline
                   minRows={3}
                   label="Message to the passenger"
-                  helperText="Optional. Shown on the public tracking page and in the email."
+                  helperText="Optional. Shown on the public tracking page and in the email. For questions, use Messages instead."
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
                   slotProps={{ htmlInput: { maxLength: 2000 } }}
@@ -482,16 +678,11 @@ function ReportDetailsView({ id }: { id: string }) {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={notifyPassenger && Boolean(report.passengerEmail)}
+                      checked={notifyPassenger}
                       onChange={(e) => setNotifyPassenger(e.target.checked)}
-                      disabled={!report.passengerEmail}
                     />
                   }
-                  label={
-                    report.passengerEmail
-                      ? "Email the passenger about this update"
-                      : "No passenger email on file"
-                  }
+                  label="Notify the passenger (email, SMS and browser notifications they signed up for)"
                   slotProps={{ typography: { variant: "body2" } }}
                 />
                 <GradientButton
@@ -512,6 +703,123 @@ function ReportDetailsView({ id }: { id: string }) {
                 )}
               </Box>
             </SectionPanel>
+
+            <SectionPanel
+              title="Public results"
+              subtitle="Impact page, map and scorecards"
+              icon={<PublicRoundedIcon fontSize="small" />}
+            >
+              <Alert severity={countsPublicly ? "success" : "info"} sx={{ mb: 2 }}>
+                {countsPublicly
+                  ? "Counted in public figures (totals only, never its details)."
+                  : report.hiddenFromPublic
+                    ? "Hidden from public figures by an admin."
+                    : "Not counted publicly until an admin marks it reviewed, escalated or resolved."}
+              </Alert>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={Boolean(report.hiddenFromPublic)}
+                    onChange={(e) => visibility.mutate(e.target.checked)}
+                    disabled={visibility.isPending}
+                  />
+                }
+                label="Exclude from public figures"
+                slotProps={{ typography: { variant: "body2" } }}
+              />
+              <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 2 }}>
+                Use for disputed or duplicate reports. Scorecards appear once a bus or route has{" "}
+                {MIN_PUBLIC_REPORTS} counted reports.
+              </Typography>
+              {visibility.error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {errorMessage(visibility.error, "Failed to change visibility")}
+                </Alert>
+              )}
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AutoStoriesRoundedIcon />}
+                  href={`/admin/stories?report=${report.id}`}
+                >
+                  Write a story
+                </Button>
+                <Button
+                  size="small"
+                  startIcon={<OpenInNewRoundedIcon />}
+                  href={`/bus/${encodeURIComponent(report.busNumber)}`}
+                  target="_blank"
+                >
+                  Bus scorecard
+                </Button>
+              </Box>
+            </SectionPanel>
+
+            {(Boolean(report.operators?.length) || Boolean(report.operatorResponses?.length)) && (
+              <SectionPanel
+                title="Bus operator"
+                subtitle={
+                  report.operators?.length
+                    ? `Run by ${report.operators.map((o) => o.organisation ?? o.email).join(", ")}. They see this report once it's reviewed, escalated or resolved, without passenger details.`
+                    : undefined
+                }
+                icon={<StorefrontRoundedIcon fontSize="small" />}
+              >
+                {report.operatorResponses?.length ? (
+                  <Box sx={{ display: "grid", gap: 1.5 }}>
+                    {report.operatorResponses.map((response) => (
+                      <Box
+                        key={response.id}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "action.hover",
+                          opacity: response.hidden ? 0.65 : 1,
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {response.organisation ?? "Operator"} ·{" "}
+                          {formatDateTime(response.createdAt)}
+                        </Typography>
+                        <Typography sx={{ whiteSpace: "pre-line", mt: 0.5 }}>
+                          {response.body}
+                        </Typography>
+                        <FormControlLabel
+                          sx={{ mt: 0.5 }}
+                          control={
+                            <Switch
+                              size="small"
+                              checked={!response.hidden}
+                              disabled={responseVisibility.isPending}
+                              onChange={(e) =>
+                                responseVisibility.mutate({
+                                  responseId: response.id,
+                                  hidden: !e.target.checked,
+                                })
+                              }
+                            />
+                          }
+                          label={
+                            response.hidden ? "Hidden from the passenger" : "Shown to the passenger"
+                          }
+                          slotProps={{ typography: { variant: "caption" } }}
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    The operator hasn&apos;t responded yet.
+                  </Typography>
+                )}
+                {responseVisibility.error && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {errorMessage(responseVisibility.error, "Failed to change the response")}
+                  </Alert>
+                )}
+              </SectionPanel>
+            )}
 
             <SectionPanel title="Activity" icon={<HistoryRoundedIcon fontSize="small" />}>
               {report.statusHistory && report.statusHistory.length > 0 ? (

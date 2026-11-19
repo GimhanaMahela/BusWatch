@@ -3,6 +3,7 @@
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import { Box, IconButton, Typography } from "@mui/material";
+import { useTranslations } from "next-intl";
 import { useId, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 // One object URL per File, so previews survive re-renders; released when the file is removed
@@ -37,6 +38,7 @@ function MediaDropzone({
   maxBytes,
   onReject,
 }: MediaDropzoneProps) {
+  const t = useTranslations("media");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -48,13 +50,17 @@ function MediaDropzone({
     const tooBig = ofKind.filter((f) => f.size > maxBytes);
     const accepted = ofKind.filter((f) => f.size <= maxBytes).slice(0, max - files.length);
     const problems: string[] = [];
-    if (ofKind.length < incoming.length) problems.push(`Only ${kind} files can be added here.`);
+    if (ofKind.length < incoming.length) problems.push(t("wrongType", { kind }));
     if (tooBig.length) {
       problems.push(
-        `${tooBig.map((f) => f.name).join(", ")} ${tooBig.length === 1 ? "is" : "are"} larger than ${maxMb}MB.`,
+        t("tooBig", {
+          count: tooBig.length,
+          names: tooBig.map((f) => f.name).join(", "),
+          mb: maxMb,
+        }),
       );
     }
-    if (ofKind.length - tooBig.length > accepted.length) problems.push(`You can add up to ${max}.`);
+    if (ofKind.length - tooBig.length > accepted.length) problems.push(t("overLimit", { max }));
     if (problems.length) onReject(problems.join(" "));
     if (accepted.length) onChange([...files, ...accepted]);
   };
@@ -110,9 +116,7 @@ function MediaDropzone({
         <CloudUploadOutlinedIcon color="primary" sx={{ fontSize: 32 }} />
         <Typography variant="subtitle2">{label}</Typography>
         <Typography variant="caption" color="text.secondary">
-          {full
-            ? `Limit reached (${max})`
-            : `Drag & drop or click to browse · up to ${max}, ${maxMb}MB each`}
+          {full ? t("limitReached", { max }) : t("hint", { max, mb: maxMb })}
         </Typography>
         <input
           ref={inputRef}
@@ -162,7 +166,7 @@ function MediaDropzone({
               )}
               <IconButton
                 size="small"
-                aria-label={`Remove ${file.name}`}
+                aria-label={t("remove", { name: file.name })}
                 onClick={() => remove(index)}
                 sx={{
                   position: "absolute",

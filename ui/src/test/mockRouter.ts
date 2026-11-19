@@ -8,3 +8,6 @@ export const mockRouter = {
   refresh: vi.fn(),
   prefetch: vi.fn(),
 };
+
+/** Query string seen by useSearchParams(); reset after each test. */
+export const mockSearchParams = { current: new URLSearchParams() };

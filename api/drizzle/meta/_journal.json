@@ -8,6 +8,76 @@
       "when": 1793272265539,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793858173407,
+      "tag": "0001_phase1_quick_wins",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793865322622,
+      "tag": "0002_phase2_public_results",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793877354480,
+      "tag": "0003_phase3_two_way_contact",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793887456210,
+      "tag": "0004_android_sms_and_telegram",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793967178287,
+      "tag": "0005_phase4_me_too_confirmations",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793968711671,
+      "tag": "0006_phase4_operator_portal",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793969472857,
+      "tag": "0007_phase4_ai_help",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794205173299,
+      "tag": "0008_phase4_helper_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794556908749,
+      "tag": "0009_phase4_whatsapp_bot",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795071751800,
+      "tag": "0010_phase5_passenger_safety",
+      "breakpoints": true
     }
   ]
 }

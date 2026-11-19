@@ -26,6 +26,88 @@ const EnvSchema = z.object({
   EMAIL_SERVICE_PORT: z.coerce.number().int().positive().default(587),
   EMAIL_SERVICE_USER: optional(z.string()),
   EMAIL_SERVICE_PASS: optional(z.string()),
+  // Cloudflare Turnstile CAPTCHA on public submissions; skipped when unset (development, tests)
+  TURNSTILE_SECRET_KEY: optional(z.string()),
+
+  // SMS / WhatsApp updates and sign-in codes. "none" (the default) sends nothing.
+  SMS_PROVIDER: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["none", "android", "notifylk", "twilio"]).default("none"),
+  ),
+  // "android": free SMS from your own Android phone and SIM with the SMS Gateway for Android app
+  // (https://sms-gate.app). Cloud mode by default; for local mode use http://<phone-ip>:8080
+  ANDROID_SMS_URL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.url().default("https://api.sms-gate.app/3rdparty/v1"),
+  ),
+  ANDROID_SMS_USERNAME: optional(z.string()),
+  ANDROID_SMS_PASSWORD: optional(z.string()),
+  NOTIFYLK_USER_ID: optional(z.string()),
+  NOTIFYLK_API_KEY: optional(z.string()),
+  NOTIFYLK_SENDER_ID: optional(z.string()),
+  TWILIO_ACCOUNT_SID: optional(z.string()),
+  TWILIO_AUTH_TOKEN: optional(z.string()),
+  // A Twilio number (+1...) for SMS, or "whatsapp:+1..." to send WhatsApp messages instead
+  TWILIO_FROM: optional(z.string()),
+
+  // Browser push notifications (Web Push). Generate a pair with `npx web-push generate-vapid-keys`.
+  VAPID_PUBLIC_KEY: optional(z.string()),
+  VAPID_PRIVATE_KEY: optional(z.string()),
+  // Contact for push services, e.g. mailto:info@buswatch.lk
+  VAPID_SUBJECT: optional(z.string()),
+
+  // Free Telegram updates. Create a bot with @BotFather and paste its token here.
+  TELEGRAM_BOT_TOKEN: optional(z.string()),
+  // Hosted only: with a secret set, Telegram calls FRONTEND_URL/api/telegram/webhook instead of
+  // the API asking Telegram for new messages (long polling, the default; works on localhost)
+  TELEGRAM_WEBHOOK_SECRET: optional(
+    z.string().regex(/^[\w-]{1,256}$/, "Use letters, digits, _ and -"),
+  ),
+
+  // The BusWatch WhatsApp bot, through Meta's WhatsApp Cloud API (see the README). Off unless the
+  // access token and phone number ID are set.
+  WHATSAPP_ACCESS_TOKEN: optional(z.string()),
+  WHATSAPP_PHONE_NUMBER_ID: optional(z.string()),
+  // App secret of the Meta app: every webhook call is signed with it
+  WHATSAPP_APP_SECRET: optional(z.string()),
+  // Any string you choose; Meta sends it back once when you register the webhook URL
+  WHATSAPP_VERIFY_TOKEN: optional(z.string()),
+  // The bot's number as passengers dial it, e.g. +94771234567 (for "Chat on WhatsApp" buttons)
+  WHATSAPP_DISPLAY_NUMBER: optional(
+    z.string().regex(/^\+[1-9]\d{7,14}$/, "Use the form +94771234567"),
+  ),
+  // Optional approved message template for updates sent more than 24 hours after the passenger's
+  // last message (WhatsApp only allows templates then). Body: {{1}} receipt ID, {{2}} the update.
+  WHATSAPP_UPDATE_TEMPLATE: optional(z.string()),
+  WHATSAPP_API_VERSION: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^v\d+\.\d+$/)
+      .default("v23.0"),
+  ),
+
+  // AI help for admins (Phase 4): category suggestions, translation, summaries, and blurring faces
+  // and number plates in photos, with Google Gemini's free tier. Off when unset.
+  GEMINI_API_KEY: optional(z.string()),
+  AI_MODEL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().default("gemini-flash-latest"),
+  ),
+  // Used when AI_MODEL is overloaded or out of free quota; "" turns the fallback off
+  AI_FALLBACK_MODEL: z.string().default("gemini-flash-lite-latest"),
+  // "false" hides the BusWatch helper chat on the public site (it shares the free Gemini quota with
+  // the admin AI help, so switch it off if the quota runs out)
+  AI_CHAT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  // "true": analyse every new report straight after it is submitted (otherwise admins click Analyse)
+  AI_AUTO_ANALYSE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   EMAIL_ALLOW_SELF_SIGNED: z
     .enum(["true", "false"])
     .default("false")

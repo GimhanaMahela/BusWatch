@@ -3,6 +3,7 @@
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import { Box, Button, InputAdornment, TextField } from "@mui/material";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 
 interface ReceiptSearchFormProps {
@@ -21,6 +22,7 @@ function ReceiptSearchForm({
   onSearch,
   size = "medium",
 }: ReceiptSearchFormProps) {
+  const t = useTranslations("receiptSearch");
   const router = useRouter();
   const [input, setInput] = useState(defaultValue);
 
@@ -48,7 +50,7 @@ function ReceiptSearchForm({
     >
       <TextField
         fullWidth
-        label="Receipt ID"
+        label={t("label")}
         placeholder="BW-2026-XXXXXX"
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -75,7 +77,7 @@ function ReceiptSearchForm({
         disabled={!input.trim()}
         sx={{ flexShrink: 0, minWidth: 120, ...(large && { height: 56 }) }}
       >
-        Track
+        {t("button")}
       </Button>
     </Box>
   );

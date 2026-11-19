@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 // The monorepo has one .env at the repo root, shared with the API.
 // Next only exposes NEXT_PUBLIC_* variables to the browser, so API secrets stay server-side.
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-loadEnvConfig(repoRoot);
+const { parsedEnv } = loadEnvConfig(repoRoot);
 
 // Where /api requests are forwarded: the API container in Docker, the local API in development.
+// The API port comes from the .env file itself: `next dev/start --port 3000` sets process.env.PORT
+// to the UI's own port, which would make Next proxy /api back to itself in a loop.
 const apiUpstream = (
-  process.env.API_UPSTREAM || `http://localhost:${process.env.PORT || 5000}`
+  process.env.API_UPSTREAM || `http://localhost:${parsedEnv?.PORT || 5000}`
 ).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
@@ -20,9 +22,26 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Tree-shake icon and component barrels
   experimental: { optimizePackageImports: ["@mui/icons-material", "@mui/material"] },
+  // next-intl loads the site language and messages from src/i18n/request.ts (cookie or
+  // Accept-Language; URLs have no locale prefix). This is the one alias its plugin would add;
+  // set directly because the plugin checks the path against the working directory, and scripts
+  // run from the repo root (`next build ui`) while Turbopack resolves aliases from ui/.
+  turbopack: { resolveAlias: { "next-intl/config": "./src/i18n/request.ts" } },
   images: {
     // Report media is hosted on Cloudinary
     remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com" }],
+  },
+  async headers() {
+    return [
+      {
+        // The service worker must always be re-checked so updates reach passengers quickly
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
   },
   // The UI calls /api on its own origin; Next forwards it to the API
   async rewrites() {
@@ -33,4 +52,5 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Site language from a cookie / Accept-Language (see src/i18n/request.ts); URLs have no locale prefix
 export default nextConfig;

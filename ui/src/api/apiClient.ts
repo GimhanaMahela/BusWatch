@@ -21,12 +21,15 @@ apiClient.interceptors.request.use((config) => {
 export class ApiError extends Error {
   readonly status?: number;
   readonly errors?: string[];
+  /** Machine-readable reason from the API, e.g. "captcha_required" */
+  readonly code?: string;
 
-  constructor(message: string, status?: number, errors?: string[]) {
+  constructor(message: string, status?: number, errors?: string[], code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.errors = errors;
+    this.code = code;
   }
 }
 
@@ -36,8 +39,13 @@ export const toApiError = (error: unknown): ApiError => {
     const data: unknown = error.response?.data;
     const status = error.response?.status;
     if (data && typeof data === "object") {
-      const body = data as { message?: string; msg?: string; errors?: string[] };
-      return new ApiError(body.message || body.msg || "Request failed", status, body.errors);
+      const body = data as { message?: string; msg?: string; errors?: string[]; code?: string };
+      return new ApiError(
+        body.message || body.msg || "Request failed",
+        status,
+        body.errors,
+        body.code,
+      );
     }
     return new ApiError(
       status && status >= 500

@@ -1,8 +1,10 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import { Box, Button, Typography } from "@mui/material";
+import { useTranslations } from "next-intl";
 import { BrandMark } from "@/components/atoms";
 
 export default function NotFound() {
+  const t = useTranslations("notFound");
   return (
     <Box
       sx={{ minHeight: "100vh", display: "grid", placeItems: "center", textAlign: "center", p: 3 }}
@@ -22,13 +24,13 @@ export default function NotFound() {
           404
         </Typography>
         <Typography variant="h5" component="h1" sx={{ mt: 1 }}>
-          This stop isn&apos;t on the route.
+          {t("title")}
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>
-          The page you&apos;re looking for doesn&apos;t exist or has moved.
+          {t("text")}
         </Typography>
         <Button href="/" variant="contained" startIcon={<ArrowBackRoundedIcon />} sx={{ mt: 4 }}>
-          Back to home
+          {t("back")}
         </Button>
       </Box>
     </Box>

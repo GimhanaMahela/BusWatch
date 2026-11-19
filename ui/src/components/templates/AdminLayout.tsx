@@ -10,7 +10,14 @@ function AdminLayout({ children }: { children: ReactNode }) {
         <AdminNavigation />
         <Box
           component="main"
-          sx={{ flex: 1, minWidth: 0, px: { xs: 2, sm: 3, lg: 5 }, py: { xs: 3, md: 5 } }}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            px: { xs: 2, sm: 3, lg: 5 },
+            py: { xs: 3, md: 5 },
+            // Printing (e.g. QR sticker sheets): only the page content, edge to edge
+            "@media print": { p: 0 },
+          }}
         >
           <Box sx={{ maxWidth: 1400, mx: "auto" }}>{children}</Box>
         </Box>

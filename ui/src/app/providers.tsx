@@ -6,6 +6,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { AuthProvider } from "@/context/AuthProvider";
 import { makeQueryClient } from "@/lib/queryClient";
+// Side effect: registers the service worker and captures the install prompt as early as possible
+import "@/lib/pwa";
 import theme from "@/theme/theme";
 
 /** Client-side providers shared by every route: theme, server-state cache and admin session. */

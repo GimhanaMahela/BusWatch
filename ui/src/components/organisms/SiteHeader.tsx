@@ -17,41 +17,58 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
-import { BrandMark, ColorModeToggle, GradientButton } from "@/components/atoms";
+import { BrandMark, ColorModeToggle, GradientButton, LanguageSwitcher } from "@/components/atoms";
+import { InstallAppButton } from "@/components/molecules";
 
 const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "Track a report", href: "/track" },
-  { label: "About", href: "/about-us" },
-];
+  { key: "home", href: "/" },
+  { key: "track", href: "/track" },
+  { key: "myReports", href: "/my-reports" },
+  { key: "commend", href: "/commend-a-driver" },
+  { key: "safety", href: "/safety" },
+  { key: "impact", href: "/impact" },
+  { key: "about", href: "/about-us" },
+] as const;
 
 const isActive = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname.startsWith(href);
 
 /** Sticky, translucent top bar for the public site. */
 function SiteHeader() {
+  const t = useTranslations("header");
+  // Sinhala and Tamil labels are much longer than English and don't fit beside the actions in the
+  // ~1200px header, so those languages always use the menu button
+  const fullNav = useLocale() === "en";
+  const navShown = fullNav ? "flex" : "none";
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   return (
     <AppBar
       position="sticky"
-      sx={{
-        top: 0,
-        borderBottom: 1,
-        borderColor: "divider",
-        bgcolor: "rgba(var(--mui-palette-background-defaultChannel) / 0.72)",
-        backdropFilter: "saturate(180%) blur(14px)",
-        color: "text.primary",
-      }}
+      sx={{ top: 0, pt: { xs: 1, md: 1.5 }, color: "text.primary", bgcolor: "transparent" }}
     >
+      {/* A floating, rounded bar that matches the bento tiles below it */}
       <Container maxWidth="lg">
-        <Toolbar disableGutters sx={{ gap: 2, minHeight: { xs: 64, md: 72 } }}>
+        <Toolbar
+          sx={{
+            gap: 2,
+            minHeight: { xs: 60, md: 64 },
+            px: { xs: 1.5, md: 2 },
+            borderRadius: { xs: 4, md: 99 },
+            border: 1,
+            borderColor: "divider",
+            bgcolor: "rgba(var(--mui-palette-background-paperChannel) / 0.82)",
+            backdropFilter: "saturate(180%) blur(16px)",
+            boxShadow: "var(--bw-shadow-card)",
+          }}
+        >
           <Box
             component={Link}
             href="/"
-            aria-label="BusWatch home"
+            aria-label={t("homeLink")}
             sx={{ display: "flex", textDecoration: "none" }}
           >
             <BrandMark />
@@ -59,8 +76,8 @@ function SiteHeader() {
 
           <Box
             component="nav"
-            aria-label="Main"
-            sx={{ display: { xs: "none", md: "flex" }, gap: 0.5, ml: 4 }}
+            aria-label={t("mainNav")}
+            sx={{ display: { xs: "none", lg: navShown }, gap: 0.25, ml: 2 }}
           >
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.href);
@@ -70,13 +87,31 @@ function SiteHeader() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   sx={{
-                    color: active ? "text.primary" : "text.secondary",
-                    fontWeight: active ? 700 : 600,
-                    bgcolor: active ? "action.selected" : "transparent",
+                    position: "relative",
+                    whiteSpace: "nowrap",
+                    borderRadius: 999,
+                    color: active ? "primary.main" : "text.secondary",
+                    fontWeight: active ? 750 : 600,
+                    bgcolor: active
+                      ? "rgba(var(--mui-palette-primary-mainChannel) / 0.08)"
+                      : "transparent",
                     "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+                    "&::after": active
+                      ? {
+                          content: '""',
+                          position: "absolute",
+                          left: "50%",
+                          bottom: 3,
+                          width: 16,
+                          height: 3,
+                          borderRadius: 3,
+                          transform: "translateX(-50%)",
+                          background: "var(--bw-gradient-brand)",
+                        }
+                      : undefined,
                   }}
                 >
-                  {item.label}
+                  {t(item.key)}
                 </Button>
               );
             })}
@@ -85,24 +120,36 @@ function SiteHeader() {
           <Box sx={{ flex: 1 }} />
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <LanguageSwitcher />
             <ColorModeToggle />
             <Button
               href="/admin/login"
               color="inherit"
-              sx={{ display: { xs: "none", md: "inline-flex" }, color: "text.secondary" }}
+              sx={{
+                // Also in the menu and the footer; shown here only where there is room
+                display: { xs: "none", xl: fullNav ? "inline-flex" : "none" },
+                color: "text.secondary",
+                whiteSpace: "nowrap",
+              }}
             >
-              Admin
+              {t("admin")}
             </Button>
             <GradientButton
               href="/submit-report"
-              sx={{ display: { xs: "none", sm: "inline-flex" } }}
+              sx={{ display: { xs: "none", sm: "inline-flex" }, whiteSpace: "nowrap" }}
             >
-              Report an incident
+              {t("report")}
             </GradientButton>
             <IconButton
-              aria-label="Open menu"
+              aria-label={t("openMenu")}
               onClick={() => setOpen(true)}
-              sx={{ display: { md: "none" }, border: 1, borderColor: "divider", borderRadius: 2.5 }}
+              sx={{
+                display: { lg: fullNav ? "none" : "inline-flex" },
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 999,
+                bgcolor: "background.paper",
+              }}
             >
               <MenuRoundedIcon fontSize="small" />
             </IconButton>
@@ -118,21 +165,28 @@ function SiteHeader() {
       >
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
           <BrandMark size={32} />
-          <IconButton aria-label="Close menu" onClick={() => setOpen(false)}>
+          <IconButton aria-label={t("closeMenu")} onClick={() => setOpen(false)}>
             <CloseRoundedIcon />
           </IconButton>
         </Box>
         <List onClick={() => setOpen(false)}>
-          {[...NAV_ITEMS, { label: "Admin sign in", href: "/admin/login" }].map((item) => (
+          {[...NAV_ITEMS, { key: "adminSignIn", href: "/admin/login" } as const].map((item) => (
             <ListItemButton
               key={item.href}
               component={Link}
               href={item.href}
               selected={isActive(pathname, item.href)}
-              sx={{ borderRadius: 2, mb: 0.5 }}
+              sx={{
+                borderRadius: 3,
+                mb: 0.5,
+                "&.Mui-selected": {
+                  color: "primary.main",
+                  bgcolor: "rgba(var(--mui-palette-primary-mainChannel) / 0.1)",
+                },
+              }}
             >
               <ListItemText
-                primary={item.label}
+                primary={t(item.key)}
                 slotProps={{ primary: { sx: { fontWeight: 600 } } }}
               />
             </ListItemButton>
@@ -140,8 +194,9 @@ function SiteHeader() {
         </List>
         <Divider sx={{ my: 2 }} />
         <GradientButton href="/submit-report" fullWidth size="large" onClick={() => setOpen(false)}>
-          Report an incident
+          {t("report")}
         </GradientButton>
+        <InstallAppButton fullWidth size="large" sx={{ mt: 1.5 }} />
       </Drawer>
     </AppBar>
   );

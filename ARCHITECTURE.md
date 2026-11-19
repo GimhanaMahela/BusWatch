@@ -29,8 +29,10 @@ api/
 │   ├── controllers/          # Request/response handling           → <entity>.controller.ts
 │   ├── middleware/           # Express middleware                  → <name>.middleware.ts
 │   ├── services/             # Side effects: email, PDF, startup   → <name>.service.ts
+│   ├── i18n/                 # Email and PDF text in English, Sinhala and Tamil
 │   ├── utils/                # Small pure helpers                  → <name>.ts
 │   └── types/                # Global type augmentation (e.g. req.admin)
+├── assets/fonts/             # Noto Sans Sinhala/Tamil for PDF receipts (OFL; shipped in Docker and Vercel)
 ├── drizzle/                  # Generated SQL migrations (commit them; never edit applied ones)
 ├── drizzle.config.ts         # drizzle-kit settings
 └── tests/                    # Vitest + Supertest API tests on PGlite (in-process PostgreSQL)
@@ -66,7 +68,8 @@ A request goes `routes → middleware (auth, rate limit, upload, validateBody) �
 ```
 ui/
 ├── next.config.ts            # Loads the root .env, /api rewrite, standalone output
-├── public/                   # Static files (hero image, icons, manifest)
+├── messages/                 # en.json, si.json, ta.json: all public UI text (next-intl)
+├── public/                   # Static files (hero image, icons, manifest, sw.js service worker)
 └── src/
     ├── app/                  # Routes only: layouts, page.tsx files, metadata
     │   ├── layout.tsx        # <html>, font, colour-scheme script, MUI cache provider
@@ -76,16 +79,17 @@ ui/
     ├── views/                # Screen components rendered by page.tsx → <Name>View.tsx
     │   ├── public/           # Home, Submit, Track, About, Privacy, Terms
     │   └── admin/            # Login, Dashboard, Report details, Analytics
+    ├── i18n/                 # Locale cookie / Accept-Language negotiation, next-intl request config
     ├── api/                  # HTTP calls, one file per resource → <resource>Api.ts; apiClient.ts is shared
     ├── hooks/                # useAuth, useReportQueries (TanStack Query hooks + query keys), useIsClient
     ├── lib/                  # queryClient, tokenStore (admin token in localStorage), format helpers
     ├── context/              # authContext.ts (context object) + AuthProvider.tsx
     ├── constants/            # Enums and label helpers → <topic>Constants.ts
     ├── types/                # Domain types shared by API and UI → <topic>.ts
-    ├── theme/                # MUI theme: light + dark colour schemes as CSS variables
+    ├── theme/                # themes.ts (the four site themes) + theme.ts (MUI theme, CSS variables)
     ├── test/                 # Test setup (next/navigation mock) and render helpers
     └── components/
-        ├── atoms/            # BrandMark, GradientButton, StatusChip, ColorModeToggle
+        ├── atoms/            # BrandMark, GradientButton, GradientText, RouteLines, WhatsAppButton, ...
         ├── molecules/        # StatTile, SectionPanel, MediaDropzone, MonthlyTrendChart, StatusDonut, ...
         ├── organisms/        # SiteHeader, SiteFooter, AdminNavigation, AdminGuard, ManageAdminsDialog
         └── templates/        # PublicLayout, AdminLayout, HeroBand, ContentPageTemplate
@@ -138,12 +142,147 @@ state (form fields, dialogs) stays in `useState`.
 - `styled()` wrappers that need MUI's `component` prop are cast back to the base type
   (`as typeof Button`) so the prop stays typed.
 - Colours come from the theme (`primary.main`) or its CSS variables
-  (`rgba(var(--mui-palette-primary-mainChannel) / 0.1)`), so both colour schemes work.
+  (`rgba(var(--mui-palette-primary-mainChannel) / 0.1)`), so both colour schemes and every site theme
+  work. Brand touches use the theme's own variables: `--bw-gradient-brand` (buttons, logo),
+  `--bw-gradient-deep` (dark bands), `--bw-gradient-text` (headline highlights), `--bw-glow` (shadow
+  tint, `rgba(var(--bw-glow) / 0.3)`), `--bw-accent`, `--bw-shadow-card` and `--bw-shadow-raised`.
+  Never hard-code a brand hex colour in a component.
+
+**Site themes.** `theme/themes.ts` defines four presets (`sunset`, the default; `aurora`; `emerald`;
+`classic`), each with light and dark palettes, brand gradients, a shadow tint, the heading font
+(Bricolage Grotesque or the body font) and the button shape. `NEXT_PUBLIC_THEME` picks one at build
+time (`activeTheme`); `theme.ts` builds the MUI theme from it and writes the `--bw-*` variables for
+`:root` and `:root.dark`. Server code reads `activeTheme` directly: the viewport colour in
+`app/layout.tsx`, the web app manifest (`app/manifest.json/route.ts`), share images (`lib/ogImage.tsx`)
+and printed QR stickers. `themes.test.ts` checks every theme's text contrast against WCAG AA.
+
+**Languages (next-intl).** The public site is in English, Sinhala and Tamil. The language comes from
+the `NEXT_LOCALE` cookie, else `Accept-Language`; URLs have no locale prefix, so emailed links and QR
+stickers work in every language. Reading the cookie makes public pages render per request rather than
+being prerendered. Text lives in `ui/messages/*.json`; keys are type-checked against `en.json`
+(`types/next-intl.d.ts`) and `i18n/messages.test.ts` fails if a translation is missing or drops a
+placeholder. Missing keys fall back to English. The admin console stays in English. Translations were
+written by the development team and should be reviewed by native speakers.
+
+**Offline and installable.** `public/sw.js` (hand-written, no build plugin) serves pages network-first
+with a cached fallback and `/offline`, and caches hashed static assets. It never caches `/api`, `/admin`
+or `/r`. Forms save drafts to IndexedDB (`lib/offlineStore.ts`, `hooks/useFormDraft.ts`); reports sent
+without a connection go to an outbox that `OfflineOutbox` (mounted in `PublicLayout`) sends when the
+browser is back online. The worker only registers in production builds.
+
+**Metrics.** `trackEvent()` (`api/metricsApi.ts`) counts anonymous events (form started, tracking
+visit, QR scan, share, ...) as daily totals in `daily_metrics`. Submissions are counted by the API.
+
+**Public results.** `/api/public/*` (`public.repository.ts`) returns aggregates only, and every query
+applies the same rules: a report counts once an admin has checked it (`PUBLIC_STATUSES`: reviewed,
+escalated, resolved) and not hidden it (`hiddenFromPublic`); buses and routes need `MIN_PUBLIC_REPORTS`
+checked reports for a scorecard; heatmap cells need `MIN_HEATMAP_REPORTS`. Responses are cached in
+memory for five minutes (`utils/ttl-cache.ts`, cleared when admins change stories or visibility) and
+the Next pages cache their fetches for the same time (`lib/serverApi.ts`). Never add receipt IDs,
+descriptions, contact details or exact times to these endpoints. The heatmap is plain SVG over a
+Natural Earth outline (`constants/sriLankaOutline.ts`), so no map key or third-party tracking is needed.
+
+**Two-way contact.** `notification.service.ts` sends a status change or team message to the passenger
+on every channel they gave: email (`email.service.ts`), SMS (`sms.service.ts`: an Android phone running SMS
+Gateway for Android, Notify.lk or Twilio, picked by `SMS_PROVIDER`), Telegram (`telegram.service.ts`)
+and Web Push (`push.service.ts`, one `push_subscriptions` row per device and
+report). Each channel is best-effort and the result (`delivery`) goes back to the admin. Messages live in
+`report_messages` with a `readAt` per side. The passenger's key to a report stays its receipt ID, as for
+ratings; replies close `REPLY_WINDOW_DAYS` after the report does.
+`GET /api/passenger/channels` tells the UI which channels are on, so it hides the phone field without
+SMS, the Telegram card without a bot and the WhatsApp buttons without the WhatsApp bot.
+
+Telegram: the tracking page fetches a `t.me/<bot>?start=<token>` link, where the token is the receipt ID,
+an expiry and an HMAC (valid a day). Pressing Start sends `/start <token>` to the bot; the chat is saved
+in `telegram_subscriptions` (private chats only) and `/stop` deletes it. The API receives bot messages by
+long polling, started from `server.ts`, or by webhook (`POST /api/telegram/webhook`, checked against
+`TELEGRAM_WEBHOOK_SECRET`) on serverless hosts. Chats that block the bot are forgotten.
+
+WhatsApp bot (`whatsapp.service.ts`, Meta's WhatsApp Cloud API over `fetch`): Meta posts every
+message to `POST /api/whatsapp/webhook`, signed with `WHATSAPP_APP_SECRET` (`X-Hub-Signature-256`, an
+HMAC of the raw body, which is why `app.ts` gives that route `express.raw`); `GET` on the same path
+answers Meta's registration check with `WHATSAPP_VERIFY_TOKEN`. Message IDs go in `whatsapp_inbound` so
+a re-sent call is handled once. Each number has a `whatsapp_chats` row: the conversation (last
+`WHATSAPP.maxHistory` turns), the draft report, attached media IDs and a shared location, cleared when
+the report is sent or cancelled, on STOP, and after a quiet day. Text and voice notes go to
+`assistant.service.chat` with `channel: "whatsapp"` (the report is sent from the chat, and voice notes
+are sent inline and transcribed into the history). When the draft has a description, bus, route and,
+for complaints, a place, the bot shows it with Send / Change / Cancel buttons; `claimWhatsAppDraft`
+makes Send file it once, through `report-submission.service.fileReport` (shared with the website
+form) with `source: "whatsapp"` and the WhatsApp number as `passengerPhone`. Photos and videos are
+downloaded from Meta and uploaded to Cloudinary only then. A receipt ID shows the status with a
+"Get updates here" button (`whatsapp_subscriptions`). Updates use free-form text within 24 hours of
+the number's last message, else the `WHATSAPP_UPDATE_TEMPLATE` template, else nothing; a number
+WhatsApp reached gets no SMS for the same update. Each number may send `WHATSAPP.maxMessagesPerHour`
+messages an hour. `GET /api/passenger/channels` returns `WHATSAPP_DISPLAY_NUMBER` for the site's wa.me
+buttons (`atoms/WhatsAppButton`), or null when the bot is off.
+
+"My reports" uses passwordless sessions: `passenger_codes` stores an HMAC of each 6-digit code (10 min,
+5 tries, 3 codes per contact per 15 min), and `POST /api/passenger/code` answers the same whether or
+not the contact has reports. The session is a JWT with its own audience, sent as `x-passenger-token`;
+`requireAuth` rejects any token without an admin claim, so the two sessions never mix. Phone numbers are
+stored in E.164 (`utils/phone.ts`, mirrored in `ui/src/lib/phone.ts`).
+
+The service worker shows push notifications and posts `report-updated` to open tabs so the tracking
+page refreshes. In development `lib/push.ts` registers it as `/sw.js?mode=push-only`, which skips the
+page cache.
+
+**"Me too" confirmations.** `GET /api/reports/similar?busNumber&category&at` returns up to
+`CONFIRMATION.maxMatches` complaints with the same bus (compared without spaces, dashes or case),
+category and incident day in Sri Lankan time, from the last `CONFIRMATION.maxAgeDays` days, excluding
+rejected and hidden reports. It returns only an ID, the route, a rough time of day and the confirmation
+count: never the description, location, receipt ID or exact time. `POST /api/reports/:id/confirmations`
+(Turnstile, honeypot, `confirmLimiter`) stores a row in `report_confirmations` with an optional comment
+and an HMAC of the IP address and user agent; a unique index allows one confirmation per device per
+report. Admins get the list on the report and a `confirmationCount` in report lists; the tracking page
+gets a count only.
+
+**Operator portal.** Operators are rows in `admins` with role `operator`, an `organisation` name and
+their buses in `operator_buses` (normalised with `utils/bus-number.ts`). `requireAuth` admits only
+`STAFF_ROLES`, so every admin-console route is closed to operators by default; `requireOperator` guards
+`/api/operator/*` and `requireAccount` (any account) only `GET /api/auth`. The operator queries in
+`operator.repository.ts` apply the public fairness rule (`PUBLIC_STATUSES`, not `hiddenFromPublic`)
+and select an explicit column list without contact details, receipt IDs, media, notes or messages.
+Responses live in `operator_responses`; the tracking page shows those not `hidden`. In the UI,
+`AdminGuard area="operator"` guards `/operator` and sends each kind of account to its own area.
+
+**AI help for admins.** `services/ai.service.ts` calls Google Gemini's REST API with `fetch`
+(free tier, no SDK): `generateContent` with structured output (`responseJsonSchema` built from a Zod
+schema by `z.toJSONSchema`, and the reply checked against the same schema). Safety filters are set to
+`BLOCK_NONE` so reports about harassment or assault aren't blocked; a blocked prompt still becomes a
+"declined" message. `analyseReport` returns `AiInsights` (stored in `reports.ai_insights`); the report text is
+fenced in `<report>` tags and the system prompt treats it as data, never instructions, and a suggested
+category outside the report type's list is discarded. `blurImages` downloads each Cloudinary photo, sends it
+inline and asks Gemini for face and number plate boxes (`box_2d`, 0-1000, converted to fractions) and builds a Cloudinary URL with
+`e_blur_faces` plus one `e_blur_region` per box; the URLs go in `reports.blurred_images`, the only
+photos the operator portal returns. Routes: `GET /api/reports/ai/status`, `POST /:id/ai/analyse`,
+`POST /:id/ai/blur` (staff, `aiLimiter`) and `PUT /:id/category`. Busy answers (503 "high demand", 5xx,
+429 quota) are retried after short waits, then sent to `AI_FALLBACK_MODEL`
+(`gemini-flash-lite-latest`, its own free quota). Failures become 502/503 with a message, never a 500. Tests stub `fetch`, so
+the service code runs without network calls.
+
+**BusWatch helper chat.** `services/assistant.service.ts` reuses `generate` from the AI service with
+the whole conversation (`POST /api/assistant/chat`, public, `assistantLimiter`, at most
+`ASSISTANT.maxMessages` messages ending with the passenger's). The system prompt holds everything the
+helper knows about BusWatch, the emergency numbers and today's date in Sri Lanka; the reply is
+structured as `{ reply, link, draft }`. `cleanDraft` keeps only what the forms accept (category of the
+right type, a valid bus number, a past "YYYY-MM-DDTHH:mm" time) and the prompt keeps contact details
+out of it. In the UI, `organisms/ChatHelper` (in `PublicLayout`) keeps the chat in `sessionStorage`
+for the tab; "Open the form" calls `lib/reportDraft.putDraftIntoForm`, which merges the draft into
+the form's IndexedDB draft (the one `useFormDraft` restores, keeping photos and contact details
+already there) and opens the form. Nothing is submitted without the passenger. The status check
+(`GET /api/assistant/status`) hides the bubble when `GEMINI_API_KEY` is unset or
+`AI_CHAT_ENABLED=false`.
+
+**CAPTCHA.** `verifyTurnstile` runs on report submission and "me too" confirmations when `TURNSTILE_SECRET_KEY` is set. The browser
+fetches a fresh token right before each send (`lib/turnstile.ts`), including reports sent later from the
+offline outbox; a failed check keeps the report in the outbox instead of dropping it.
 
 ## Cross-cutting conventions
 
-- Status and category enums in `api/src/config/constants.ts` must match
-  `ui/src/constants/reportConstants.ts`.
+- Status, category, type and language enums in `api/src/config/constants.ts` must match
+  `ui/src/constants/reportConstants.ts`. Category and status names are translated twice: in
+  `api/src/i18n/messages.ts` (emails, PDF) and `ui/messages/*.json` (site).
 - One `.env` at the repo root (template: `.env.example`). The API reads all of it; Next only exposes
   `NEXT_PUBLIC_*` variables to the browser.
 - Dependencies: the API's runtime packages are `dependencies`; UI libraries and tooling are

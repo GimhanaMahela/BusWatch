@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Box, Button, Typography, CircularProgress } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
+import { useTranslations } from "next-intl";
 
 const MAPS_API_KEY = process.env.NEXT_PUBLIC_MAPS_API_KEY ?? "";
 const hasMapsKey = Boolean(MAPS_API_KEY) && MAPS_API_KEY !== "YOUR_Maps_API_KEY";
@@ -22,12 +23,13 @@ const SRI_LANKA_CENTER = { lat: 7.8731, lng: 80.7718 };
 
 // Only mounted when a key is configured, so the Maps script is never requested without one
 function MapPin({ value, onChange }: LocationPickerProps) {
+  const t = useTranslations("location");
   const { isLoaded, loadError } = useJsApiLoader({ googleMapsApiKey: MAPS_API_KEY });
 
   if (loadError) {
     return (
       <Typography variant="body2" color="error">
-        The map could not be loaded.
+        {t("mapError")}
       </Typography>
     );
   }
@@ -57,12 +59,13 @@ function MapPin({ value, onChange }: LocationPickerProps) {
  * value: { lat, lng } | null
  */
 function LocationPicker({ value, onChange }: LocationPickerProps) {
+  const t = useTranslations("location");
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
 
   const useMyLocation = () => {
     if (!navigator.geolocation) {
-      setError("Your browser does not support location access.");
+      setError(t("unsupported"));
       return;
     }
     setLocating(true);
@@ -73,11 +76,7 @@ function LocationPicker({ value, onChange }: LocationPickerProps) {
         setLocating(false);
       },
       (err) => {
-        setError(
-          err.code === err.PERMISSION_DENIED
-            ? "Location permission was denied. You can still type the location."
-            : "Could not get your location. You can still type it.",
-        );
+        setError(err.code === err.PERMISSION_DENIED ? t("denied") : t("failed"));
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 15000 },
@@ -93,15 +92,15 @@ function LocationPicker({ value, onChange }: LocationPickerProps) {
           onClick={useMyLocation}
           disabled={locating}
         >
-          Use my current location
+          {t("useMine")}
         </Button>
         {value && (
           <>
             <Typography variant="body2" color="text.secondary">
-              Pinned: {value.lat.toFixed(5)}, {value.lng.toFixed(5)}
+              {t("pinned", { lat: value.lat.toFixed(5), lng: value.lng.toFixed(5) })}
             </Typography>
             <Button size="small" onClick={() => onChange(null)}>
-              Remove pin
+              {t("removePin")}
             </Button>
           </>
         )}
@@ -109,7 +108,7 @@ function LocationPicker({ value, onChange }: LocationPickerProps) {
       {hasMapsKey && (
         <>
           <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-            Or tap the map to drop a pin where the incident happened.
+            {t("tapMap")}
           </Typography>
           <MapPin value={value} onChange={onChange} />
         </>

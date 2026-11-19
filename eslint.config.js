@@ -53,6 +53,9 @@ export default tseslint.config(
     },
   },
 
+  // --- Service worker (plain JS served from ui/public) ---
+  { files: ["ui/public/sw.js"], languageOptions: { globals: globals.serviceworker } },
+
   // --- Root config files ---
   { files: ["*.{js,ts}"], languageOptions: { globals: globals.node } },
   prettier,

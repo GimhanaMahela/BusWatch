@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { ContentPageTemplate, type ContentSection } from "@/components/templates";
 
 const SECTIONS: ContentSection[] = [
@@ -131,9 +132,10 @@ const SECTIONS: ContentSection[] = [
 ];
 
 function TermsOfServiceView() {
+  const t = useTranslations("meta");
   return (
     <ContentPageTemplate
-      title="Terms of service"
+      title={t("termsTitle")}
       updated="May 29, 2025"
       intro={
         <p>

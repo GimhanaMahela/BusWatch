@@ -1,13 +1,18 @@
+import { fileURLToPath } from "node:url";
 import PDFDocument from "pdfkit";
+import type { Language, ReportType } from "../config/constants.js";
+import { DATE_LOCALES, messagesFor } from "../i18n/messages.js";
 import { generateReceiptId } from "../utils/receipt-id.js";
 
 export interface ReceiptData {
   receiptId?: string;
+  type?: ReportType;
+  language?: Language;
   busNumber: string;
   routeNumber: string;
   busName?: string;
   category?: string;
-  location: string;
+  location?: string | null;
   incidentAt?: Date | string;
   reportedAt: Date | string;
   description: string;
@@ -24,6 +29,226 @@ interface DownloadedImage {
   index: number;
   filename: string;
 }
+
+// ---------------------------------------------------------------- Fonts and mixed-script text
+
+// Same relative path from src/services (tsx) and dist/services (compiled)
+const fontPath = (file: string) =>
+  fileURLToPath(new URL(`../../assets/fonts/${file}`, import.meta.url));
+
+type Script = "latin" | "sinhala" | "tamil";
+
+const FONTS: Record<Script, { regular: string; bold: string }> = {
+  latin: { regular: "Helvetica", bold: "Helvetica-Bold" },
+  sinhala: { regular: "sinhala", bold: "sinhala-bold" },
+  tamil: { regular: "tamil", bold: "tamil-bold" },
+};
+
+const registerFonts = (doc: PDFKit.PDFDocument) => {
+  doc.registerFont("sinhala", fontPath("NotoSansSinhala-Regular.ttf"));
+  doc.registerFont("sinhala-bold", fontPath("NotoSansSinhala-Bold.ttf"));
+  doc.registerFont("tamil", fontPath("NotoSansTamil-Regular.ttf"));
+  doc.registerFont("tamil-bold", fontPath("NotoSansTamil-Bold.ttf"));
+};
+
+const ZERO_WIDTH_JOINERS = /[‌‍]/;
+
+const scriptOf = (char: string): Script | null => {
+  const code = char.codePointAt(0) ?? 0;
+  if (code >= 0x0d80 && code <= 0x0dff) return "sinhala";
+  if (code >= 0x0b80 && code <= 0x0bff) return "tamil";
+  // Spaces and joiners belong to whichever script they sit in
+  if (/\s/.test(char) || ZERO_WIDTH_JOINERS.test(char)) return null;
+  return "latin";
+};
+
+/**
+ * Splits text into runs that one font can draw: Helvetica has no Sinhala or Tamil glyphs, and the
+ * Tamil font has no Latin letters. Passengers often mix scripts ("NB-1234 බස් රථය").
+ */
+export const scriptRuns = (text: string): { script: Script; text: string }[] => {
+  const runs: { script: Script; text: string }[] = [];
+  let pending = ""; // leading neutral characters wait for the first real script
+  for (const char of text) {
+    const script = scriptOf(char);
+    const last = runs.at(-1);
+    if (script === null) {
+      if (last) last.text += char;
+      else pending += char;
+    } else if (last && last.script === script) {
+      last.text += char;
+    } else {
+      runs.push({ script, text: pending + char });
+      pending = "";
+    }
+  }
+  if (pending) runs.push({ script: "latin", text: pending });
+  return runs;
+};
+
+export interface Segment {
+  text: string;
+  bold?: boolean;
+  color?: string;
+}
+
+interface WriteOptions {
+  x?: number;
+  y?: number;
+  width?: number;
+  size?: number;
+  bold?: boolean;
+  color?: string;
+  align?: "left" | "center" | "right";
+  lineGap?: number;
+  underline?: boolean;
+}
+
+interface Fragment {
+  text: string;
+  font: string;
+  color: string;
+  width: number;
+  space: boolean;
+  /** Continues the previous fragment's word (a script change inside one word) */
+  glued: boolean;
+}
+
+/**
+ * Measures and word-wraps text that may mix Latin, Sinhala and Tamil. pdfkit's own "continued"
+ * text overlaps lines when the font changes mid-paragraph, so we lay lines out ourselves.
+ */
+const layoutText = (
+  doc: PDFKit.PDFDocument,
+  content: string | Segment[],
+  {
+    x = doc.page.margins.left,
+    width = doc.page.width - x - doc.page.margins.right,
+    size = 12,
+    bold = false,
+    color = COLORS.text,
+    lineGap = 0,
+  }: WriteOptions = {},
+) => {
+  const segments = typeof content === "string" ? [{ text: content }] : content;
+  const fragments: Fragment[][] = [[]]; // lines split on explicit "\n"
+  let indic = false;
+  doc.fontSize(size);
+
+  for (const segment of segments) {
+    const segmentColor = segment.color ?? color;
+    const segmentBold = segment.bold ?? bold;
+    // Tokens are words, runs of spaces, or line breaks
+    for (const token of segment.text.split(/(\n|[^\S\n]+)/)) {
+      if (!token) continue;
+      if (token === "\n") {
+        fragments.push([]);
+        continue;
+      }
+      const space = /^\s+$/.test(token);
+      const runs = space ? [{ script: "latin" as Script, text: " " }] : scriptRuns(token);
+      runs.forEach((run, i) => {
+        if (run.script !== "latin") indic = true;
+        const font = FONTS[run.script][segmentBold ? "bold" : "regular"];
+        doc.font(font);
+        fragments.at(-1)?.push({
+          text: run.text,
+          font,
+          color: segmentColor,
+          width: doc.widthOfString(run.text),
+          space,
+          glued: i > 0,
+        });
+      });
+    }
+  }
+
+  // Greedy word wrap
+  const lines: Fragment[][] = [];
+  for (const paragraph of fragments) {
+    let line: Fragment[] = [];
+    let lineWidth = 0;
+    let i = 0;
+    while (i < paragraph.length) {
+      // A "word" is a fragment plus any glued fragments (other scripts inside the same word)
+      let j = i + 1;
+      while (j < paragraph.length && paragraph[j]?.glued) j++;
+      const word = paragraph.slice(i, j);
+      const wordWidth = word.reduce((sum, f) => sum + f.width, 0);
+      const isSpace = word.length === 1 && word[0]?.space;
+      if (!isSpace && line.length && lineWidth + wordWidth > width) {
+        lines.push(line);
+        line = [];
+        lineWidth = 0;
+      }
+      if (!(isSpace && line.length === 0)) {
+        line.push(...word);
+        lineWidth += wordWidth;
+      }
+      i = j;
+    }
+    lines.push(line);
+  }
+
+  // Noto's Sinhala and Tamil glyphs reach higher and lower than Helvetica's
+  const lineHeight = size * (indic ? 1.75 : 1.3) + lineGap;
+  const ascent = size * (indic ? 1.2 : 0.95);
+  for (const line of lines) while (line.length && line.at(-1)?.space) line.pop();
+  return { lines, lineHeight, ascent, height: lines.length * lineHeight };
+};
+
+/** Draws text laid out by layoutText on a shared baseline, moves doc.y below it, adds pages as needed. */
+const writeText = (
+  doc: PDFKit.PDFDocument,
+  content: string | Segment[],
+  options: WriteOptions = {},
+) => {
+  const {
+    x = doc.page.margins.left,
+    y = doc.y,
+    width = doc.page.width - x - doc.page.margins.right,
+    color = COLORS.text,
+    align = "left",
+    underline = false,
+  } = options;
+  const { lines, lineHeight, ascent } = layoutText(doc, content, { ...options, x, width });
+  let top = y;
+
+  for (const line of lines) {
+    if (
+      top + lineHeight > doc.page.height - doc.page.margins.bottom &&
+      top > doc.page.margins.top
+    ) {
+      doc.addPage({ margin: 50 });
+      top = doc.page.margins.top;
+    }
+    const lineWidth = line.reduce((sum, f) => sum + f.width, 0);
+    let cursor =
+      x +
+      (align === "center" ? (width - lineWidth) / 2 : align === "right" ? width - lineWidth : 0);
+    for (const fragment of line) {
+      doc
+        .font(fragment.font)
+        .fillColor(fragment.color)
+        .text(fragment.text, cursor, top + ascent, { lineBreak: false, baseline: "alphabetic" });
+      cursor += fragment.width;
+    }
+    if (underline && lineWidth) {
+      const startX = cursor - lineWidth;
+      doc
+        .strokeColor(color)
+        .lineWidth(1)
+        .moveTo(startX, top + ascent + 3)
+        .lineTo(cursor, top + ascent + 3)
+        .stroke();
+    }
+    top += lineHeight;
+  }
+
+  doc.x = x;
+  doc.y = top;
+  return doc;
+};
 
 // pdfkit exposes openImage at runtime, but @types/pdfkit does not declare it
 const openImage = (doc: PDFKit.PDFDocument, buffer: Buffer) =>
@@ -45,432 +270,300 @@ const downloadImages = (urls: string[]): Promise<DownloadedImage[]> =>
           `Failed to download image ${index + 1} from ${imageUrl}:`,
           error instanceof Error ? error.message : error,
         );
-        return { buffer: null, index, filename: `Image ${index + 1} (Failed)` };
+        return { buffer: null, index, filename: `${index + 1}` };
       }
     }),
   );
 
-/** Generates the passenger's PDF receipt: cover page, incident details and evidence images. */
+// --- Colour palette ---
+const COLORS = {
+  brand: "#0056b3", // BusWatch blue (main accent)
+  accent: "#FF8C00", // orange highlight
+  commend: "#12A150", // green accent for commendations
+  text: "#333333",
+  muted: "#666666",
+  background: "#F8F9FA",
+  border: "#E0E0E0",
+  success: "#28A745",
+};
+
+/**
+ * Generates the passenger's PDF receipt in their language: cover page, report details and
+ * evidence images. Commendations get their own title and wording.
+ */
 export const generatePdfReceipt = async (reportData: ReceiptData): Promise<ReceiptResult> => {
   const imageResults = await downloadImages(reportData.images ?? []);
+  const type = reportData.type ?? "complaint";
+  const language = reportData.language ?? "en";
+  const messages = messagesFor(language);
+  const t = messages.pdf;
+
+  const formatDate = (value: Date | string) =>
+    new Date(value).toLocaleString(DATE_LOCALES[language], {
+      dateStyle: "long",
+      timeStyle: "short",
+      timeZone: "Asia/Colombo",
+    });
 
   return new Promise<ReceiptResult>((resolve, reject) => {
-    // Initialize PDFDocument with A4 size and bufferPages for post-generation page numbering
-    // The first page is created by default, so we'll use it for the cover.
-    const doc = new PDFDocument({
-      margin: 0, // Set initial margin to 0 for the cover page
-      size: "A4",
-      bufferPages: true, // Enable buffering pages for later manipulation (like adding page numbers)
-    });
-    const buffers: Buffer[] = []; // Collected PDF data chunks
+    // bufferPages lets us add page numbers once all content is written
+    const doc = new PDFDocument({ margin: 0, size: "A4", bufferPages: true });
+    registerFonts(doc);
+    const buffers: Buffer[] = [];
 
     const receiptId = reportData.receiptId || generateReceiptId();
-    const formattedDate = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const formattedDate = formatDate(new Date());
+    const accent = type === "commendation" ? COLORS.commend : COLORS.accent;
 
-    // Event listeners for PDF generation
     doc.on("data", (chunk: Buffer) => buffers.push(chunk));
-    doc.on("end", () => {
-      // When document ends, concatenate buffers and resolve
-      const pdfBuffer = Buffer.concat(buffers);
-      resolve({ pdfBuffer, receiptId });
-    });
-    doc.on("error", reject); // Handle errors
+    doc.on("end", () => resolve({ pdfBuffer: Buffer.concat(buffers), receiptId }));
+    doc.on("error", reject);
 
-    // --- Color Palette (Modern & Professional) ---
-    const primaryBrandColor = "#0056b3"; // BusWatch Blue (main accent)
-    const secondaryAccentColor = "#FF8C00"; // Vibrant Orange (secondary accent/highlight)
-    const textColorPrimary = "#333333"; // Dark gray for main text
-    const textColorSecondary = "#666666"; // Medium gray for subtext/labels
-    const backgroundColorLight = "#F8F9FA"; // Very light gray for backgrounds
-    const borderColorLight = "#E0E0E0"; // Light gray for borders/dividers
-    const successColor = "#28A745"; // Green for success messages
-
-    // --- Font Setup ---
-    const fontPrimaryBold = "Helvetica-Bold";
-    const fontPrimaryRegular = "Helvetica";
-    const fontAccentItalic = "Helvetica-Oblique"; // Using Oblique for a subtle accent
-
-    // --- Helper Function: Add Horizontal Rule ---
-    const addHorizontalRule = (
-      y: number,
-      color = borderColorLight,
-      thickness = 0.5,
-      indent = 0,
-    ) => {
+    const addHorizontalRule = (y: number, color = COLORS.border, thickness = 0.5) => {
       doc
         .strokeColor(color)
         .lineWidth(thickness)
-        .moveTo(doc.page.margins.left + indent, y)
-        .lineTo(doc.page.width - doc.page.margins.right - indent, y)
+        .moveTo(doc.page.margins.left, y)
+        .lineTo(doc.page.width - doc.page.margins.right, y)
         .stroke();
     };
 
-    // --- Cover Page ---
-    // Background with subtle pattern
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill(backgroundColorLight);
+    const heading = (text: string) => {
+      writeText(doc, text, { size: 16, bold: true, color: COLORS.brand, underline: true });
+      doc.y += 6;
+    };
 
-    // Subtle diagonal lines pattern
-    doc.opacity(0.05).lineWidth(0.8).strokeColor(primaryBrandColor);
+    // --- Cover page ---
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.background);
+    doc.opacity(0.05).lineWidth(0.8).strokeColor(COLORS.brand);
     for (let i = -doc.page.height; i < doc.page.width * 2; i += 20) {
       doc
         .moveTo(i, 0)
         .lineTo(i + doc.page.height, doc.page.height)
         .stroke();
     }
-    doc.opacity(1); // Reset opacity
+    doc.opacity(1);
 
-    // Header: BusWatch Logo/Name
-    doc
-      .fillColor(primaryBrandColor)
-      .fontSize(36)
-      .font(fontPrimaryBold)
-      .text("BusWatch", 0, doc.page.height / 2 - 150, { align: "center" });
+    const middle = doc.page.height / 2;
+    const fullWidth = { x: 0, width: doc.page.width, align: "center" as const };
+    writeText(doc, "BusWatch", {
+      ...fullWidth,
+      y: middle - 150,
+      size: 36,
+      bold: true,
+      color: COLORS.brand,
+    });
+    writeText(doc, t.subtitle, { ...fullWidth, y: middle - 100, size: 18, color: COLORS.muted });
 
-    doc
-      .fillColor(textColorSecondary)
-      .fontSize(18)
-      .font(fontAccentItalic)
-      .text("Public Transport Monitoring System", 0, doc.page.height / 2 - 100, {
-        align: "center",
-      });
+    const [titleTop, titleBottom] = t.title[type];
+    writeText(doc, titleTop, { ...fullWidth, y: middle + 10, size: 44, bold: true });
+    writeText(doc, titleBottom, { ...fullWidth, y: middle + 70, size: 44, bold: true });
 
-    // Main Title: Incident Report
+    const titleLineY = middle + 160;
     doc
-      .fillColor(textColorPrimary)
-      .fontSize(48)
-      .font(fontPrimaryBold)
-      .text("INCIDENT", 0, doc.page.height / 2 + 20, { align: "center" });
-    doc.fontSize(56).text("REPORT", 0, doc.page.height / 2 + 80, { align: "center" });
-
-    // Decorative accent line below title
-    const titleLineY = doc.page.height / 2 + 150;
-    doc
-      .strokeColor(secondaryAccentColor)
+      .strokeColor(accent)
       .lineWidth(5)
       .moveTo(doc.page.width / 2 - 60, titleLineY)
       .lineTo(doc.page.width / 2 + 60, titleLineY)
       .stroke();
 
-    // Report ID and Date on cover
-    doc
-      .fillColor(textColorSecondary)
-      .fontSize(12)
-      .font(fontPrimaryRegular)
-      .text(`Report ID: ${receiptId}`, 0, doc.page.height - 80, {
-        align: "center",
-      });
-    doc.text(`Date: ${formattedDate}`, 0, doc.page.height - 60, {
-      align: "center",
+    // Text inside the bottom margin would otherwise start a new page
+    doc.page.margins.bottom = 0;
+    writeText(doc, `${t.reportId}: ${receiptId}`, {
+      ...fullWidth,
+      y: doc.page.height - 90,
+      size: 12,
+      color: COLORS.muted,
+    });
+    writeText(doc, `${t.date}: ${formattedDate}`, {
+      ...fullWidth,
+      y: doc.page.height - 68,
+      size: 12,
+      color: COLORS.muted,
     });
 
-    // Add new page for main content with standard margins
+    // --- Details page ---
     doc.addPage({ margin: 50 });
+    writeText(doc, t.detailsHeading[type], { size: 22, bold: true });
+    doc.y += 4;
+    addHorizontalRule(doc.y, COLORS.brand, 1.5);
+    doc.y += 16;
 
-    // --- Main Content Header ---
-    doc
-      .fillColor(textColorPrimary)
-      .fontSize(22)
-      .font(fontPrimaryBold)
-      .text("Incident Report Details", { align: "left" })
-      .moveDown(0.5);
+    heading(t.summary);
+    const summaryLine = (label: string, value: string) =>
+      writeText(
+        doc,
+        [
+          { text: `${label}: `, color: COLORS.muted },
+          { text: value, bold: true },
+        ],
+        { size: 11 },
+      );
+    summaryLine(t.identifier, receiptId);
+    summaryLine(t.generatedOn, formattedDate);
+    doc.y += 20;
 
-    addHorizontalRule(doc.y, primaryBrandColor, 1.5); // Thicker rule for main header
-    doc.moveDown(1);
-
-    // --- Report Summary Section ---
-    doc
-      .fillColor(primaryBrandColor)
-      .fontSize(16)
-      .font(fontPrimaryBold)
-      .text("Report Summary", { underline: true })
-      .moveDown(0.5);
-
-    doc
-      .fillColor(textColorSecondary)
-      .fontSize(11)
-      .font(fontPrimaryRegular)
-      .text(`Unique Report Identifier: `, { continued: true })
-      .fillColor(textColorPrimary)
-      .font(fontPrimaryBold)
-      .text(receiptId)
-      .moveDown(0.2);
-
-    doc
-      .fillColor(textColorSecondary)
-      .font(fontPrimaryRegular)
-      .text(`Report Generated On: `, { continued: true })
-      .fillColor(textColorPrimary)
-      .font(fontPrimaryBold)
-      .text(formattedDate)
-      .moveDown(1.5);
-
-    // --- Incident Details Section ---
-    doc
-      .fillColor(primaryBrandColor)
-      .fontSize(16)
-      .font(fontPrimaryBold)
-      .text("Incident Overview", { underline: true })
-      .moveDown(0.5);
-
+    heading(t.overview[type]);
     const detailRows = [
-      { label: "Bus Number", value: reportData.busNumber || "N/A" },
-      { label: "Route Number", value: reportData.routeNumber || "N/A" },
-      { label: "Bus Name", value: reportData.busName || "N/A" },
+      { label: t.busNumber, value: reportData.busNumber || t.none },
+      { label: t.routeNumber, value: reportData.routeNumber || t.none },
+      { label: t.busName, value: reportData.busName || t.none },
       {
-        label: "Category",
+        label: t.category,
         value: reportData.category
-          ? reportData.category
-              .split("_")
-              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-              .join(" ")
-          : "N/A",
+          ? (messages.categories[reportData.category as keyof typeof messages.categories] ??
+            reportData.category)
+          : t.none,
       },
-      { label: "Location of Incident", value: reportData.location || "N/A" },
+      { label: t.location, value: reportData.location || t.notSpecified },
       {
-        label: "Date & Time of Incident",
-        value: reportData.incidentAt
-          ? new Date(reportData.incidentAt).toLocaleString()
-          : "Not specified",
+        label: t.incidentAt[type],
+        value: reportData.incidentAt ? formatDate(reportData.incidentAt) : t.notSpecified,
       },
-      {
-        label: "Reported On",
-        value: new Date(reportData.reportedAt).toLocaleString() || "N/A",
-      },
-      // Detailed Description of Incident is now part of the detailRows
-      { label: "Detailed Description", value: reportData.description || "N/A" },
+      { label: t.reportedOn, value: formatDate(reportData.reportedAt) },
     ];
 
-    const detailTableX = doc.page.margins.left;
-    const labelColumnWidth = 180; // Increased width to accommodate longer labels
-    const valueColumnX = detailTableX + labelColumnWidth + 10; // Fixed gap of 10 points after label column
-    const actualRowHeight = 28; // This is the total height of each row, including padding
-    const paddingY = 5; // Vertical padding within each row to center text
+    const tableX = doc.page.margins.left;
+    const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const labelWidth = 180;
+    const valueX = tableX + labelWidth + 10;
+    const valueWidth = tableWidth - labelWidth - 10;
+    const paddingY = 4;
 
-    // Set the starting Y position for the table
-    const currentTableY = doc.y;
+    for (const [i, row] of detailRows.entries()) {
+      const label = {
+        x: tableX + 6,
+        width: labelWidth - 6,
+        size: 11,
+        color: COLORS.muted,
+      } satisfies WriteOptions;
+      const value = { x: valueX, width: valueWidth, size: 12, bold: true } satisfies WriteOptions;
+      const rowHeight =
+        Math.max(
+          layoutText(doc, `${row.label}:`, label).height,
+          layoutText(doc, row.value, value).height,
+        ) +
+        paddingY * 2;
+      if (doc.y + rowHeight > doc.page.height - doc.page.margins.bottom)
+        doc.addPage({ margin: 50 });
+      const rowY = doc.y;
+      if (i % 2 === 0) doc.rect(tableX, rowY, tableWidth, rowHeight).fill(COLORS.background);
+      writeText(doc, `${row.label}:`, { ...label, y: rowY + paddingY });
+      writeText(doc, row.value, { ...value, y: rowY + paddingY });
+      doc.y = rowY + rowHeight;
+    }
 
-    detailRows.forEach((row, i) => {
-      const rowY = currentTableY + i * actualRowHeight;
+    // The description can be long, so it gets its own block under the table
+    doc.y += 18;
+    writeText(doc, `${t.description[type]}:`, { size: 11, color: COLORS.muted });
+    doc.y += 4;
+    writeText(doc, reportData.description || t.none, { size: 12, lineGap: 2 });
+    doc.y += 16;
 
-      // Alternating row background for readability
-      if (i % 2 === 0) {
-        doc
-          .rect(
-            detailTableX,
-            rowY, // Start rect at rowY
-            doc.page.width - doc.page.margins.left * 2,
-            actualRowHeight,
-          )
-          .fill(backgroundColorLight);
-      }
+    // --- Evidence images ---
+    const images = reportData.images ?? [];
+    if (images.length > 0) {
+      doc.addPage({ margin: 50 });
+      heading(t.evidence);
+      writeText(doc, t.evidenceCount(images.length), { size: 10, color: COLORS.muted });
+      doc.y += 12;
 
-      doc
-        .fillColor(textColorSecondary)
-        .fontSize(11)
-        .font(fontPrimaryRegular)
-        .text(row.label + ":", detailTableX, rowY + paddingY, {
-          // Label starts at detailTableX, left-aligned
-          width: labelColumnWidth,
-          align: "left", // Left-align label within its column
+      const contentWidth = doc.page.width - doc.page.margins.left * 2;
+      const unavailable = (filename: string) => {
+        writeText(doc, t.imageUnavailable(filename), {
+          size: 10,
+          color: COLORS.muted,
+          align: "center",
         });
-
-      doc
-        .fillColor(textColorPrimary)
-        .fontSize(12)
-        .font(fontPrimaryBold)
-        .text(row.value, valueColumnX, rowY + paddingY); // Value starts at fixed position
-    });
-
-    doc.y = currentTableY + detailRows.length * actualRowHeight + 20; // Update Y position after table
-
-    doc.addPage({ margin: 50 });
-    // --- Images Section ---
-    if (reportData.images && reportData.images.length > 0) {
-      // Estimate height needed for the images section heading and first image.
-      const estimatedImageSectionInitialHeight =
-        16 + 0.8 * 16 + 10 + 1 * 10 + 300 + 9 + 1.5 * 9 + 60;
-      if (doc.y + estimatedImageSectionInitialHeight > doc.page.height - doc.page.margins.bottom) {
-        doc.addPage(); // Add a new page only if necessary
-      }
-
-      doc
-        .fillColor(primaryBrandColor)
-        .fontSize(16)
-        .font(fontPrimaryBold)
-        .text("Attached Evidence ", { underline: true })
-        .moveDown(0.5);
-
-      doc
-        .fillColor(textColorSecondary)
-        .fontSize(10)
-        .font(fontPrimaryRegular)
-        .text(`Total ${reportData.images.length} image(s) attached to this report:`)
-        .moveDown(1);
-
+        doc.y += 10;
+      };
       for (const { buffer, index, filename } of imageResults) {
-        if (buffer) {
-          try {
-            const img = openImage(doc, buffer);
-            const maxWidth = doc.page.width - doc.page.margins.left * 2 - 40; // Content width minus padding
-            const maxHeight = 300; // Max height for an image
-
-            let width = img.width;
-            let height = img.height;
-
-            // Scale down if needed, maintaining aspect ratio
-            if (width > maxWidth) {
-              const ratio = maxWidth / width;
-              width = maxWidth;
-              height = height * ratio;
-            }
-            if (height > maxHeight) {
-              const ratio = maxHeight / height;
-              height = maxHeight;
-              width = width * ratio;
-            }
-
-            // Check if we need a new page for the image and its caption
-            // 60 is approximate space for caption + padding
-            if (doc.y + height + 60 > doc.page.height - doc.page.margins.bottom) {
-              doc.addPage();
-              doc.y = doc.page.margins.top; // Reset Y to top margin
-            }
-
-            // Center the image
-            const x =
-              doc.page.margins.left + (doc.page.width - doc.page.margins.left * 2 - width) / 2;
-            const imageY = doc.y;
-
-            // Add image
-            doc.image(buffer, x, imageY, { width, height });
-            doc.y += height + 8; // Space after image
-
-            // Add border around the image
-            doc
-              .rect(x - 2, imageY - 2, width + 4, height + 4)
-              .stroke(borderColorLight)
-              .lineWidth(1);
-
-            // Image caption (now explicitly centered using x and width)
-            doc
-              .fillColor(textColorSecondary)
-              .fontSize(9)
-              .font(fontAccentItalic)
-              .text(
-                `${filename} (Image ${index + 1} of ${reportData.images.length})`,
-                doc.page.margins.left, // Start at left margin
-                doc.y,
-                {
-                  width: doc.page.width - doc.page.margins.left * 2, // Span full content width
-                  align: "center",
-                },
-              )
-              .moveDown(1.5); // Space after caption
-          } catch (imgErr) {
-            console.error(
-              "Error embedding image:",
-              imgErr instanceof Error ? imgErr.message : imgErr,
-            );
-            doc
-              .fillColor(textColorSecondary)
-              .fontSize(10)
-              .text(`[Failed to display image: ${filename}]`, {
-                align: "center",
-              })
-              .moveDown(1);
+        if (!buffer) {
+          unavailable(filename);
+          continue;
+        }
+        try {
+          const img = openImage(doc, buffer);
+          const maxWidth = contentWidth - 40;
+          const maxHeight = 300;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
           }
-        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+
+          if (doc.y + height + 60 > doc.page.height - doc.page.margins.bottom) {
+            doc.addPage({ margin: 50 });
+          }
+
+          const x = doc.page.margins.left + (contentWidth - width) / 2;
+          const imageY = doc.y;
+          doc.image(buffer, x, imageY, { width, height });
           doc
-            .fillColor(textColorSecondary)
-            .fontSize(10)
-            .text(`[Image ${filename} unavailable or failed to download]`, {
-              align: "center",
-            })
-            .moveDown(1);
+            .rect(x - 2, imageY - 2, width + 4, height + 4)
+            .lineWidth(1)
+            .stroke(COLORS.border);
+          doc.y = imageY + height + 8;
+          writeText(doc, `${filename} (${index + 1}/${images.length})`, {
+            size: 9,
+            color: COLORS.muted,
+            align: "center",
+          });
+          doc.y += 16;
+        } catch (imgErr) {
+          console.error(
+            "Error embedding image:",
+            imgErr instanceof Error ? imgErr.message : imgErr,
+          );
+          unavailable(filename);
         }
       }
     }
 
-    // --- Footer Section ---
-    // Ensure footer is placed correctly, add a new page if content is too long
-    // Estimate footer height (Thank you message, contact info, padding)
-    const estimatedFooterHeight =
-      16 + 0.5 * 16 + 11 + 1 * 11 + 10 + 0.3 * 10 + 9 + 0.2 * 9 + 9 + 50; // Roughly 150 points
-    if (doc.y + estimatedFooterHeight > doc.page.height - doc.page.margins.bottom) {
-      doc.addPage();
+    // --- Footer --- (measured first so it is never split across pages)
+    const centered = { align: "center" as const };
+    const footer: [string, WriteOptions, number][] = [
+      [t.submitted, { ...centered, size: 16, bold: true, color: COLORS.success }, 6],
+      [t.thanks[type], { ...centered, size: 11, color: COLORS.muted, lineGap: 3 }, 12],
+      [t.reference, { ...centered, size: 10, bold: true, color: COLORS.brand }, 0],
+      [t.provideId(receiptId), { ...centered, size: 9 }, 0],
+      [t.contact, { ...centered, size: 9 }, 0],
+    ];
+    const footerHeight =
+      14 +
+      footer.reduce(
+        (sum, [text, options, gap]) => sum + layoutText(doc, text, options).height + gap,
+        0,
+      );
+    if (doc.y + footerHeight > doc.page.height - doc.page.margins.bottom)
+      doc.addPage({ margin: 50 });
+    addHorizontalRule(doc.y, COLORS.border, 1);
+    doc.y += 14;
+    for (const [text, options, gap] of footer) {
+      writeText(doc, text, options);
+      doc.y += gap;
     }
 
-    addHorizontalRule(doc.y, borderColorLight, 1, 0); // Rule across full content width
-    doc.moveDown(1);
-
-    // Thank you section
-    doc
-      .fillColor(successColor)
-      .fontSize(16)
-      .font(fontPrimaryBold)
-      .text("Report Successfully Submitted", { align: "center" })
-      .moveDown(0.5);
-
-    doc
-      .fillColor(textColorSecondary)
-      .fontSize(11)
-      .font(fontPrimaryRegular)
-      .text(
-        "Thank you for contributing to safer public transportation. Your report has been recorded and will be reviewed by our team.",
-        {
-          align: "center",
-          lineGap: 5,
-        },
-      )
-      .moveDown(1);
-
-    // Contact info
-    doc
-      .fillColor(primaryBrandColor)
-      .fontSize(10)
-      .font(fontPrimaryBold)
-      .text("Need to reference this report?", { align: "center" })
-      .moveDown(0.3);
-
-    doc
-      .fillColor(textColorPrimary)
-      .fontSize(9)
-      .font(fontPrimaryRegular)
-      .text(`Please provide this Report ID: ${receiptId}`, {
-        align: "center",
-      })
-      .moveDown(0.2);
-
-    doc.text("For follow-up inquiries, contact support@buswatch.example.com", {
-      align: "center",
-    });
-
-    // --- Page Numbers (Applied after all content is generated) ---
+    // --- Page numbers ---
     const pageCount = doc.bufferedPageRange().count;
-    const pageNumberY = doc.page.height - 25; // Position from bottom edge
-    const pageNumberX = doc.page.width - doc.page.margins.right; // Right alignment
-
     for (let i = 0; i < pageCount; i++) {
-      doc.switchToPage(i); // Switch to the current page to add the number
-      doc
-        .fillColor(textColorSecondary)
-        .fontSize(8)
-        .font(fontPrimaryRegular)
-        .text(
-          `Page ${i + 1} of ${pageCount}`,
-          pageNumberX, // X position
-          pageNumberY, // Y position
-          { align: "right" },
-        );
+      doc.switchToPage(i);
+      doc.page.margins.bottom = 0;
+      writeText(doc, t.page(i + 1, pageCount), {
+        x: doc.page.width - 200,
+        y: doc.page.height - 32,
+        width: 150,
+        size: 8,
+        color: COLORS.muted,
+        align: "right",
+      });
     }
 
-    // Finalize the PDF document
     doc.end();
   });
 };
