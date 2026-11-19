@@ -20,15 +20,23 @@ function OperatorTopBar() {
   return (
     <AppBar
       position="sticky"
-      sx={{
-        borderBottom: 1,
-        borderColor: "divider",
-        bgcolor: "rgba(var(--mui-palette-background-defaultChannel) / 0.85)",
-        backdropFilter: "blur(14px)",
-        color: "text.primary",
-      }}
+      sx={{ top: 0, pt: 1.5, px: { xs: 2, sm: 3 }, bgcolor: "transparent", color: "text.primary" }}
     >
-      <Toolbar sx={{ gap: 1.5, maxWidth: 1200, width: "100%", mx: "auto" }}>
+      {/* A floating rounded bar, like the public site's header */}
+      <Toolbar
+        sx={{
+          gap: 1.5,
+          maxWidth: 1200,
+          width: "100%",
+          mx: "auto",
+          borderRadius: 99,
+          border: 1,
+          borderColor: "divider",
+          bgcolor: "rgba(var(--mui-palette-background-paperChannel) / 0.85)",
+          backdropFilter: "blur(14px)",
+          boxShadow: "var(--bw-shadow-card)",
+        }}
+      >
         <Box
           component={Link}
           href="/operator"

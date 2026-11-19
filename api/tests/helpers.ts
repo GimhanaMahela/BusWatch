@@ -12,7 +12,7 @@ export { db };
 export const useTestDatabase = () => {
   beforeEach(async () => {
     await db.execute(
-      sql`TRUNCATE admins, reports, daily_metrics, passenger_codes RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE admins, reports, daily_metrics, passenger_codes, whatsapp_chats, whatsapp_inbound, fare_tables, fare_routes, trip_shares RESTART IDENTITY CASCADE`,
     );
   });
 };

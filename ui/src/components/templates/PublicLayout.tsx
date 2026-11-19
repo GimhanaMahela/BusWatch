@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
 import type { ReactNode } from "react";
-import { OfflineOutbox, SiteFooter, SiteHeader } from "@/components/organisms";
+import { ChatHelper, OfflineOutbox, SiteFooter, SiteHeader } from "@/components/organisms";
 
-/** Chrome for public pages: sticky header, page content, footer. */
+/** Chrome for public pages: sticky header, page content, footer, and the helper chat. */
 function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -12,6 +12,7 @@ function PublicLayout({ children }: { children: ReactNode }) {
       </Box>
       <SiteFooter />
       <OfflineOutbox />
+      <ChatHelper />
     </Box>
   );
 }

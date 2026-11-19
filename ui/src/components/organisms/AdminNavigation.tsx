@@ -8,6 +8,7 @@ import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import {
   AppBar,
@@ -52,6 +53,12 @@ const NAV_ITEMS = [
     match: ["/admin/stories"],
   },
   {
+    label: "Fares",
+    href: "/admin/fares",
+    icon: <PaymentsRoundedIcon />,
+    match: ["/admin/fares"],
+  },
+  {
     label: "QR stickers",
     href: "/admin/qr-codes",
     icon: <QrCode2RoundedIcon />,
@@ -75,13 +82,25 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       key={key}
       selected={selected}
       sx={{
-        borderRadius: 2.5,
+        position: "relative",
+        borderRadius: 3,
         mb: 0.5,
         py: 1,
         "&.Mui-selected": {
           color: "primary.main",
           bgcolor: "rgba(var(--mui-palette-primary-mainChannel) / 0.1)",
           "& .MuiListItemIcon-root": { color: "primary.main" },
+          // Gradient marker on the left of the current page
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            top: 10,
+            bottom: 10,
+            width: 4,
+            borderRadius: 4,
+            background: "var(--bw-gradient-brand)",
+          },
         },
       }}
       {...props}
@@ -216,14 +235,22 @@ function AdminNavigation() {
         sx={{
           display: { xs: "none", md: "block" },
           displayPrint: "none",
+          // A floating rounded panel, like the bento tiles on the public site
           width: SIDEBAR_WIDTH,
           flexShrink: 0,
           position: "sticky",
-          top: 0,
-          height: "100vh",
-          borderRight: 1,
+          top: 16,
+          height: "calc(100vh - 32px)",
+          m: 2,
+          mr: 0,
+          overflow: "hidden",
+          borderRadius: "28px",
+          border: 1,
           borderColor: "divider",
           bgcolor: "background.paper",
+          boxShadow: "var(--bw-shadow-card)",
+          backgroundImage:
+            "radial-gradient(120% 40% at 0% 0%, rgba(var(--mui-palette-primary-mainChannel) / 0.08), transparent 70%)",
         }}
       >
         <SidebarContent />

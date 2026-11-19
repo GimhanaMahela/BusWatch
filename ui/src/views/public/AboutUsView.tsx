@@ -91,7 +91,8 @@ function AboutUsView() {
                 gap: 2,
                 border: 0,
                 color: "common.white",
-                background: "linear-gradient(135deg, #2457F5 0%, #7A4DF0 100%)",
+                background: "var(--bw-gradient-deep)",
+                boxShadow: "var(--bw-shadow-raised)",
               }}
             >
               <Typography variant="h6" component="p">

@@ -1,6 +1,4 @@
 import type { Request, Response } from "express";
-import { env } from "../config/env.js";
-import { analyseInBackground } from "./ai.controller.js";
 import cloudinary from "../config/cloudinary.js";
 import {
   RATEABLE_STATUSES,
@@ -11,26 +9,21 @@ import {
 import type { UploadedMedia } from "../middleware/upload.middleware.js";
 import {
   addReportNote,
-  createReport,
   deleteReport as deleteReportRow,
   findReportById,
   findReportByReceiptId,
   getReportStats,
   listReports,
-  receiptIdExists,
   setOutcomeRating,
   setReportHiddenFromPublic,
-  setReportPdfUrl,
   updateReportStatus as updateReportStatusRow,
   type ReportWithRelations,
 } from "../repositories/report.repository.js";
-import { countEvent } from "../repositories/metric.repository.js";
-import { messagesFor } from "../i18n/messages.js";
-import { sendReportReceiptEmail, trackingUrl } from "../services/email.service.js";
-import { sendSms } from "../services/sms.service.js";
 import { notifyPassenger as deliverToPassenger } from "../services/notification.service.js";
-import { generatePdfReceipt } from "../services/pdf-receipt.service.js";
-import { generateReceiptId } from "../utils/receipt-id.js";
+import { FareError, officialFare } from "../services/fare.service.js";
+import { fileReport } from "../services/report-submission.service.js";
+import type { ReportDetails } from "../db/schema.js";
+import type { ReportDetailsInput } from "../validators/report.validator.js";
 import { invalidateCache } from "../utils/ttl-cache.js";
 import type { VisibilityInput } from "../validators/story.validator.js";
 import type { ResponseVisibilityInput } from "../validators/operator.validator.js";
@@ -55,14 +48,6 @@ const uploadMedia = async (file: Express.Multer.File, resourceType: "image" | "v
     { resource_type: resourceType },
   );
   return result.secure_url;
-};
-
-const generateFreeReceiptId = async (): Promise<string> => {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const id = generateReceiptId();
-    if (!(await receiptIdExists(id))) return id;
-  }
-  throw new Error("Could not generate a unique receipt ID");
 };
 
 export interface PublicTimelineEntry {
@@ -118,6 +103,8 @@ export const toPublicView = (report: ReportWithRelations) => {
     ratedAt: report.ratedAt,
     messages,
     canReply: canReply(report),
+    // Accessibility issues ticked, the official fare, or what was ticked on the safety form
+    details: report.details,
     // Other passengers who said "me too" (a count only)
     confirmations: report.confirmations.length,
     // The bus operator's responses, unless an admin hid them
@@ -130,90 +117,62 @@ export const toPublicView = (report: ReportWithRelations) => {
 // @desc    Submit a new report
 // @route   POST /api/reports
 // @access  Public
+/**
+ * Turns the passenger's choices into what is stored: the fare becomes the official fare worked out
+ * here (the browser only says which route, stops and class). Throws FareError when that fails.
+ */
+const storedDetails = async (input?: ReportDetailsInput): Promise<ReportDetails | null> => {
+  if (!input) return null;
+  const details: ReportDetails = {};
+  if (input.accessibility) details.accessibility = input.accessibility;
+  if (input.safety) details.safety = input.safety;
+  if (input.fare) details.fare = await officialFare(input.fare);
+  return Object.keys(details).length ? details : null;
+};
+
+/** The quick safety-mode form may leave the description empty: say what was ticked instead. */
+const safetyDescription = (details: ReportDetails | null) =>
+  `Quick safety report. What happened: ${
+    details?.safety?.kinds.length ? details.safety.kinds.join(", ") : "not given"
+  }.`;
+
 export const submitReport = async (
   req: Request<object, object, SubmitReportInput>,
   res: Response,
 ) => {
-  const { website: _honeypot, busNumber, ...fields } = req.body;
+  const { website: _honeypot, busNumber, details: detailsInput, ...fields } = req.body;
   const files = (req.files ?? {}) as UploadedMedia;
 
-  const receiptId = await generateFreeReceiptId();
+  let details: ReportDetails | null;
+  try {
+    details = await storedDetails(detailsInput);
+  } catch (error) {
+    if (error instanceof FareError) {
+      res.status(400).json({ msg: error.message, message: error.message, errors: [error.message] });
+      return;
+    }
+    throw error;
+  }
 
   const [images, videos] = await Promise.all([
     Promise.all((files.images ?? []).map((f) => uploadMedia(f, "image"))),
     Promise.all((files.videos ?? []).map((f) => uploadMedia(f, "video"))),
   ]);
 
-  const saved = await createReport(
-    { ...fields, busNumber: busNumber.toUpperCase(), images, videos, receiptId },
-    fields.type === "commendation" ? "Commendation received." : "Report received.",
-  );
-  await countEvent(saved.type === "commendation" ? "commendation_submitted" : "report_submitted");
-  if (env.AI_AUTO_ANALYSE) analyseInBackground(saved);
-
-  // Everything below is best-effort: the report is already saved, so a PDF or
-  // email failure must not turn into an error response (the passenger would resubmit).
-  let pdfBuffer: Buffer | null = null;
-  let pdfUrl: string | null = null;
-  try {
-    ({ pdfBuffer } = await generatePdfReceipt({
-      ...saved,
-      busName: saved.busName ?? undefined,
-      incidentAt: saved.incidentAt ?? undefined,
-    }));
-    const pdfUploadResult = await cloudinary.uploader.upload(
-      `data:application/pdf;base64,${pdfBuffer.toString("base64")}`,
-      { resource_type: "raw", folder: "buswatch_receipts", public_id: `receipt_${saved.id}` },
-    );
-    pdfUrl = pdfUploadResult.secure_url;
-    await setReportPdfUrl(saved.id, pdfUrl);
-  } catch (pdfError) {
-    console.error(
-      "Failed to generate or upload PDF receipt:",
-      pdfError instanceof Error ? pdfError.message : pdfError,
-    );
-  }
-
-  let emailSent = false;
-  if (saved.passengerEmail && pdfBuffer) {
-    try {
-      emailSent = await sendReportReceiptEmail({
-        toEmail: saved.passengerEmail,
-        receiptPdfBuffer: pdfBuffer,
-        receiptId,
-        type: saved.type,
-        language: saved.language,
-      });
-    } catch (emailError) {
-      console.error(
-        "Failed to send receipt email:",
-        emailError instanceof Error ? emailError.message : emailError,
-      );
-    }
-  }
-
-  let smsSent = false;
-  if (saved.passengerPhone) {
-    const link = trackingUrl(receiptId);
-    const t = messagesFor(saved.language).sms;
-    try {
-      smsSent = await sendSms(
-        saved.passengerPhone,
-        t.received(receiptId) + (link ? t.link(link) : ""),
-      );
-    } catch (smsError) {
-      console.error(
-        "Failed to send receipt SMS:",
-        smsError instanceof Error ? smsError.message : smsError,
-      );
-    }
-  }
+  const { saved, pdfUrl, emailSent, smsSent } = await fileReport({
+    ...fields,
+    description: fields.description ?? safetyDescription(details),
+    busNumber: busNumber.toUpperCase(),
+    details,
+    images,
+    videos,
+  });
 
   const report = await findReportById(saved.id);
   res.status(201).json({
     msg: "Report submitted successfully!",
     report: report ? toPublicView(report) : null,
-    receiptId,
+    receiptId: saved.receiptId,
     pdfUrl,
     emailSent,
     smsSent,

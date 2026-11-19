@@ -16,6 +16,7 @@ import { isEmailConfigured, sendSignInCodeEmail } from "../services/email.servic
 import { isPushConfigured } from "../services/push.service.js";
 import { isSmsConfigured, sendSms } from "../services/sms.service.js";
 import { isTelegramConfigured } from "../services/telegram.service.js";
+import { whatsAppDisplayNumber } from "../services/whatsapp.service.js";
 import { maskEmail, maskPhone } from "../utils/phone.js";
 import type { RequestCodeInput, VerifyCodeInput } from "../validators/passenger.validator.js";
 
@@ -38,6 +39,8 @@ export const channels = (_req: Request, res: Response) => {
     sms: channelAvailable("phone"),
     push: isPushConfigured(),
     telegram: isTelegramConfigured(),
+    // The bot's number for "Chat on WhatsApp" buttons, or null when the bot is off
+    whatsapp: whatsAppDisplayNumber(),
   });
 };
 

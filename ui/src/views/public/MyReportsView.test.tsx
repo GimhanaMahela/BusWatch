@@ -33,7 +33,13 @@ describe("MyReportsView", () => {
   afterEach(() => passengerSession.set(null));
 
   it("asks for an email address only when SMS is switched off", async () => {
-    mockedChannels.mockResolvedValue({ email: true, sms: false, push: false, telegram: false });
+    mockedChannels.mockResolvedValue({
+      email: true,
+      sms: false,
+      push: false,
+      telegram: false,
+      whatsapp: null,
+    });
     renderWithProviders(<MyReportsView />);
     expect(await screen.findByLabelText("Email address")).toBeInTheDocument();
     expect(screen.queryByLabelText("Email or mobile number")).not.toBeInTheDocument();

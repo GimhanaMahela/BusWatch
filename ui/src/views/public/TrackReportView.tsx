@@ -7,6 +7,7 @@ import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import {
   Alert,
   Box,
@@ -30,6 +31,7 @@ import {
   PushToggle,
   ReportConversation,
   TelegramFollow,
+  WhatsAppFollow,
 } from "@/components/organisms";
 import { HeroBand } from "@/components/templates";
 import type { ReportStatus } from "@/constants/reportConstants";
@@ -44,6 +46,8 @@ const PIPELINE: ReportStatus[] = ["pending", "reviewed", "escalated", "resolved"
 const SYSTEM_NOTES = {
   "Report received.": "noteReportReceived",
   "Commendation received.": "noteCommendationReceived",
+  "Lost item report received. We've passed it on to the bus operator where we can.":
+    "noteLostReceived",
 } as const;
 
 function StatusPipeline({ status }: { status: ReportStatus }) {
@@ -120,6 +124,7 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
   const t = useTranslations("track");
   const tStatus = useTranslations("statuses");
   const tCategory = useTranslations("categories");
+  const tIssue = useTranslations("accessibilityIssues");
   const tShare = useTranslations("share");
   const format = useFormatter();
   const router = useRouter();
@@ -167,7 +172,8 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
   };
 
   const commendation = report?.type === "commendation";
-  const descriptions = commendation ? "commend" : "complaint";
+  const lost = report?.type === "lost_item";
+  const descriptions = commendation ? "commend" : lost ? "lost" : "complaint";
 
   return (
     <>
@@ -241,6 +247,15 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                           icon={<ThumbUpAltRoundedIcon />}
                           label={t("commendation")}
                           color="success"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      {lost && (
+                        <Chip
+                          icon={<TravelExploreRoundedIcon />}
+                          label={t("lostItem")}
+                          color="info"
                           variant="outlined"
                           size="small"
                         />
@@ -360,12 +375,29 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
               <Stack spacing={3}>
                 {report.canRate && <OutcomeRating key={report.ratedAt ?? "new"} report={report} />}
                 <PushToggle receiptId={report.receiptId} />
+                <WhatsAppFollow receiptId={report.receiptId} />
                 <TelegramFollow receiptId={report.receiptId} />
                 <Card sx={{ p: { xs: 2.5, sm: 3 } }}>
                   <Typography variant="subtitle1" component="h2" sx={{ mb: 1 }}>
                     {t("details")}
                   </Typography>
                   <DetailRow label={t("category")}>{tCategory(report.category)}</DetailRow>
+                  {report.details?.accessibility && (
+                    <DetailRow label={t("accessibilityIssues")}>
+                      {report.details.accessibility.map((issue) => tIssue(issue)).join(", ")}
+                    </DetailRow>
+                  )}
+                  {report.details?.fare && (
+                    <DetailRow label={t("officialFare")}>
+                      {t("fareValue", {
+                        official: report.details.fare.officialFare,
+                        from: report.details.fare.from,
+                        to: report.details.fare.to,
+                      })}
+                      {report.details.fare.chargedFare !== null &&
+                        ` · ${t("farePaid", { charged: report.details.fare.chargedFare })}`}
+                    </DetailRow>
+                  )}
                   <DetailRow label={t("bus")}>{report.busNumber}</DetailRow>
                   <DetailRow label={t("route")}>{report.routeNumber}</DetailRow>
                   {report.location && (

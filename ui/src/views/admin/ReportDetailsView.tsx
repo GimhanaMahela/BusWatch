@@ -17,8 +17,11 @@ import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import StickyNote2RoundedIcon from "@mui/icons-material/StickyNote2Rounded";
 import {
@@ -49,7 +52,10 @@ import {
   MIN_PUBLIC_REPORTS,
   PUBLIC_STATUSES,
   STATUSES,
+  accessibilityLabel,
   categoryLabel,
+  safetyKindLabel,
+  serviceClassLabel,
   languageLabel,
   type ReportStatus,
 } from "@/constants/reportConstants";
@@ -290,6 +296,8 @@ function ReportDetailsView({ id }: { id: string }) {
   ];
   const hasPin = report.latitude != null && report.longitude != null;
   const commendation = report.type === "commendation";
+  const lost = report.type === "lost_item";
+  const details = report.details;
   const checked = (PUBLIC_STATUSES as readonly string[]).includes(report.status);
   const countsPublicly = checked && !report.hiddenFromPublic;
 
@@ -336,6 +344,26 @@ function ReportDetailsView({ id }: { id: string }) {
             size="small"
           />
         )}
+        {lost && (
+          <Chip
+            icon={<TravelExploreRoundedIcon />}
+            label="Lost item"
+            color="info"
+            variant="outlined"
+            size="small"
+          />
+        )}
+        {details?.safety && (
+          <Chip
+            icon={<ShieldRoundedIcon />}
+            label="Safety mode (quick report)"
+            color="secondary"
+            size="small"
+          />
+        )}
+        {report.source === "whatsapp" && (
+          <Chip icon={<WhatsAppIcon />} label="From WhatsApp" variant="outlined" size="small" />
+        )}
         {report.source === "qr" && (
           <Chip
             icon={<QrCode2RoundedIcon />}
@@ -378,7 +406,7 @@ function ReportDetailsView({ id }: { id: string }) {
           )}
 
           <SectionPanel
-            title={commendation ? "Commendation" : "Incident"}
+            title={commendation ? "Commendation" : lost ? "Lost item" : "Incident"}
             icon={
               commendation ? (
                 <ThumbUpAltRoundedIcon fontSize="small" />
@@ -414,6 +442,37 @@ function ReportDetailsView({ id }: { id: string }) {
               <DetailRow label="Route">{report.routeNumber}</DetailRow>
               {report.busName && <DetailRow label="Bus name">{report.busName}</DetailRow>}
               <DetailRow label="Category">{categoryLabel(report.category)}</DetailRow>
+              {details?.accessibility && (
+                <DetailRow label="Accessibility issues">
+                  {details.accessibility.map(accessibilityLabel).join(", ")}
+                </DetailRow>
+              )}
+              {details?.safety && (
+                <DetailRow label="What happened (ticked)">
+                  {details.safety.kinds.length
+                    ? details.safety.kinds.map(safetyKindLabel).join(", ")
+                    : "Nothing ticked"}
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Official fare">
+                  Rs. {details.fare.officialFare} · {details.fare.from} → {details.fare.to} (
+                  {details.fare.stages} stage{details.fare.stages === 1 ? "" : "s"},{" "}
+                  {serviceClassLabel(details.fare.serviceClass)}, route {details.fare.routeNumber}
+                  {details.fare.effectiveFrom && `, fares from ${details.fare.effectiveFrom}`})
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Passenger paid">
+                  {details.fare.chargedFare === null
+                    ? "Not given"
+                    : `Rs. ${details.fare.chargedFare}${
+                        details.fare.chargedFare > details.fare.officialFare
+                          ? ` (Rs. ${details.fare.chargedFare - details.fare.officialFare} over)`
+                          : ""
+                      }`}
+                </DetailRow>
+              )}
               <DetailRow label="Location">{report.location || "Not given"}</DetailRow>
               {report.incidentAt && (
                 <DetailRow label="Incident time">{formatDateTime(report.incidentAt)}</DetailRow>
@@ -427,7 +486,11 @@ function ReportDetailsView({ id }: { id: string }) {
               </DetailRow>
               <DetailRow label="Language">{languageLabel(report.language)}</DetailRow>
               <DetailRow label="Sent from">
-                {report.source === "qr" ? "QR sticker in the bus" : "Website"}
+                {
+                  { qr: "QR sticker in the bus", whatsapp: "WhatsApp bot", web: "Website" }[
+                    report.source
+                  ]
+                }
               </DetailRow>
             </Box>
             {hasPin && (

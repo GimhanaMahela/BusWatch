@@ -1,4 +1,5 @@
 import type { ReportCategory, ReportStatus, ReportType } from "@/constants/reportConstants";
+import type { ReportDetails } from "@/types/report";
 
 /** A report as a bus operator sees it: no passenger details, receipt ID or internal notes. */
 export interface FleetReport {
@@ -22,6 +23,8 @@ export interface FleetReport {
   translation: string | null;
   /** List only: responses the operator has posted */
   responses?: number;
+  /** Accessibility issues, or the official fare for an overcharging complaint */
+  details: ReportDetails | null;
 }
 
 export interface OperatorResponse {
@@ -62,4 +65,7 @@ export interface FleetSummary {
   /** Open complaints without a response yet */
   awaitingResponse: number;
   topBuses: { busNumber: string; count: number }[];
+  lostItems: number;
+  /** Lost items not marked as found yet */
+  lostItemsOpen: number;
 }

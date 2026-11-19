@@ -1,9 +1,46 @@
 import type {
+  AccessibilityIssue,
   Language,
   ReportCategory,
   ReportStatus,
   ReportType,
+  SafetyKind,
+  ServiceClass,
 } from "@/constants/reportConstants";
+
+/** The official fare, worked out by the server from the admins' fare tables */
+export interface FareEvidence {
+  routeNumber: string;
+  routeName: string;
+  from: string;
+  to: string;
+  stages: number;
+  serviceClass: ServiceClass;
+  officialFare: number;
+  chargedFare: number | null;
+  effectiveFrom: string | null;
+}
+
+/** Structured extras for some categories */
+export interface ReportDetails {
+  accessibility?: AccessibilityIssue[];
+  fare?: FareEvidence;
+  /** Filed from the quick safety-mode form */
+  safety?: { kinds: SafetyKind[] };
+}
+
+/** What the browser sends: the fare is only the passenger's choice; the server looks it up */
+export interface ReportDetailsInput {
+  accessibility?: AccessibilityIssue[];
+  fare?: {
+    routeId: string;
+    from: number;
+    to: number;
+    serviceClass: ServiceClass;
+    charged?: number;
+  };
+  safety?: { kinds: SafetyKind[] };
+}
 
 export interface StatusChange {
   status: ReportStatus;
@@ -42,6 +79,9 @@ export interface PublicMessage {
   read: boolean;
 }
 
+/** How a report reached BusWatch: the website, its QR sticker link, or the WhatsApp bot */
+export type ReportSource = "web" | "qr" | "whatsapp";
+
 /** Which channels reached the passenger after an update */
 export interface Delivery {
   email: boolean;
@@ -50,6 +90,8 @@ export interface Delivery {
   push: number;
   /** Telegram chats reached */
   telegram: number;
+  /** WhatsApp numbers reached */
+  whatsapp: number;
 }
 
 /** A "me too" confirmation from another passenger, as admins see it */
@@ -57,7 +99,7 @@ export interface ReportConfirmation {
   id: string;
   comment: string | null;
   language: Language;
-  source: "web" | "qr";
+  source: ReportSource;
   createdAt: string;
 }
 
@@ -115,7 +157,7 @@ export interface Report {
   passengerEmail?: string;
   passengerPhone?: string | null;
   language: Language;
-  source: "web" | "qr";
+  source: ReportSource;
   status: ReportStatus;
   statusHistory?: StatusChange[];
   notes?: InternalNote[];
@@ -139,6 +181,7 @@ export interface Report {
   blurredImages?: string[] | null;
   /** Details page: operator accounts that run this bus */
   operators?: { id: string; email: string; organisation: string | null }[];
+  details?: ReportDetails | null;
 }
 
 /** What the public tracking endpoint returns */
@@ -166,6 +209,7 @@ export interface PublicReport {
   confirmations: number;
   /** What the bus operator said they did */
   operatorResponses: { body: string; organisation: string | null; createdAt: string }[];
+  details?: ReportDetails | null;
 }
 
 export interface SubmitReportFields {
@@ -182,8 +226,10 @@ export interface SubmitReportFields {
   passengerEmail?: string;
   passengerPhone?: string;
   language?: Language;
-  source?: "web" | "qr";
+  source?: ReportSource;
   website?: string;
+  /** JSON of ReportDetailsInput (multipart forms send strings) */
+  details?: string;
 }
 
 export interface SubmitReportResponse {
@@ -226,6 +272,13 @@ export interface ReportStats {
   avgResolutionHours: number | null;
   resolvedWithTiming: number;
   commendations: CommendationStats;
+  lostItems: {
+    total: number;
+    last30Days: number;
+    open: number;
+    found: number;
+    byStatus: Record<ReportStatus, number>;
+  };
   engagement: EngagementStats;
 }
 
@@ -271,9 +324,16 @@ export interface EngagementStats {
   myReportsSignins: number;
   pushSubscriptions: number;
   telegramLinks: number;
+  whatsappMessages: number;
+  whatsappLinks: number;
   // Wider ecosystem (Phase 4)
   confirmationsOffered: number;
   reportConfirmations: number;
+  // Passenger safety (Phase 5)
+  faresChecked: number;
+  safetyReports: number;
+  tripsShared: number;
+  emergencyShown: number;
 }
 
 /** A report in "My reports" */

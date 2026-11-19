@@ -19,6 +19,7 @@ import { BrandMark, QrCode } from "@/components/atoms";
 import { EmptyState, PageHeader, SectionPanel } from "@/components/molecules";
 import useIsClient from "@/hooks/useIsClient";
 import { parseBusNumber, parseRoute, qrShortPath } from "@/lib/busNumber";
+import { activeTheme } from "@/theme/themes";
 
 // The sticker speaks all three languages: passengers scan it before choosing one on the site
 const CALL_TO_ACTION = [
@@ -64,6 +65,14 @@ const parseLines = (text: string) => {
   return { stickers, invalid };
 };
 
+// Stickers are printed on white whatever the console's colour mode: use the theme's light colours
+const STICKER = {
+  ink: activeTheme.light.text.primary,
+  muted: activeTheme.light.text.secondary,
+  accent: activeTheme.light.primary.main,
+  wordmark: activeTheme.light.textGradient,
+};
+
 function Sticker({ bus, route, origin, layout }: StickerLine & { origin: string; layout: Layout }) {
   const size = LAYOUTS[layout];
   const url = `${origin}${qrShortPath(bus, route)}`;
@@ -78,7 +87,7 @@ function Sticker({ bus, route, origin, layout }: StickerLine & { origin: string;
         border: "1px dashed #9AA3B8", // cut line
         borderRadius: "4mm",
         bgcolor: "#fff",
-        color: "#0B1220",
+        color: STICKER.ink,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -102,14 +111,16 @@ function Sticker({ bus, route, origin, layout }: StickerLine & { origin: string;
         {/* Stickers are always white; keep the wordmark dark even in the console's dark mode */}
         <Box
           sx={{
-            "& .MuiTypography-root": { color: "#0B1220" },
-            "& .MuiTypography-root span": { color: "#2457F5" },
+            "& .MuiTypography-root": { color: STICKER.ink },
+            "& .MuiTypography-root span": { background: STICKER.wordmark },
           }}
         >
           <BrandMark size={large ? 30 : 22} />
         </Box>
         <Box sx={{ textAlign: "right" }}>
-          <Typography sx={{ fontSize: large ? "9pt" : "7pt", color: "#5B6478", lineHeight: 1.2 }}>
+          <Typography
+            sx={{ fontSize: large ? "9pt" : "7pt", color: STICKER.muted, lineHeight: 1.2 }}
+          >
             Bus · බස් · பேருந்து
           </Typography>
           <Typography
@@ -130,7 +141,13 @@ function Sticker({ bus, route, origin, layout }: StickerLine & { origin: string;
         </Box>
       </Box>
 
-      <Box sx={{ p: large ? "3mm" : "2mm", borderRadius: "3mm", border: "2px solid #2457F5" }}>
+      <Box
+        sx={{
+          p: large ? "3mm" : "2mm",
+          borderRadius: "3mm",
+          border: `2px solid ${STICKER.accent}`,
+        }}
+      >
         <QrCode value={url} size={size.qr} title={`QR code for bus ${bus}`} />
       </Box>
 
@@ -152,7 +169,7 @@ function Sticker({ bus, route, origin, layout }: StickerLine & { origin: string;
           sx={{
             mt: large ? "1mm" : "0.5mm",
             fontSize: large ? "9pt" : "6.5pt",
-            color: "#5B6478",
+            color: STICKER.muted,
             fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
           }}
         >

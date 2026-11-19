@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { Request, Response } from "express";
 import { CATEGORIES_BY_TYPE } from "../config/constants.js";
 import { countEvent } from "../repositories/metric.repository.js";
@@ -11,6 +10,7 @@ import {
   type ReportWithRelations,
 } from "../repositories/report.repository.js";
 import {
+  AiServiceError,
   AiUnavailableError,
   analyseReport,
   blurImages,
@@ -32,11 +32,15 @@ const sendAiError = (res: Response, error: unknown) => {
     res.status(503).json({ msg: error.message });
     return;
   }
-  if (error instanceof Anthropic.RateLimitError) {
-    res.status(503).json({ msg: "The AI service is busy. Try again in a minute." });
+  if (error instanceof AiServiceError && error.status === 429) {
+    res.status(503).json({ msg: "The free AI quota is used up for now. Try again in a minute." });
     return;
   }
-  if (error instanceof Anthropic.APIError) {
+  if (error instanceof AiServiceError && error.status >= 500) {
+    res.status(503).json({ msg: "The AI service is busy right now. Try again in a minute." });
+    return;
+  }
+  if (error instanceof AiServiceError) {
     console.error("AI request failed:", error.status, error.message);
     res.status(502).json({ msg: "The AI service could not help with this report right now." });
     return;

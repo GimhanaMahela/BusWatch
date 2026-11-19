@@ -10,13 +10,16 @@ import EmailRoundedIcon from "@mui/icons-material/EmailRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
 import {
   Alert,
   Box,
   Button,
   Card,
+  Collapse,
   Container,
   Divider,
   Grid,
@@ -47,7 +50,9 @@ import { findSimilarReports } from "@/api/reportApi";
 import { GradientButton } from "@/components/atoms";
 import {
   CategoryPicker,
+  ChoiceChips,
   DetailRow,
+  EmergencyBanner,
   LocationPicker,
   MediaDropzone,
   PhoneField,
@@ -55,25 +60,35 @@ import {
 import type { LatLng } from "@/components/molecules/LocationPicker";
 import {
   ConfirmedPanel,
+  FareChecker,
   MeTooDialog,
   QueuedPanel,
   SubmittedPanel,
   type Receipt,
 } from "@/components/organisms";
-import { CATEGORIES, type ComplaintCategory, type Language } from "@/constants/reportConstants";
+import {
+  ACCESSIBILITY_ISSUES,
+  CATEGORIES,
+  type AccessibilityIssue,
+  type ComplaintCategory,
+  type Language,
+} from "@/constants/reportConstants";
+import useEmergencyCheck from "@/hooks/useEmergencyCheck";
+import { parseFareParams } from "@/lib/fareLink";
+import type { FareCheckResult, FareSelection } from "@/types/fare";
 import { useSmsAvailable } from "@/hooks/useContactChannels";
 import useFormDraft from "@/hooks/useFormDraft";
 import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
 import { submitOrQueue } from "@/lib/offlineSubmit";
+import { REPORT_DRAFT_KEY as DRAFT_KEY } from "@/lib/reportDraft";
 import { rememberReceipt } from "@/lib/trackingHistory";
-import type { SimilarReport } from "@/types/report";
+import type { ReportDetailsInput, SimilarReport } from "@/types/report";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // Must match the backend upload limit
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 2;
 const MAX_DESCRIPTION = 2000;
-const DRAFT_KEY = "submit-report";
 
 interface ReportForm {
   busNumber: string;
@@ -108,7 +123,14 @@ interface Draft {
   videos: File[];
   step: number;
   source: "web" | "qr";
+  /** Accessibility complaints: what went wrong */
+  accessibility?: AccessibilityIssue[];
+  /** Overcharging complaints: the fare check to attach */
+  fare?: FareSelection | null;
 }
+
+const isComplaintCategory = (value: string | null): value is ComplaintCategory =>
+  CATEGORIES.some((c) => c.value === value);
 
 // A bus and route number alone (e.g. pre-filled from a QR code) isn't worth restoring later
 const isEmptyDraft = ({ form, images, videos, coords }: Draft) =>
@@ -149,6 +171,7 @@ function SubmitReportView() {
   const tc = useTranslations("common");
   const tCategory = useTranslations("categories");
   const tMedia = useTranslations("media");
+  const tIssue = useTranslations("accessibilityIssues");
   const locale = useLocale() as Language;
   const online = useOnlineStatus();
 
@@ -157,7 +180,15 @@ function SubmitReportView() {
   const qrBus = parseBusNumber(searchParams.get("bus"));
   const qrRoute = parseRoute(searchParams.get("route"));
   const fromQr = searchParams.get("src") === "qr";
-  const prefilled = { ...EMPTY_FORM, busNumber: qrBus, routeNumber: qrRoute };
+  // From the fare checker: an overcharging complaint with the fare check filled in
+  const linkedCategory = searchParams.get("category");
+  const linkedFare = useMemo(() => parseFareParams(searchParams), [searchParams]);
+  const prefilled = {
+    ...EMPTY_FORM,
+    busNumber: qrBus,
+    routeNumber: qrRoute,
+    category: isComplaintCategory(linkedCategory) ? linkedCategory : ("" as const),
+  };
 
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<ReportForm>(prefilled);
@@ -166,6 +197,11 @@ function SubmitReportView() {
   const [videos, setVideos] = useState<File[]>([]);
   const [source, setSource] = useState<"web" | "qr">(fromQr ? "qr" : "web");
   const [categoryError, setCategoryError] = useState(false);
+  const [accessibility, setAccessibility] = useState<AccessibilityIssue[]>([]);
+  const [accessibilityError, setAccessibilityError] = useState(false);
+  const [fare, setFare] = useState<FareSelection | null>(linkedFare);
+  const [fareResult, setFareResult] = useState<FareCheckResult | null>(null);
+  const [fareOpen, setFareOpen] = useState(Boolean(linkedFare));
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
   const [result, setResult] = useState<Result | null>(null);
@@ -186,9 +222,11 @@ function SubmitReportView() {
     if (fromQr && qrBus && isNewQrScan(qrBus)) trackEvent("qr_scan");
   }, [fromQr, qrBus]);
 
+  const emergency = useEmergencyCheck(formData.description, locale);
+
   const draft = useMemo<Draft>(
-    () => ({ form: formData, coords, images, videos, step, source }),
-    [formData, coords, images, videos, step, source],
+    () => ({ form: formData, coords, images, videos, step, source, accessibility, fare }),
+    [formData, coords, images, videos, step, source, accessibility, fare],
   );
   const {
     restoredAt,
@@ -207,6 +245,8 @@ function SubmitReportView() {
       setVideos(saved.videos);
       setStep(Math.min(Math.max(saved.step, 0), STEPS.length - 1));
       setSource(fromQr ? "qr" : saved.source);
+      setAccessibility(saved.accessibility ?? []);
+      if (!linkedFare) setFare(saved.fare ?? null);
       started.current = true; // a restored draft was already counted as started
       return true;
     },
@@ -222,14 +262,23 @@ function SubmitReportView() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  /** Extras for this category: the accessibility checklist or the fare check */
+  const details = (): ReportDetailsInput | null => {
+    if (formData.category === "accessibility") return { accessibility };
+    if (formData.category === "overcharging" && fare && fareResult) return { fare };
+    return null;
+  };
+
   const send = async () => {
     setSubmitting(true);
     setErrorText("");
+    const extras = details();
     try {
       const outcome = await submitOrQueue(
         {
           ...formData,
           type: "complaint",
+          ...(extras && { details: JSON.stringify(extras) }),
           // datetime-local has no timezone; send an unambiguous ISO timestamp
           incidentAt: formData.incidentAt ? new Date(formData.incidentAt).toISOString() : "",
           latitude: coords ? coords.lat : "",
@@ -309,6 +358,10 @@ function SubmitReportView() {
       setCategoryError(true);
       return;
     }
+    if (step === 1 && formData.category === "accessibility" && !accessibility.length) {
+      setAccessibilityError(true);
+      return;
+    }
     if (step === 1) void checkSimilar();
     else if (step < STEPS.length - 1) goTo(step + 1);
     else void send();
@@ -322,6 +375,9 @@ function SubmitReportView() {
     setVideos([]);
     setResult(null);
     setSimilar(null);
+    setAccessibility([]);
+    setFare(null);
+    setFareResult(null);
     declinedSimilar.current = "";
     setStep(0);
     started.current = false;
@@ -394,6 +450,23 @@ function SubmitReportView() {
         }}
         error={categoryError ? t("chooseCategory") : undefined}
       />
+      {formData.category === "harassment" && (
+        <Alert
+          severity="info"
+          icon={<ShieldRoundedIcon />}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              href={`/safety${busQuery(formData.busNumber, formData.routeNumber)}`}
+            >
+              {t("safetyOpen")}
+            </Button>
+          }
+        >
+          {t("safetyHint")}
+        </Alert>
+      )}
       <Typography variant="body2" color="text.secondary">
         {t.rich("commendInstead", {
           link: (chunks) => <Link href={commendHref}>{chunks}</Link>,
@@ -403,6 +476,53 @@ function SubmitReportView() {
 
     // 1: What happened
     <Box key="incident" sx={{ display: "grid", gap: 2.5 }}>
+      {formData.category === "accessibility" && (
+        <ChoiceChips
+          required
+          label={t("accessibilityQuestion")}
+          options={ACCESSIBILITY_ISSUES.map((i) => ({
+            value: i.value,
+            label: tIssue(i.value),
+          }))}
+          value={accessibility}
+          onChange={(issues) => {
+            setAccessibility(issues);
+            setAccessibilityError(false);
+          }}
+          error={accessibilityError ? t("accessibilityRequired") : undefined}
+        />
+      )}
+      {formData.category === "overcharging" && (
+        <Box sx={{ borderRadius: 3, border: 1, borderColor: "divider", p: 2 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}
+          >
+            <Box>
+              <Typography variant="subtitle2">{t("fareTitle")}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {fareResult ? t("fareAttached", { fare: fareResult.officialFare }) : t("fareHint")}
+              </Typography>
+            </Box>
+            {!fareOpen && (
+              <Button startIcon={<PaymentsRoundedIcon />} onClick={() => setFareOpen(true)}>
+                {t("fareOpen")}
+              </Button>
+            )}
+          </Box>
+          <Collapse in={fareOpen} unmountOnExit>
+            <Box sx={{ mt: 2 }}>
+              <FareChecker
+                routeNumber={formData.routeNumber}
+                initial={fare ?? undefined}
+                onResult={(selection, checked) => {
+                  setFare(selection);
+                  setFareResult(checked);
+                }}
+              />
+            </Box>
+          </Collapse>
+        </Box>
+      )}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
@@ -511,7 +631,18 @@ function SubmitReportView() {
         <DetailRow label={t("reviewRoute")}>{formData.routeNumber}</DetailRow>
         <DetailRow label={t("reviewCategory")}>
           {formData.category ? tCategory(formData.category) : ""}
+          {formData.category === "accessibility" &&
+            accessibility.length > 0 &&
+            `: ${accessibility.map((i) => tIssue(i)).join(", ")}`}
         </DetailRow>
+        {formData.category === "overcharging" && fareResult && (
+          <DetailRow label={t("reviewFare")}>
+            {t("reviewFareValue", {
+              official: fareResult.officialFare,
+              charged: fareResult.chargedFare ?? "-",
+            })}
+          </DetailRow>
+        )}
         <DetailRow label={t("reviewWhen")}>
           {formData.incidentAt ? new Date(formData.incidentAt).toLocaleString() : t("justNow")}
         </DetailRow>
@@ -546,7 +677,20 @@ function SubmitReportView() {
     <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
       <Grid container spacing={{ xs: 3, md: 6 }}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box sx={{ position: { md: "sticky" }, top: { md: 104 } }}>
+          <Box
+            sx={{
+              position: { md: "sticky" },
+              top: { md: 104 },
+              p: { xs: 2.5, md: 3.5 },
+              borderRadius: { xs: "22px", md: "28px" },
+              border: 1,
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              boxShadow: "var(--bw-shadow-card)",
+              backgroundImage:
+                "radial-gradient(120% 60% at 0% 0%, rgba(var(--mui-palette-primary-mainChannel) / 0.12), transparent 60%)",
+            }}
+          >
             <Typography variant="overline" color="primary" component="p">
               {t("eyebrow")}
             </Typography>
@@ -598,6 +742,9 @@ function SubmitReportView() {
               >
                 {t("draftRestored")}
               </Alert>
+            )}
+            {emergency.kind && (
+              <EmergencyBanner kind={emergency.kind} onDismiss={emergency.dismiss} />
             )}
             {fromQr && qrBus && step === 0 && !restoredAt && (
               <Alert severity="success" icon={<QrCode2RoundedIcon />}>

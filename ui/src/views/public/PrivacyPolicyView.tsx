@@ -114,11 +114,28 @@ const SECTIONS: ContentSection[] = [
           you confirm, and other passengers only ever see a count.
         </p>
         <p>
-          To handle reports faster, our team may use an AI service (Claude, by Anthropic) to
-          translate a report into English, suggest a category, summarise it, or find faces and
-          number plates in photos so they can be blurred. Only the report&apos;s text, bus and route
-          details and photos are sent, never your email address or mobile number. The results are
-          suggestions for our team and are not shown publicly.
+          To handle reports faster, our team may use an AI service (Gemini, by Google) to translate
+          a report into English, suggest a category, summarise it, or find faces and number plates
+          in photos so they can be blurred. Only the report&apos;s text, bus and route details and
+          photos are sent, never your email address or mobile number. The results are suggestions
+          for our team and are not shown publicly. We use Google&apos;s free service, so Google may
+          keep what is sent and use it to improve its products.
+        </p>
+        <p>
+          The BusWatch helper chat also uses Gemini. What you type in the chat is sent to Google to
+          write the answers and is kept only in your browser tab, not by BusWatch. Please don&apos;t
+          share names, phone numbers or other personal details in the chat. The helper never sends a
+          report for you: it fills in the form, and you decide whether to send it.
+        </p>
+        <p>
+          If you write to BusWatch on WhatsApp, we receive your WhatsApp number and your messages,
+          photos, videos, voice notes and any location you share. While you are writing a report the
+          conversation is kept so the helper can follow it, and your messages and voice notes are
+          sent to Gemini to understand them. The conversation is deleted when you send or cancel the
+          report, when you write STOP, or after a day without messages. A report you send is kept
+          like any other, with your WhatsApp number as its mobile number so you get updates there
+          and can find it in My reports. WhatsApp (Meta) delivers the messages under its own privacy
+          policy. Send STOP at any time to stop all updates.
         </p>
         <h3>Bus operators</h3>
         <p>

@@ -532,18 +532,49 @@ const getEngagementStats = async (now: Date) => {
     myReportsSignins: metrics.my_reports_signin,
     pushSubscriptions: metrics.push_subscribed,
     telegramLinks: metrics.telegram_linked,
+    whatsappMessages: metrics.whatsapp_message,
+    whatsappLinks: metrics.whatsapp_linked,
     // Wider ecosystem (Phase 4)
     confirmationsOffered: metrics.confirmation_offered,
     reportConfirmations: metrics.report_confirmed,
+    // Passenger safety (Phase 5)
+    faresChecked: metrics.fare_checked,
+    safetyReports: metrics.safety_report_submitted,
+    tripsShared: metrics.trip_share_started,
+    emergencyShown: metrics.emergency_shown,
+  };
+};
+
+/** "Lost something?" reports: how many, and how many were found. */
+const getLostItemStats = async (now: Date) => {
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+  const isLost = eq(reports.type, "lost_item");
+  const [total, last30Days, byStatusRows] = await Promise.all([
+    db.$count(reports, isLost),
+    db.$count(reports, and(isLost, gte(reports.reportedAt, thirtyDaysAgo))),
+    db
+      .select({ status: reports.status, count: countInt })
+      .from(reports)
+      .where(isLost)
+      .groupBy(reports.status),
+  ]);
+  const byStatus = statusCounts(byStatusRows);
+  return {
+    total,
+    last30Days,
+    open: OPEN_STATUSES.reduce((sum, s) => sum + byStatus[s], 0),
+    found: byStatus.resolved,
+    byStatus,
   };
 };
 
 export const getReportStats = async () => {
   const now = new Date();
-  const [complaints, commendations, engagement] = await Promise.all([
+  const [complaints, commendations, lostItems, engagement] = await Promise.all([
     getComplaintStats(now),
     getCommendationStats(now),
+    getLostItemStats(now),
     getEngagementStats(now),
   ]);
-  return { ...complaints, commendations, engagement };
+  return { ...complaints, commendations, lostItems, engagement };
 };

@@ -4,6 +4,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
 import { useTranslations } from "next-intl";
@@ -13,6 +14,7 @@ import { GradientButton } from "@/components/atoms";
 import { ResultCard, ShareButton } from "@/components/molecules";
 import PushToggle from "./PushToggle";
 import TelegramFollow from "./TelegramFollow";
+import WhatsAppFollow from "./WhatsAppFollow";
 import type { ReportType } from "@/constants/reportConstants";
 
 export interface Receipt {
@@ -38,6 +40,7 @@ function SubmittedPanel({
   const ts2 = useTranslations("statuses");
   const [copied, setCopied] = useState(false);
   const commendation = type === "commendation";
+  const lost = type === "lost_item";
   const trackPath = `/track/${encodeURIComponent(receipt.receiptId)}`;
 
   const copy = async () => {
@@ -52,14 +55,23 @@ function SubmittedPanel({
 
   return (
     <ResultCard
-      icon={commendation ? <ThumbUpAltRoundedIcon /> : <TaskAltRoundedIcon />}
+      icon={
+        commendation ? (
+          <ThumbUpAltRoundedIcon />
+        ) : lost ? (
+          <TravelExploreRoundedIcon />
+        ) : (
+          <TaskAltRoundedIcon />
+        )
+      }
       color="success"
     >
       <Typography variant="h4" component="h1" sx={{ mt: 3 }}>
-        {commendation ? t("commendTitle") : t("title")}
+        {commendation ? t("commendTitle") : lost ? t("lostTitle") : t("title")}
       </Typography>
       <Typography color="text.secondary" sx={{ mt: 1 }}>
         {commendation && `${t("commendText")} `}
+        {lost && `${t("lostText")} `}
         {t("saveId")}
         {receipt.emailSent && ` ${t("emailed")}`}
         {receipt.smsSent && ` ${t("texted")}`}
@@ -121,9 +133,10 @@ function SubmittedPanel({
         />
       </Box>
       <PushToggle receiptId={receipt.receiptId} compact />
+      <WhatsAppFollow receiptId={receipt.receiptId} compact />
       <TelegramFollow receiptId={receipt.receiptId} compact />
       <Button onClick={onReset} sx={{ mt: 2 }}>
-        {commendation ? t("anotherCommendation") : t("another")}
+        {commendation ? t("anotherCommendation") : lost ? t("anotherLost") : t("another")}
       </Button>
     </ResultCard>
   );

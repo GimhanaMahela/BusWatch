@@ -1,5 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import {
   AI_SUMMARY_MIN_LENGTH,
@@ -11,25 +9,133 @@ import {
 import { env } from "../config/env.js";
 import type { AiInsights } from "../db/schema.js";
 
-// AI help for admins (Phase 4), using Claude. Every call is on demand from an admin (or right after a
-// report is submitted with AI_AUTO_ANALYSE=true), and the result is only advice: admins decide.
+// AI help for admins (Phase 4), using Google Gemini on its free tier. Every call is on demand from an
+// admin (or right after a report is submitted with AI_AUTO_ANALYSE=true), and the result is only
+// advice: admins decide.
 
-export const isAiConfigured = () => Boolean(env.ANTHROPIC_API_KEY);
-
-let client: Anthropic | null = null;
-const getClient = () => {
-  if (!env.ANTHROPIC_API_KEY) throw new AiUnavailableError("AI help is not set up.");
-  client ??= new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: 60_000, maxRetries: 2 });
-  return client;
-};
+export const isAiConfigured = () => Boolean(env.GEMINI_API_KEY);
 
 export class AiUnavailableError extends Error {}
 
-// On a safety decline Claude re-runs the request on a fallback model chosen by refusal category
-const fallback = () => ({
-  betas: ["server-side-fallback-2026-07-01"],
-  fallbacks: "default" as const,
-});
+/** The Gemini API answered with an error status (429 means the free quota is used up for now). */
+export class AiServiceError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const TIMEOUT_MS = 60_000;
+// Gemini can reject photos larger than this when they are sent inline
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+
+// Reports describe harassment, assaults and abuse on buses. Google's default filters can block those
+// reports outright, which would leave exactly the serious ones without help.
+const SAFETY_SETTINGS = [
+  "HARM_CATEGORY_HARASSMENT",
+  "HARM_CATEGORY_HATE_SPEECH",
+  "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+  "HARM_CATEGORY_DANGEROUS_CONTENT",
+].map((category) => ({ category, threshold: "BLOCK_NONE" }));
+
+type Part = { text: string } | { inline_data: { mime_type: string; data: string } };
+
+/** One turn of a conversation: "user" is the person, "model" is Gemini. */
+export interface Turn {
+  role: "user" | "model";
+  parts: Part[];
+}
+
+interface GeminiResponse {
+  candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+  promptFeedback?: { blockReason?: string };
+  modelVersion?: string;
+}
+
+/** JSON Schema for Gemini's structured output (it rejects the "$schema" keyword). */
+const jsonSchema = (schema: z.ZodType) => {
+  const { $schema: _ignored, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
+  return rest;
+};
+
+const refusalError = () =>
+  new AiUnavailableError("The AI declined to analyse this report. Please review it yourself.");
+
+// Google's free tier is often briefly "experiencing high demand" (503) or over its per-minute quota
+// (429). Retry each model after a short wait, then move on to the fallback model, which has its own
+// free quota and is usually less busy.
+const RETRY_DELAYS_MS = [0, 1500, 4000];
+const BUSY = (status: number) => status === 429 || status >= 500;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Posts the request, retrying busy answers; resolves with the first good response. */
+const sendToGemini = async (body: string, apiKey: string) => {
+  const models = [...new Set([env.AI_MODEL, env.AI_FALLBACK_MODEL].filter(Boolean))];
+  let last: { status: number; detail: string } = { status: 503, detail: "No model to ask" };
+  for (const model of models) {
+    for (const delay of RETRY_DELAYS_MS) {
+      if (delay && env.NODE_ENV !== "test") await wait(delay);
+      const response = await fetch(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (response.ok) return { response, model };
+      const detail = await response.text().catch(() => "");
+      last = { status: response.status, detail: detail.slice(0, 500) || response.statusText };
+      if (!BUSY(response.status)) throw new AiServiceError(last.status, last.detail);
+      // Over quota: waiting a few seconds won't help, try the next model straight away
+      if (response.status === 429) break;
+    }
+  }
+  throw new AiServiceError(last.status, last.detail);
+};
+
+/**
+ * One structured-output request to Gemini, checked against the Zod schema. `input` is either the
+ * parts of a single question or a whole conversation (ending with the person's turn).
+ */
+export const generate = async <T extends z.ZodType>(
+  schema: T,
+  input: Part[] | Turn[],
+  system?: string,
+  temperature = 0.2,
+): Promise<{ data: z.infer<T>; model: string }> => {
+  if (!env.GEMINI_API_KEY) throw new AiUnavailableError("AI help is not set up.");
+  const body = JSON.stringify({
+    ...(system && { system_instruction: { parts: [{ text: system }] } }),
+    contents: input.every((item) => "role" in item) ? input : [{ role: "user", parts: input }],
+    safetySettings: SAFETY_SETTINGS,
+    generationConfig: {
+      temperature,
+      responseMimeType: "application/json",
+      responseJsonSchema: jsonSchema(schema),
+    },
+  });
+
+  const { response, model } = await sendToGemini(body, env.GEMINI_API_KEY);
+  const result = (await response.json()) as GeminiResponse;
+  if (result.promptFeedback?.blockReason) throw refusalError();
+  const candidate = result.candidates?.[0];
+  const text = candidate?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+  if (!text) {
+    if (candidate?.finishReason && candidate.finishReason !== "STOP") throw refusalError();
+    throw new Error("The AI response was empty");
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("The AI response could not be read");
+  }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) throw new Error("The AI response could not be read");
+  return { data: parsed.data, model: result.modelVersion ?? model };
+};
 
 const SYSTEM = `You help the volunteer team behind BusWatch, a Sri Lankan service where bus passengers report incidents (reckless driving, overcharging, harassment and so on) or commend drivers. Reports are written by passengers in English, Sinhala or Tamil, sometimes mixed or in transliterated "Singlish"/"Tanglish".
 
@@ -70,22 +176,14 @@ export interface ReportForAnalysis {
   description: string;
 }
 
-const refusalError = () =>
-  new AiUnavailableError("The AI declined to analyse this report. Please review it yourself.");
-
 /** Suggests a category, translates non-English text and summarises long reports. */
 export const analyseReport = async (report: ReportForAnalysis): Promise<AiInsights> => {
   const allowed = CATEGORIES_BY_TYPE[report.type];
-  const response = await getClient().beta.messages.parse({
-    model: env.AI_MODEL,
-    max_tokens: 16000,
-    ...fallback(),
-    system: SYSTEM,
-    output_config: { effort: "low", format: betaZodOutputFormat(insightsSchema) },
-    messages: [
+  const { data, model } = await generate(
+    insightsSchema,
+    [
       {
-        role: "user",
-        content: `Analyse this ${report.type === "commendation" ? "commendation (praise)" : "complaint"}.
+        text: `Analyse this ${{ complaint: "complaint", commendation: "commendation (praise)", lost_item: "lost item report (something the passenger left on a bus)" }[report.type]}.
 
 Choose suggestedCategory only from: ${allowed.join(", ")}.
 The passenger chose: ${report.category}.
@@ -100,65 +198,82 @@ ${report.description}
 </report>`,
       },
     ],
-  });
-
-  if (response.stop_reason === "refusal") throw refusalError();
-  const parsed = response.parsed_output;
-  if (!parsed) throw new Error("The AI response could not be read");
+    SYSTEM,
+  );
 
   return {
-    ...parsed,
+    ...data,
     // Never suggest a complaint category for praise (or the other way round)
-    suggestedCategory: allowed.includes(parsed.suggestedCategory)
-      ? parsed.suggestedCategory
+    suggestedCategory: allowed.includes(data.suggestedCategory)
+      ? data.suggestedCategory
       : report.category,
-    englishTranslation: parsed.detectedLanguage === "en" ? null : parsed.englishTranslation,
-    model: response.model,
+    englishTranslation: data.detectedLanguage === "en" ? null : data.englishTranslation,
+    model,
     generatedAt: new Date().toISOString(),
   };
 };
 
 // ---------------------------------------------------------------- Blurring faces and number plates
 
+// Gemini is trained to give boxes as [ymin, xmin, ymax, xmax] on a 0-1000 scale
 const regionsSchema = z.object({
   regions: z
     .array(
       z.object({
         kind: z.enum(["face", "number_plate"]),
-        // Fractions of the image size, from the top-left corner
-        x: z.number(),
-        y: z.number(),
-        width: z.number(),
-        height: z.number(),
+        box_2d: z.array(z.number()).length(4).describe("[ymin, xmin, ymax, xmax], 0 to 1000"),
       }),
     )
     .describe("Every visible human face and vehicle number plate, generously boxed"),
 });
 
-export type SensitiveRegion = z.infer<typeof regionsSchema>["regions"][number];
+/** A face or number plate, in fractions of the image size from the top-left corner. */
+export interface SensitiveRegion {
+  kind: "face" | "number_plate";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const CLOUDINARY_IMAGE = /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//;
+
+/** Downloads a photo to send inline (Gemini can't fetch URLs itself). */
+const downloadImage = async (url: string) => {
+  const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`Could not download the photo (${response.status})`);
+  const mimeType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
+  if (!mimeType.startsWith("image/")) throw new Error("The attachment is not a photo");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    throw new AiUnavailableError("A photo is too large for the AI to check.");
+  }
+  return { mime_type: mimeType, data: bytes.toString("base64") };
+};
 
 /** Finds faces and number plates in a photo, as boxes in fractions of the image size. */
 export const findSensitiveRegions = async (imageUrl: string): Promise<SensitiveRegion[]> => {
-  const response = await getClient().beta.messages.parse({
-    model: env.AI_MODEL,
-    max_tokens: 16000,
-    ...fallback(),
-    output_config: { effort: "medium", format: betaZodOutputFormat(regionsSchema) },
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "image", source: { type: "url", url: imageUrl } },
-          {
-            type: "text",
-            text: "This photo was attached to a passenger's report about a bus. To protect people's privacy before others see it, list every visible human face (including partly visible ones and people in the background) and every vehicle number plate. Give each box as fractions of the image width and height (0 to 1) from the top-left corner, with a little margin around it. Return an empty list if there are none.",
-          },
-        ],
-      },
-    ],
+  const { data } = await generate(regionsSchema, [
+    { inline_data: await downloadImage(imageUrl) },
+    {
+      text: "This photo was attached to a passenger's report about a bus. To protect people's privacy before others see it, find every visible human face (including partly visible ones and people in the background) and every vehicle number plate. Give each box as box_2d [ymin, xmin, ymax, xmax] normalised to 0-1000, with a little margin around it. Return an empty list if there are none.",
+    },
+  ]);
+  return data.regions.map(({ kind, box_2d }) => {
+    const [ymin, xmin, ymax, xmax] = box_2d.map((value) => clamp(value, 0, 1000) / 1000) as [
+      number,
+      number,
+      number,
+      number,
+    ];
+    return {
+      kind,
+      x: Math.min(xmin, xmax),
+      y: Math.min(ymin, ymax),
+      width: Math.abs(xmax - xmin),
+      height: Math.abs(ymax - ymin),
+    };
   });
-  if (response.stop_reason === "refusal") throw refusalError();
-  return response.parsed_output?.regions ?? [];
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -166,11 +281,11 @@ const fraction = (value: number) => clamp(value, 0, 0.999).toFixed(3);
 
 /**
  * A Cloudinary URL for the same photo with faces blurred by Cloudinary's own face detection, plus
- * every region Claude found. Regions use decimal (relative) coordinates, so no image size is needed.
+ * every region Gemini found. Regions use decimal (relative) coordinates, so no image size is needed.
  * Returns null for URLs that aren't Cloudinary uploads.
  */
 export const blurredCloudinaryUrl = (url: string, regions: SensitiveRegion[]): string | null => {
-  if (!/^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(url)) return null;
+  if (!CLOUDINARY_IMAGE.test(url)) return null;
   const steps = ["e_blur_faces:1000"];
   for (const region of regions) {
     // Pad the box by 3% on each side, staying inside the image
@@ -186,13 +301,15 @@ export const blurredCloudinaryUrl = (url: string, regions: SensitiveRegion[]): s
   return url.replace("/image/upload/", `/image/upload/${steps.join("/")}/`);
 };
 
-/** Blurred copies of every photo, in the same order. */
+/** Blurred copies of every Cloudinary photo, in the same order (others can't be blurred). */
 export const blurImages = async (urls: string[]) => {
   const results = await Promise.all(
-    urls.map(async (url) => {
-      const regions = await findSensitiveRegions(url);
-      return { url: blurredCloudinaryUrl(url, regions), regions: regions.length };
-    }),
+    urls
+      .filter((url) => CLOUDINARY_IMAGE.test(url))
+      .map(async (url) => {
+        const regions = await findSensitiveRegions(url);
+        return { url: blurredCloudinaryUrl(url, regions), regions: regions.length };
+      }),
   );
   return {
     urls: results.map((r) => r.url).filter((url): url is string => url !== null),

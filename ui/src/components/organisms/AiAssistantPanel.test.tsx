@@ -37,7 +37,7 @@ const report: Report = {
     categoryConfidence: "high",
     categoryReason: "Racing is reckless driving.",
     flags: ["possible_emergency"],
-    model: "claude-opus-5-5",
+    model: "gemini-flash-latest",
     generatedAt: "2026-11-05T08:01:00.000Z",
   },
   blurredImages: null,

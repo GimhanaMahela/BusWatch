@@ -3,7 +3,7 @@ import {
   COMPLAINT_CATEGORIES,
   CONFIRMATION,
   LANGUAGES,
-  REPORT_SOURCES,
+  WEB_REPORT_SOURCES,
 } from "../config/constants.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,7 +42,7 @@ export const confirmReportSchema = z.object({
     .optional()
     .transform((comment) => comment || undefined),
   language: z.enum(LANGUAGES).catch("en").default("en"),
-  source: z.enum(REPORT_SOURCES).catch("web").default("web"),
+  source: z.enum(WEB_REPORT_SOURCES).catch("web").default("web"),
   // Honeypot: hidden from people, filled in by bots
   website: z
     .string()

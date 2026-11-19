@@ -210,23 +210,32 @@ export const sendMessageEmail = async ({
   receiptId,
   body,
   language = "en",
+  operator,
 }: {
   toEmail: string;
   receiptId: string;
   body: string;
   language?: Language;
+  /** Set when the bus operator wrote it (operator portal), not the BusWatch team */
+  operator?: { organisation: string | null };
 }): Promise<boolean> => {
   if (!isEmailConfigured()) return false;
   const t = messagesFor(language).messageEmail;
-  const replyUrl = trackingUrl(receiptId, "#messages");
+  const replyUrl = trackingUrl(receiptId, operator ? "" : "#messages");
+  const intro = operator
+    ? t.operatorIntro(
+        escapeHtml(receiptId),
+        operator.organisation ? escapeHtml(operator.organisation) : null,
+      )
+    : t.intro(escapeHtml(receiptId));
   await transporter.sendMail({
     from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
     to: toEmail,
-    subject: t.subject(receiptId),
+    subject: operator ? t.operatorSubject(receiptId) : t.subject(receiptId),
     html: layout(
       language,
       `
-      <p style="font-size: 16px;">${t.intro(escapeHtml(receiptId))}</p>
+      <p style="font-size: 16px;">${intro}</p>
       <p style="font-size: 16px; background-color: #ffffff; border-left: 4px solid #0056b3; padding: 12px 16px; border-radius: 4px;">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>
       ${replyUrl ? `<div style="text-align: center; margin: 24px 0;"><a href="${replyUrl}" style="display: inline-block; background-color: #0056b3; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">${escapeHtml(t.replyLink)}</a></div>` : ""}
     `,

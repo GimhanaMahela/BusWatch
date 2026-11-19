@@ -1,19 +1,21 @@
 "use client";
 
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import { Alert, Box, Button, Card, Chip, Grid, TextField, Typography } from "@mui/material";
 import { useState, type FormEvent } from "react";
 import { ApiError, errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
-import { categoryLabel, statusLabel } from "@/constants/reportConstants";
+import { accessibilityLabel, categoryLabel, statusLabel } from "@/constants/reportConstants";
 import { useFleetReport, useRespondToReport } from "@/hooks/useOperatorQueries";
 import { formatDateTime, timeAgo } from "@/lib/format";
 
@@ -22,7 +24,9 @@ const MAX_RESPONSE = 2000; // Must match MAX_OPERATOR_RESPONSE_LENGTH in the API
 function OperatorReportView({ id }: { id: string }) {
   const report = useFleetReport(id);
   const respond = useRespondToReport(id);
+  const markFound = useRespondToReport(id, true);
   const [body, setBody] = useState("");
+  const [foundBody, setFoundBody] = useState("");
 
   if (report.isPending) return <LoadingState message="Loading the report..." />;
   if (report.error) {
@@ -44,6 +48,8 @@ function OperatorReportView({ id }: { id: string }) {
   }
   const r = report.data;
   const commendation = r.type === "commendation";
+  const lost = r.type === "lost_item";
+  const details = r.details;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -63,6 +69,15 @@ function OperatorReportView({ id }: { id: string }) {
         {commendation && (
           <Chip label="Commendation" color="success" variant="outlined" size="small" />
         )}
+        {lost && (
+          <Chip
+            icon={<TravelExploreRoundedIcon />}
+            label={r.status === "resolved" ? "Lost item · found" : "Lost item"}
+            color="info"
+            variant="outlined"
+            size="small"
+          />
+        )}
       </Box>
       <Typography color="text.secondary" sx={{ mb: 4 }}>
         {categoryLabel(r.category)} · reported {timeAgo(r.reportedAt)}
@@ -71,7 +86,13 @@ function OperatorReportView({ id }: { id: string }) {
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 8 }} sx={{ display: "grid", gap: 3, alignContent: "start" }}>
           <SectionPanel
-            title={commendation ? "What the passenger said" : "What the passenger reported"}
+            title={
+              commendation
+                ? "What the passenger said"
+                : lost
+                  ? "What the passenger lost"
+                  : "What the passenger reported"
+            }
             icon={<DescriptionRoundedIcon fontSize="small" />}
           >
             <Typography sx={{ whiteSpace: "pre-line", lineHeight: 1.75 }}>
@@ -121,9 +142,25 @@ function OperatorReportView({ id }: { id: string }) {
               <DetailRow label="Route">{r.routeNumber}</DetailRow>
               {r.busName && <DetailRow label="Bus name">{r.busName}</DetailRow>}
               <DetailRow label="Category">{categoryLabel(r.category)}</DetailRow>
-              <DetailRow label="Location">{r.location || "Not given"}</DetailRow>
+              {details?.accessibility && (
+                <DetailRow label="Accessibility issues">
+                  {details.accessibility.map(accessibilityLabel).join(", ")}
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Official fare">
+                  Rs. {details.fare.officialFare} ({details.fare.from} → {details.fare.to})
+                  {details.fare.chargedFare !== null &&
+                    `, passenger says they paid Rs. ${details.fare.chargedFare}`}
+                </DetailRow>
+              )}
+              <DetailRow label={lost ? "Got off at" : "Location"}>
+                {r.location || "Not given"}
+              </DetailRow>
               {r.incidentAt && (
-                <DetailRow label="Incident time">{formatDateTime(r.incidentAt)}</DetailRow>
+                <DetailRow label={lost ? "On the bus at" : "Incident time"}>
+                  {formatDateTime(r.incidentAt)}
+                </DetailRow>
               )}
               <DetailRow label="Reported">{formatDateTime(r.reportedAt)}</DetailRow>
             </Box>
@@ -135,9 +172,58 @@ function OperatorReportView({ id }: { id: string }) {
             )}
           </SectionPanel>
 
+          {lost && r.status !== "resolved" && (
+            <SectionPanel
+              title="Found it?"
+              subtitle="Say where and when the passenger can collect it. We tell them straight away by email, SMS or WhatsApp, and close the report."
+              icon={<TravelExploreRoundedIcon fontSize="small" />}
+            >
+              <Box
+                component="form"
+                onSubmit={(e: FormEvent) => {
+                  e.preventDefault();
+                  markFound.mutate(foundBody, { onSuccess: () => setFoundBody("") });
+                }}
+                sx={{ display: "grid", gap: 1.5 }}
+              >
+                {markFound.error && (
+                  <Alert severity="error">
+                    {errorMessage(markFound.error, "Could not mark it as found.")}
+                  </Alert>
+                )}
+                <TextField
+                  multiline
+                  minRows={3}
+                  required
+                  label="Where can they collect it?"
+                  placeholder="e.g. Found by the conductor. Collect from the Kadawatha depot office, 8am to 5pm, with ID."
+                  value={foundBody}
+                  onChange={(e) => setFoundBody(e.target.value)}
+                  slotProps={{ htmlInput: { maxLength: MAX_RESPONSE } }}
+                />
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="success"
+                    loading={markFound.isPending}
+                    disabled={!foundBody.trim()}
+                    startIcon={<CheckCircleRoundedIcon />}
+                  >
+                    We found it
+                  </Button>
+                </Box>
+              </Box>
+            </SectionPanel>
+          )}
+
           <SectionPanel
-            title="Your response"
-            subtitle="Tell the passenger what you did. They see it on their tracking page with your company name."
+            title={lost ? "Updates for the passenger" : "Your response"}
+            subtitle={
+              lost
+                ? "Not found yet, or need a detail? Write here: the passenger is told straight away."
+                : "Tell the passenger what you did. They see it on their tracking page with your company name."
+            }
             icon={<ChatBubbleOutlineRoundedIcon fontSize="small" />}
           >
             {r.responses.length > 0 && (

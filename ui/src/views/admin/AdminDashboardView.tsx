@@ -9,8 +9,10 @@ import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HourglassTopRoundedIcon from "@mui/icons-material/HourglassTopRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -25,7 +27,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Grid,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -46,6 +47,7 @@ import { EmptyState, PageHeader, StatTile } from "@/components/molecules";
 import {
   CATEGORIES,
   COMMENDATION_CATEGORIES,
+  LOST_ITEM_CATEGORIES,
   STATUSES,
   categoryLabel,
   type ReportType,
@@ -76,9 +78,11 @@ function AdminDashboardView() {
     FILTER_KEYS.map((k) => [k, searchParams.get(k) ?? ""]),
   ) as Record<FilterKey, string>;
   // Complaints and commendations are worked on separately; complaints are the default view
+  const requestedType = searchParams.get("type");
   const type: ReportType =
-    searchParams.get("type") === "commendation" ? "commendation" : "complaint";
+    requestedType === "commendation" || requestedType === "lost_item" ? requestedType : "complaint";
   const commendations = type === "commendation";
+  const lostItems = type === "lost_item";
   const page = Math.max(parseInt(searchParams.get("page") ?? "", 10) || 1, 1);
   const limit = parseInt(searchParams.get("limit") ?? "", 10) || 20;
 
@@ -121,17 +125,23 @@ function AdminDashboardView() {
 
   const clearFilters = () => {
     setSearchInput("");
-    router.replace(commendations ? "?type=commendation" : "?", { scroll: false });
+    router.replace(type === "complaint" ? "?" : `?type=${type}`, { scroll: false });
   };
 
   const switchType = (next: ReportType | null) => {
     if (!next || next === type) return;
     // Categories differ between the two types, so drop that filter
-    updateParams({ type: next === "commendation" ? next : null, category: null });
+    updateParams({ type: next === "complaint" ? null : next, category: null });
   };
 
-  const typeStats = stats.data && (commendations ? stats.data.commendations : stats.data);
-  const categoryOptions = commendations ? COMMENDATION_CATEGORIES : CATEGORIES;
+  const typeStats =
+    stats.data &&
+    (commendations ? stats.data.commendations : lostItems ? stats.data.lostItems : stats.data);
+  const categoryOptions = commendations
+    ? COMMENDATION_CATEGORIES
+    : lostItems
+      ? LOST_ITEM_CATEGORIES
+      : CATEGORIES;
 
   const confirmDelete = () => {
     if (!reportToDelete) return;
@@ -207,6 +217,11 @@ function AdminDashboardView() {
                 <QrCode2RoundedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
               </Tooltip>
             )}
+            {row.source === "whatsapp" && (
+              <Tooltip title="Sent through the WhatsApp bot">
+                <WhatsAppIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+              </Tooltip>
+            )}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Route {row.routeNumber}
@@ -273,7 +288,7 @@ function AdminDashboardView() {
     <>
       <PageHeader
         eyebrow="Workspace"
-        title={commendations ? "Commendations" : "Reports"}
+        title={commendations ? "Commendations" : lostItems ? "Lost items" : "Reports"}
         subtitle={admin ? `Welcome back, ${admin.email}` : undefined}
         actions={
           <>
@@ -312,18 +327,42 @@ function AdminDashboardView() {
           Commendations
           {stats.data && ` (${stats.data.commendations.total})`}
         </ToggleButton>
+        <ToggleButton value="lost_item" sx={{ px: 2, gap: 1, fontWeight: 650 }}>
+          <TravelExploreRoundedIcon fontSize="small" />
+          Lost items
+          {stats.data && ` (${stats.data.lostItems.total})`}
+        </ToggleButton>
       </ToggleButtonGroup>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 6, lg: 3 }}>
+      {/* Bento row: the total is the big tile, the rest fill in beside it */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", lg: "1.6fr 1fr 1fr 1fr" },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box sx={{ gridColumn: { xs: "span 2", lg: "span 1" } }}>
           <StatTile
-            label={commendations ? "Total commendations" : "Total reports"}
+            featured
+            label={
+              commendations ? "Total commendations" : lostItems ? "Lost items" : "Total reports"
+            }
             value={typeStats?.total ?? "–"}
-            icon={commendations ? <ThumbUpAltRoundedIcon /> : <InboxRoundedIcon />}
-            tone={commendations ? "success" : "primary"}
+            icon={
+              commendations ? (
+                <ThumbUpAltRoundedIcon />
+              ) : lostItems ? (
+                <TravelExploreRoundedIcon />
+              ) : (
+                <InboxRoundedIcon />
+              )
+            }
+            tone={commendations ? "success" : lostItems ? "info" : "primary"}
           />
-        </Grid>
-        <Grid size={{ xs: 6, lg: 3 }}>
+        </Box>
+        <Box>
           <StatTile
             label="Open"
             value={typeStats?.open ?? "–"}
@@ -331,24 +370,24 @@ function AdminDashboardView() {
             icon={<AssignmentLateRoundedIcon />}
             tone="secondary"
           />
-        </Grid>
-        <Grid size={{ xs: 6, lg: 3 }}>
+        </Box>
+        <Box>
           <StatTile
             label="Awaiting review"
             value={typeStats?.byStatus.pending ?? "–"}
             icon={<HourglassTopRoundedIcon />}
             tone="warning"
           />
-        </Grid>
-        <Grid size={{ xs: 6, lg: 3 }}>
+        </Box>
+        <Box>
           <StatTile
             label="Last 30 days"
             value={typeStats?.last30Days ?? "–"}
             icon={<CalendarMonthRoundedIcon />}
             tone="info"
           />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <Card sx={{ overflow: "hidden" }}>
         <Tabs
@@ -479,14 +518,18 @@ function AdminDashboardView() {
                     ? "Nothing matches these filters"
                     : commendations
                       ? "No commendations yet"
-                      : "No reports yet"
+                      : lostItems
+                        ? "No lost items yet"
+                        : "No reports yet"
                 }
                 description={
                   hasFilters
                     ? "Try a different search or clear the filters."
                     : commendations
                       ? "Praise for drivers and crews will appear here."
-                      : "New passenger reports will appear here."
+                      : lostItems
+                        ? "Things passengers left on buses will appear here."
+                        : "New passenger reports will appear here."
                 }
               />
             ),

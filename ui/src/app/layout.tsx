@@ -3,14 +3,27 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Noto_Sans_Sinhala, Noto_Sans_Tamil, Plus_Jakarta_Sans } from "next/font/google";
+import {
+  Bricolage_Grotesque,
+  Noto_Sans_Sinhala,
+  Noto_Sans_Tamil,
+  Plus_Jakarta_Sans,
+} from "next/font/google";
 import type { ReactNode } from "react";
+import { activeTheme } from "@/theme/themes";
 import Providers from "./providers";
 
 const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-sans",
+});
+
+// Headings in the display themes (see theme/themes.ts)
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
 });
 
 // Plus Jakarta Sans has no Sinhala or Tamil glyphs; the browser falls back to these per character
@@ -51,8 +64,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F5F7FB" },
-    { media: "(prefers-color-scheme: dark)", color: "#090D18" },
+    { media: "(prefers-color-scheme: light)", color: activeTheme.light.background.default },
+    { media: "(prefers-color-scheme: dark)", color: activeTheme.dark.background.default },
   ],
 };
 
@@ -61,7 +74,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html
       lang={locale}
-      className={`${sans.variable} ${sinhala.variable} ${tamil.variable}`}
+      className={`${sans.variable} ${display.variable} ${sinhala.variable} ${tamil.variable}`}
       suppressHydrationWarning
     >
       {/* Browser extensions (e.g. ColorZilla's cz-shortcut-listen) add attributes to <body> before

@@ -6,7 +6,10 @@ import { clearDraft, saveDraft } from "@/lib/offlineStore";
 import { mockSearchParams, renderWithProviders } from "@/test/renderWithProviders";
 import SubmitReportView from "./SubmitReportView";
 
-vi.mock("@/api/reportApi", () => ({ submitReport: vi.fn() }));
+vi.mock("@/api/reportApi", () => ({ submitReport: vi.fn(), findSimilarReports: vi.fn() }));
+vi.mock("@/api/assistantApi", () => ({
+  checkEmergency: () => Promise.resolve({ checked: false, emergency: false, kind: null }),
+}));
 const mockedSubmit = vi.mocked(submitReport);
 
 describe("SubmitReportView", () => {
@@ -66,6 +69,64 @@ describe("SubmitReportView", () => {
       [],
     );
     expect(screen.getByRole("button", { name: "බෙදාගන්න" })).toBeInTheDocument();
+  });
+
+  it("asks what went wrong on an accessibility complaint and sends it along", async () => {
+    mockSearchParams.current = new URLSearchParams("bus=NB-1234&route=08");
+    mockedSubmit.mockResolvedValue({
+      msg: "ok",
+      receiptId: "BW-2026-ACCESS",
+      pdfUrl: null,
+      emailSent: false,
+      report: {} as never,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SubmitReportView />);
+
+    await user.click(screen.getByRole("radio", { name: /Accessibility/ }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText(/Where/), "Kurunegala");
+    await user.type(screen.getByLabelText(/Describe what happened/), "Drove past my grandmother");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Tick at least one.")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("checkbox", { name: "Didn't stop for an elderly or disabled passenger" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    expect(await screen.findByText("BW-2026-ACCESS")).toBeInTheDocument();
+    expect(mockedSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "accessibility",
+        details: JSON.stringify({ accessibility: ["passed_by"] }),
+      }),
+      [],
+      [],
+    );
+  });
+
+  it("shows the emergency numbers as soon as the description sounds like one", async () => {
+    mockSearchParams.current = new URLSearchParams("bus=NB-1234&route=08");
+    const user = userEvent.setup();
+    renderWithProviders(<SubmitReportView />);
+
+    await user.click(screen.getByRole("radio", { name: /Reckless/ }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.queryByText("Is someone in danger right now?")).not.toBeInTheDocument();
+    await user.type(
+      screen.getByLabelText(/Describe what happened/),
+      "The bus crashed, people are injured",
+    );
+
+    expect(screen.getByText("Is someone in danger right now?")).toBeInTheDocument();
+    // The ambulance first for a crash
+    const calls = screen.getAllByRole("link", { name: /119|1990|110/ });
+    expect(calls[0]).toHaveAttribute("href", "tel:1990");
+    await user.click(screen.getByRole("button", { name: "No one is in danger, hide this" }));
+    expect(screen.queryByText("Is someone in danger right now?")).not.toBeInTheDocument();
   });
 
   it("restores an unfinished report and lets the passenger start over", async () => {

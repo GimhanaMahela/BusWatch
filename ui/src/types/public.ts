@@ -1,4 +1,4 @@
-import type { Language, ReportCategory } from "@/constants/reportConstants";
+import type { AccessibilityIssue, Language, ReportCategory } from "@/constants/reportConstants";
 
 // Shapes returned by the public, aggregated endpoints (/api/public/*): totals only, never
 // passenger details. Keep in sync with api/src/repositories/public.repository.ts.
@@ -67,6 +67,11 @@ interface ScorecardBase {
   since: string | null;
   complaints: ScorecardComplaints | null;
   commendations: { count: number; byCategory: CategoryCount[] } | null;
+  /** Accessibility complaints by issue; only with enough of them checked */
+  accessibility: {
+    checked: number;
+    byIssue: { issue: AccessibilityIssue; count: number }[];
+  } | null;
 }
 
 export interface BusScorecard extends ScorecardBase {

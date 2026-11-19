@@ -1,9 +1,13 @@
 import { z } from "zod";
 import {
+  ACCESSIBILITY_ISSUES,
   CATEGORIES_BY_TYPE,
+  FARES,
+  SAFETY_KINDS,
+  SERVICE_CLASSES,
   LANGUAGES,
   REPORT_CATEGORIES,
-  REPORT_SOURCES,
+  WEB_REPORT_SOURCES,
   REPORT_STATUSES,
   REPORT_TYPES,
 } from "../config/constants.js";
@@ -24,6 +28,49 @@ const requiredText = (field: string) =>
     .trim()
     .min(1, `${field} is required.`);
 
+/**
+ * Structured extras for some categories. Multipart forms send them as one JSON string. The fare is
+ * only the passenger's choice of route, stops and class: the server looks up the official fare.
+ */
+export const reportDetailsSchema = z
+  .object({
+    accessibility: z
+      .array(z.enum(ACCESSIBILITY_ISSUES, { error: "Invalid accessibility issue." }))
+      .min(1, "Tick what went wrong.")
+      .max(ACCESSIBILITY_ISSUES.length)
+      .transform((issues) => [...new Set(issues)])
+      .optional(),
+    fare: z
+      .object({
+        routeId: z.uuid({ error: "Choose the route again." }),
+        from: z.number().int().min(0).max(FARES.maxStops),
+        to: z.number().int().min(0).max(FARES.maxStops),
+        serviceClass: z.enum(SERVICE_CLASSES).default("normal"),
+        charged: z.number().int().min(0).max(FARES.maxFare).optional(),
+      })
+      .optional(),
+    safety: z
+      .object({
+        kinds: z
+          .array(z.enum(SAFETY_KINDS))
+          .max(SAFETY_KINDS.length)
+          .transform((kinds) => [...new Set(kinds)]),
+      })
+      .optional(),
+  })
+  .strict();
+
+export type ReportDetailsInput = z.infer<typeof reportDetailsSchema>;
+
+const parseJson = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value; // left as a string, so the schema reports it as invalid
+  }
+};
+
 // Allow a few minutes of clock skew between the passenger's device and the server
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
@@ -43,11 +90,17 @@ export const submitReportSchema = z
       blankToUndefined,
       z.enum(REPORT_CATEGORIES, { error: "Invalid incident category." }).default("other"),
     ),
-    // Required for complaints (checked below); optional when commending a driver
+    // Required for complaints (checked below); optional when commending a driver, for a lost item
+    // and on the quick safety-mode form
     location: optionalText,
-    description: requiredText("Description").max(
-      5000,
-      "Description must be 5000 characters or fewer.",
+    // Required, except on the quick safety-mode form (the ticked boxes say what happened)
+    description: z.preprocess(
+      blankToUndefined,
+      z.string().trim().max(5000, "Description must be 5000 characters or fewer.").optional(),
+    ),
+    details: z.preprocess(
+      (value) => parseJson(blankToUndefined(value)),
+      reportDetailsSchema.optional(),
     ),
     passengerEmail: z.preprocess(
       blankToUndefined,
@@ -81,7 +134,7 @@ export const submitReportSchema = z
     // The passenger's site language: their receipt and later emails use it
     language: z.preprocess(blankToUndefined, z.enum(LANGUAGES).catch("en").default("en")),
     // "qr" when the form was opened from the QR sticker inside the bus
-    source: z.preprocess(blankToUndefined, z.enum(REPORT_SOURCES).catch("web").default("web")),
+    source: z.preprocess(blankToUndefined, z.enum(WEB_REPORT_SOURCES).catch("web").default("web")),
     // Honeypot: hidden from people, filled in by bots
     website: z.preprocess(
       blankToUndefined,
@@ -92,14 +145,46 @@ export const submitReportSchema = z
     error: "Invalid map coordinates.",
     path: ["latitude"],
   })
-  .refine((data) => data.type === "commendation" || data.location !== undefined, {
-    error: "Location is required.",
-    path: ["location"],
+  .refine(
+    (data) => data.type !== "complaint" || data.details?.safety || data.location !== undefined,
+    { error: "Location is required.", path: ["location"] },
+  )
+  .refine((data) => data.details?.safety || data.description !== undefined, {
+    error: "Description is required.",
+    path: ["description"],
   })
   .refine((data) => CATEGORIES_BY_TYPE[data.type].includes(data.category), {
     error: "Invalid incident category.",
     path: ["category"],
-  });
+  })
+  // Someone has to be able to tell the passenger their bag was found
+  .refine(
+    (data) =>
+      data.type !== "lost_item" ||
+      data.passengerEmail !== undefined ||
+      data.passengerPhone !== undefined,
+    {
+      error: "Give an email address or mobile number so we can tell you if it is found.",
+      path: ["passengerEmail"],
+    },
+  )
+  // Each extra belongs to one kind of complaint
+  .refine(
+    (data) =>
+      (data.type === "complaint" && data.category === "accessibility") ===
+      Boolean(data.details?.accessibility),
+    { error: "Tick what went wrong.", path: ["details"] },
+  )
+  .refine(
+    (data) =>
+      !data.details?.fare || (data.type === "complaint" && data.category === "overcharging"),
+    { error: "Fare details only go with an overcharging complaint.", path: ["details"] },
+  )
+  .refine(
+    (data) =>
+      !data.details?.safety || (data.type === "complaint" && data.category === "harassment"),
+    { error: "Invalid submission.", path: ["details"] },
+  );
 
 export type SubmitReportInput = z.infer<typeof submitReportSchema>;
 

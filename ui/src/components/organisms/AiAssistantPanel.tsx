@@ -40,7 +40,7 @@ const quote = {
 
 /**
  * AI help for admins: category suggestion, translation and summary, and blurring faces and
- * number plates in photos. Hidden when ANTHROPIC_API_KEY isn't set on the API.
+ * number plates in photos. Hidden when GEMINI_API_KEY isn't set on the API.
  */
 function AiAssistantPanel({ report }: { report: Report }) {
   const status = useAiStatus();

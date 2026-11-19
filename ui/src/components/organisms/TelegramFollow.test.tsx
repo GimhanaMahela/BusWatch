@@ -10,7 +10,7 @@ vi.mock("@/api/pushApi", () => ({ getTelegramLink: vi.fn() }));
 const mockedChannels = vi.mocked(getContactChannels);
 const mockedLink = vi.mocked(getTelegramLink);
 
-const channels = { email: true, sms: false, push: false, telegram: true };
+const channels = { email: true, sms: false, push: false, telegram: true, whatsapp: null };
 const url = "https://t.me/BusWatchBot?start=BW-2026-ABCDEF_abc_0123456789abcdef";
 
 describe("TelegramFollow", () => {
@@ -31,7 +31,7 @@ describe("TelegramFollow", () => {
   });
 
   it("stays hidden when no Telegram bot is set up", async () => {
-    mockedChannels.mockResolvedValue({ ...channels, telegram: false });
+    mockedChannels.mockResolvedValue({ ...channels, telegram: false, whatsapp: null });
     const { container } = renderWithProviders(<TelegramFollow receiptId="BW-2026-ABCDEF" />);
     await vi.waitFor(() => expect(mockedChannels).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();

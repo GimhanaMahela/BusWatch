@@ -47,10 +47,10 @@ import useFormDraft from "@/hooks/useFormDraft";
 import useOnlineStatus from "@/hooks/useOnlineStatus";
 import { busQuery, isNewQrScan, parseBusNumber, parseRoute } from "@/lib/busNumber";
 import { submitOrQueue } from "@/lib/offlineSubmit";
+import { COMMEND_DRAFT_KEY as DRAFT_KEY } from "@/lib/reportDraft";
 import { rememberReceipt } from "@/lib/trackingHistory";
 
 const MAX_DESCRIPTION = 2000;
-const DRAFT_KEY = "commend-a-driver";
 
 interface CommendForm {
   busNumber: string;

@@ -1,36 +1,48 @@
 import { eq } from "drizzle-orm";
 import request from "supertest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { reports } from "../src/db/schema.js";
 import { blurredCloudinaryUrl } from "../src/services/ai.service.js";
 import { app, createAdminAndLogin, db, submitReport, useTestDatabase } from "./helpers.js";
 
-// Claude is mocked: the service code runs for real, the network call doesn't
+// Gemini is stubbed at fetch: the service code runs for real, the network call doesn't
 const ai = vi.hoisted(() => {
-  process.env.ANTHROPIC_API_KEY = "test-key";
+  process.env.GEMINI_API_KEY = "test-key";
   return { parse: vi.fn() };
 });
 
-vi.mock("@anthropic-ai/sdk", () => {
-  class APIError extends Error {
-    constructor(
-      readonly status: number,
-      message: string,
-    ) {
-      super(message);
-    }
+type GeminiReply =
+  | { stop_reason: string; model?: string; parsed_output: unknown }
+  | { status: number; body: string };
+
+/** Answers Gemini calls with what ai.parse returns (or a photo for image downloads). */
+const realFetch = globalThis.fetch;
+const geminiFetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+  const url = input instanceof Request ? input.url : input.toString();
+  if (url.startsWith("https://res.cloudinary.com/")) {
+    return new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+      headers: { "content-type": "image/jpeg" },
+    });
   }
-  class RateLimitError extends APIError {}
-  class Anthropic {
-    static APIError = APIError;
-    static RateLimitError = RateLimitError;
-    beta = { messages: { parse: ai.parse } };
+  if (!url.startsWith("https://generativelanguage.googleapis.com/")) return realFetch(input, init);
+  const reply = (await ai.parse(JSON.parse(init?.body as string), url)) as GeminiReply;
+  if ("status" in reply) return new Response(reply.body, { status: reply.status });
+  if (reply.stop_reason === "refusal") {
+    return Response.json({ promptFeedback: { blockReason: "SAFETY" } });
   }
-  return { default: Anthropic };
+  return Response.json({
+    modelVersion: reply.model,
+    candidates: [
+      {
+        finishReason: "STOP",
+        content: { parts: [{ text: JSON.stringify(reply.parsed_output) }] },
+      },
+    ],
+  });
 });
-vi.mock("@anthropic-ai/sdk/helpers/beta/zod", () => ({
-  betaZodOutputFormat: (schema: unknown) => schema,
-}));
+
+beforeAll(() => vi.stubGlobal("fetch", geminiFetch));
+afterAll(() => vi.unstubAllGlobals());
 
 useTestDatabase();
 
@@ -38,7 +50,7 @@ const IMAGE = "https://res.cloudinary.com/demo/image/upload/v1/evidence.jpg";
 
 const insights = (overrides: Record<string, unknown> = {}) => ({
   stop_reason: "end_turn",
-  model: "claude-opus-5-5",
+  model: "gemini-flash-latest",
   parsed_output: {
     detectedLanguage: "si",
     englishTranslation: "The driver was racing another bus.",
@@ -78,13 +90,16 @@ describe("AI help: analysing a report", () => {
       suggestedCategory: "reckless_driving",
       englishTranslation: "The driver was racing another bus.",
       flags: ["possible_emergency"],
-      model: "claude-opus-5-5",
+      model: "gemini-flash-latest",
     });
 
-    // The request asks for structured output with refusal fallbacks, and fences the report text
+    // The request asks for structured JSON, keeps safety filters from blocking serious reports,
+    // and fences the report text
     const params = ai.parse.mock.calls[0]![0];
-    expect(params).toMatchObject({ fallbacks: "default", output_config: { effort: "low" } });
-    expect(params.messages[0].content).toContain("<report>");
+    expect(params.generationConfig).toMatchObject({ responseMimeType: "application/json" });
+    expect(params.generationConfig.responseJsonSchema.properties.suggestedCategory).toBeDefined();
+    expect(params.safetySettings[0]).toMatchObject({ threshold: "BLOCK_NONE" });
+    expect(params.contents[0].parts[0].text).toContain("<report>");
   });
 
   it("never suggests a commendation category for a complaint, nor translates English", async () => {
@@ -100,7 +115,7 @@ describe("AI help: analysing a report", () => {
     });
   });
 
-  it("explains refusals and API failures instead of failing with a 500", async () => {
+  it("explains refusals, quota limits and API failures instead of failing with a 500", async () => {
     const token = await createAdminAndLogin();
     const id = await fileReport();
 
@@ -110,17 +125,50 @@ describe("AI help: analysing a report", () => {
       .set("x-auth-token", token);
     expect(refused.status).toBe(503);
 
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    // The mocked class takes (status, message); the real one has a longer signature
-    const MockApiError = Anthropic.APIError as unknown as new (
-      status: number,
-      message: string,
-    ) => Error;
-    ai.parse.mockRejectedValueOnce(new MockApiError(500, "overloaded"));
+    // Over quota on both the main and the fallback model
+    ai.parse.mockResolvedValueOnce({ status: 429, body: "quota" });
+    ai.parse.mockResolvedValueOnce({ status: 429, body: "quota" });
+    const quota = await request(app)
+      .post(`/api/reports/${id}/ai/analyse`)
+      .set("x-auth-token", token);
+    expect(quota.status).toBe(503);
+    expect(quota.body.msg).toMatch(/quota/);
+
+    // "High demand" everywhere: each model is tried three times, then the admin is told
+    ai.parse.mockReset();
+    ai.parse.mockResolvedValue({ status: 503, body: "high demand" });
+    const busy = await request(app)
+      .post(`/api/reports/${id}/ai/analyse`)
+      .set("x-auth-token", token);
+    expect(ai.parse).toHaveBeenCalledTimes(6);
+    expect(busy.status).toBe(503);
+    expect(busy.body.msg).toMatch(/busy/);
+
+    // Other errors aren't retried
+    ai.parse.mockReset();
+    ai.parse.mockResolvedValue({ status: 400, body: "bad request" });
     const failed = await request(app)
       .post(`/api/reports/${id}/ai/analyse`)
       .set("x-auth-token", token);
+    expect(ai.parse).toHaveBeenCalledTimes(1);
     expect(failed.status).toBe(502);
+  });
+
+  it("falls back to the lighter model when the main one is busy", async () => {
+    const token = await createAdminAndLogin();
+    const id = await fileReport();
+    ai.parse
+      .mockResolvedValueOnce({ status: 503, body: "high demand" })
+      .mockResolvedValueOnce({ status: 503, body: "high demand" })
+      .mockResolvedValueOnce({ status: 503, body: "high demand" })
+      .mockResolvedValueOnce({ ...insights(), model: undefined });
+
+    const res = await request(app).post(`/api/reports/${id}/ai/analyse`).set("x-auth-token", token);
+    expect(res.status).toBe(200);
+    const urls = ai.parse.mock.calls.map((call) => call[1] as string);
+    expect(urls[0]).toContain("/models/gemini-flash-latest:generateContent");
+    expect(urls[3]).toContain("/models/gemini-flash-lite-latest:generateContent");
+    expect(res.body.aiInsights.model).toBe("gemini-flash-lite-latest");
   });
 
   it("is for the BusWatch team only", async () => {
@@ -162,14 +210,17 @@ describe("AI help: blurring faces and number plates", () => {
       .where(eq(reports.id, id));
     ai.parse.mockResolvedValue({
       stop_reason: "end_turn",
-      parsed_output: {
-        regions: [{ kind: "number_plate", x: 0.5, y: 0.7, width: 0.2, height: 0.1 }],
-      },
+      parsed_output: { regions: [{ kind: "number_plate", box_2d: [700, 500, 800, 700] }] },
     });
 
     const res = await request(app).post(`/api/reports/${id}/ai/blur`).set("x-auth-token", token);
     expect(res.status).toBe(200);
-    expect(res.body.blurredRegions).toBe(2);
+    // Only the Cloudinary photo is sent (others can't be blurred), as an inline image
+    expect(res.body.blurredRegions).toBe(1);
+    expect(ai.parse).toHaveBeenCalledTimes(1);
+    expect(ai.parse.mock.calls[0]![0].contents[0].parts[0].inline_data.mime_type).toBe(
+      "image/jpeg",
+    );
     expect(res.body.blurredImages).toEqual([
       "https://res.cloudinary.com/demo/image/upload/e_blur_faces:1000/e_blur_region:1500,x_0.470,y_0.670,w_0.260,h_0.160/v1/evidence.jpg",
     ]);

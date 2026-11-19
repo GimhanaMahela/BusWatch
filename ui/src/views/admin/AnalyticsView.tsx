@@ -6,7 +6,10 @@ import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import DirectionsBusRoundedIcon from "@mui/icons-material/DirectionsBusRounded";
 import DonutLargeRoundedIcon from "@mui/icons-material/DonutLargeRounded";
 import ForumRoundedIcon from "@mui/icons-material/ForumRounded";
+import CallRoundedIcon from "@mui/icons-material/CallRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
@@ -14,6 +17,7 @@ import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
 import TelegramIcon from "@mui/icons-material/Telegram";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
@@ -375,6 +379,15 @@ function AnalyticsView() {
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
             <StatTile
+              label="WhatsApp followers"
+              tone="success"
+              icon={<WhatsAppIcon />}
+              value={engagement.whatsappLinks}
+              hint={`${engagement.whatsappMessages} messages to the WhatsApp bot`}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
               label="“Me too” confirmations"
               tone="success"
               icon={<GroupsRoundedIcon />}
@@ -384,6 +397,33 @@ function AnalyticsView() {
                   ? `${engagement.confirmationsOffered} passengers were offered a matching report`
                   : "Passengers backing up an existing report"
               }
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Fare checks"
+              tone="primary"
+              icon={<PaymentsRoundedIcon />}
+              value={engagement.faresChecked}
+              hint="Official fares looked up on the fare checker"
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Safety-mode reports"
+              tone="secondary"
+              icon={<ShieldRoundedIcon />}
+              value={engagement.safetyReports}
+              hint={`${engagement.tripsShared} trips shared with a trusted contact`}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, md: 3 }}>
+            <StatTile
+              label="Emergency shortcut shown"
+              tone="error"
+              icon={<CallRoundedIcon />}
+              value={engagement.emergencyShown}
+              hint="Call buttons offered while a passenger was typing"
             />
           </Grid>
 

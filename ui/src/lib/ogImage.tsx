@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { activeTheme } from "@/theme/themes";
 
 // Social preview images (WhatsApp, Facebook, X) for shared links. Satori's default font covers
 // Latin only, so previews are in English whatever the site language.
@@ -24,7 +25,7 @@ export const renderOgCard = ({ eyebrow, title, subtitle, badge }: OgCardProps) =
         justifyContent: "space-between",
         padding: 72,
         color: "white",
-        background: "linear-gradient(130deg, #1638B8 0%, #2457F5 50%, #7A4DF0 100%)",
+        background: activeTheme.deepGradient,
         fontFamily: "sans-serif",
       }}
     >

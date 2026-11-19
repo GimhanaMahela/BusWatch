@@ -18,3 +18,7 @@ export const getFleetReport = (id: string) =>
 
 export const respondToReport = (id: string, body: string) =>
   call<FleetReportDetails>(apiClient.post(`/operator/reports/${id}/responses`, { body }));
+
+/** Lost items: "We found it", with where the passenger can collect it */
+export const markLostItemFound = (id: string, body: string) =>
+  call<FleetReportDetails>(apiClient.post(`/operator/reports/${id}/found`, { body }));

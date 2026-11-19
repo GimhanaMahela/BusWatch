@@ -38,12 +38,15 @@ export interface ApiMessages {
     subject: (receiptId: string) => string;
     intro: (receiptId: string) => string;
     replyLink: string;
+    operatorSubject: (receiptId: string) => string;
+    operatorIntro: (receiptId: string, organisation: string | null) => string;
   };
   sms: {
     code: (code: string, minutes: number) => string;
     received: (receiptId: string) => string;
     status: (receiptId: string, status: string) => string;
     message: (receiptId: string) => string;
+    operator: (receiptId: string) => string;
     link: (url: string) => string;
   };
   push: {
@@ -51,11 +54,65 @@ export interface ApiMessages {
     statusBody: (receiptId: string, status: string) => string;
     messageTitle: string;
     messageBody: (receiptId: string) => string;
+    operatorTitle: string;
+    operatorBody: (receiptId: string) => string;
   };
   telegram: {
     linked: (receiptId: string) => string;
     welcome: string;
     invalidLink: string;
+    stopped: string;
+  };
+  whatsapp: {
+    welcome: string;
+    welcomeNoAi: (url: string) => string;
+    /** Reply-button titles: WhatsApp allows 20 characters */
+    buttons: {
+      report: string;
+      commend: string;
+      track: string;
+      follow: string;
+      send: string;
+      change: string;
+      cancel: string;
+    };
+    reportPrompt: string;
+    commendPrompt: string;
+    trackPrompt: string;
+    notFound: (id: string) => string;
+    status: (id: string, status: string, date: string) => string;
+    teamMessages: (count: number) => string;
+    followPrompt: string;
+    followed: (id: string) => string;
+    alreadyFollowing: (id: string) => string;
+    mediaAdded: (photos: number, videos: number) => string;
+    mediaFull: string;
+    locationAdded: string;
+    voiceTooLong: string;
+    unsupported: string;
+    aiBusy: string;
+    tooMany: string;
+    checkTitle: Record<ReportType, string>;
+    labels: {
+      category: string;
+      bus: string;
+      route: string;
+      place: string;
+      when: string;
+      media: string;
+      pin: string;
+      description: string;
+    };
+    mediaCount: (photos: number, videos: number) => string;
+    checkFooter: string;
+    missing: string;
+    changePrompt: string;
+    cancelled: string;
+    sent: (id: string) => string;
+    sentLink: (url: string) => string;
+    mediaFailed: string;
+    sendFailed: string;
+    receiptCaption: (id: string) => string;
     stopped: string;
   };
   pdf: {
@@ -109,24 +166,35 @@ const en: ApiMessages = {
     loud_music: "Loud music",
     vehicle_condition: "Poor vehicle condition",
     staff_behaviour: "Rude driver / conductor",
+    accessibility: "Accessibility (elderly / disabled passengers)",
     other: "Other",
     safe_driving: "Safe, careful driving",
     helpful_staff: "Kind, helpful crew",
     clean_vehicle: "Clean, well-kept bus",
     on_time: "On time, every halt served",
     fair_fare: "Correct fare and ticket",
+    bag: "Bag",
+    phone: "Phone",
+    wallet: "Wallet / purse",
+    documents: "Documents / ID",
+    keys: "Keys",
+    clothing: "Clothing / umbrella",
   },
   receiptEmail: {
     subject: (id, type) =>
-      type === "commendation"
-        ? `Thank you for your BusWatch commendation - ID: ${id}`
-        : `Your BusWatch Report Receipt - ID: ${id}`,
+      type === "lost_item"
+        ? `Your BusWatch lost item report - ID: ${id}`
+        : type === "commendation"
+          ? `Thank you for your BusWatch commendation - ID: ${id}`
+          : `Your BusWatch Report Receipt - ID: ${id}`,
     greeting: "Hi there!",
     thanks: {
       complaint:
         "Thank you for taking the time to report an issue with public transport. Your vigilance helps us make a real difference!",
       commendation:
         "Thank you for taking the time to recognise good service. We will pass your kind words on to the operator.",
+      lost_item:
+        "We're sorry you lost something. We'll pass the details to the bus operator where we can, and let you know as soon as we hear anything.",
     },
     received:
       "We've successfully received it. For your records, please find your official <strong>receipt attached</strong> to this email.",
@@ -158,6 +226,9 @@ const en: ApiMessages = {
     subject: (id) => `New message about your BusWatch report ${id}`,
     intro: (id) => `The BusWatch team sent you a message about your report <strong>${id}</strong>:`,
     replyLink: "Read and reply",
+    operatorSubject: (id) => `The bus operator replied about your BusWatch report ${id}`,
+    operatorIntro: (id, organisation) =>
+      `${organisation ?? "The bus operator"} replied about your report <strong>${id}</strong>:`,
   },
   sms: {
     code: (code, minutes) =>
@@ -165,6 +236,7 @@ const en: ApiMessages = {
     received: (id) => `BusWatch: we received your report. Your receipt ID is ${id}.`,
     status: (id, status) => `BusWatch: your report ${id} is now "${status}".`,
     message: (id) => `BusWatch: the team sent you a message about report ${id}.`,
+    operator: (id) => `BusWatch: the bus operator replied about your report ${id}.`,
     link: (url) => ` Details: ${url}`,
   },
   push: {
@@ -172,6 +244,8 @@ const en: ApiMessages = {
     statusBody: (id, status) => `${id} is now: ${status}`,
     messageTitle: "New message from BusWatch",
     messageBody: (id) => `About your report ${id}. Tap to read and reply.`,
+    operatorTitle: "The bus operator replied",
+    operatorBody: (id) => `About your report ${id}. Tap to read it.`,
   },
   telegram: {
     linked: (id) =>
@@ -183,27 +257,118 @@ const en: ApiMessages = {
     stopped:
       "Done. You won't get any more BusWatch updates here. You can follow a report again from its tracking page.",
   },
+  whatsapp: {
+    welcome:
+      "Hi, this is BusWatch 🚌 You can report a problem on a bus or praise a good driver right here, in English, සිංහල or தமிழ். Just tell me what happened. You can also send photos, a voice note or your location.\n\nTo check a report, send its receipt ID (like BW-2026-ABC123).\n\nIn an emergency call 119.",
+    welcomeNoAi: (url) =>
+      `Hi, this is BusWatch 🚌 Send a receipt ID (like BW-2026-ABC123) to check a report and get updates here. To report a problem, use the form: ${url}`,
+    buttons: {
+      report: "Report a problem",
+      commend: "Praise a driver",
+      track: "Track a report",
+      follow: "Get updates here",
+      send: "Send report",
+      change: "Change something",
+      cancel: "Cancel",
+    },
+    reportPrompt:
+      "I'm sorry that happened. Tell me in your own words: what happened, the bus number (from the number plate, like NB-1234), the route, and where and when. You can type or send a voice note, plus photos or videos.",
+    commendPrompt:
+      "Lovely! Tell me about the driver or crew: what did they do well, the bus number and the route?",
+    trackPrompt: "Send me your receipt ID. It looks like BW-2026-ABC123.",
+    notFound: (id) =>
+      `I couldn't find a report with the receipt ID ${id}. Please check it and try again.`,
+    status: (id, status, date) => `Report *${id}*\nStatus: *${status}*\nUpdated: ${date}`,
+    teamMessages: (count) =>
+      `The team has sent you ${count} message${count === 1 ? "" : "s"}: read and reply on the tracking page.`,
+    followPrompt: "Want updates about this report here on WhatsApp?",
+    followed: (id) =>
+      `Done ✅ We'll message you here when report ${id} changes or the team writes to you. Send STOP to stop all updates.`,
+    alreadyFollowing: (id) => `You already get updates about ${id} here.`,
+    mediaAdded: (photos, videos) =>
+      `Got it 📎 (${photos} photo${photos === 1 ? "" : "s"}, ${videos} video${videos === 1 ? "" : "s"} so far). They'll go with your report.`,
+    mediaFull: "That's the most I can attach (5 photos and 2 videos). The rest wasn't added.",
+    locationAdded: "📍 Location added to your report.",
+    voiceTooLong: "That voice note is too long for me. Please send a shorter one or type it.",
+    unsupported: "Sorry, I can read text, photos, videos, voice notes and shared locations.",
+    aiBusy: "Sorry, I'm busy right now. Please try again in a minute.",
+    tooMany: "You've sent a lot of messages. Please wait a while and try again.",
+    checkTitle: {
+      complaint: "Please check your report:",
+      commendation: "Please check your commendation:",
+      lost_item: "Please check your lost item report:",
+    },
+    labels: {
+      category: "Type",
+      bus: "Bus",
+      route: "Route",
+      place: "Place",
+      when: "When",
+      media: "Attached",
+      pin: "Map pin",
+      description: "What happened",
+    },
+    mediaCount: (photos, videos) =>
+      [
+        photos && `${photos} photo${photos === 1 ? "" : "s"}`,
+        videos && `${videos} video${videos === 1 ? "" : "s"}`,
+      ]
+        .filter(Boolean)
+        .join(", "),
+    checkFooter: "Press Send report if it's right.",
+    missing:
+      "The report still needs what happened, the bus number and the route (and the place for a complaint). Please tell me those first.",
+    changePrompt: "Sure, what would you like to change?",
+    cancelled: "OK, I've thrown that report away. Write to me any time.",
+    sent: (id) =>
+      `Thank you 🙏 Your report is sent.\nReceipt ID: *${id}*\n\nWe'll message you here when it's reviewed or the team needs more details. Send STOP to stop updates.`,
+    sentLink: (url) => `\nTrack it: ${url}`,
+    mediaFailed:
+      "Some photos or videos couldn't be attached. You can tell the team in a reply on the tracking page.",
+    sendFailed:
+      "Sorry, I couldn't send your report just now. Please press Send report again in a moment.",
+    receiptCaption: (id) => `BusWatch receipt ${id}`,
+    stopped:
+      "Done. You won't get any more BusWatch updates here, and I've forgotten our chat. Write any time to start again.",
+  },
   pdf: {
     subtitle: "Public Transport Monitoring System",
-    title: { complaint: ["INCIDENT", "REPORT"], commendation: ["DRIVER", "COMMENDATION"] },
+    title: {
+      complaint: ["INCIDENT", "REPORT"],
+      commendation: ["DRIVER", "COMMENDATION"],
+      lost_item: ["LOST", "ITEM"],
+    },
     reportId: "Report ID",
     date: "Date",
     detailsHeading: {
       complaint: "Incident Report Details",
       commendation: "Commendation Details",
+      lost_item: "Lost Item Details",
     },
     summary: "Report Summary",
     identifier: "Unique Report Identifier",
     generatedOn: "Report Generated On",
-    overview: { complaint: "Incident Overview", commendation: "What was good" },
+    overview: {
+      complaint: "Incident Overview",
+      commendation: "What was good",
+      lost_item: "The lost item",
+    },
     busNumber: "Bus Number",
     routeNumber: "Route Number",
     busName: "Bus Name",
     category: "Category",
     location: "Location",
-    incidentAt: { complaint: "Date & Time of Incident", commendation: "Date & Time of Journey" },
+    incidentAt: {
+      complaint: "Date & Time of Incident",
+      commendation: "Date & Time of Journey",
+      lost_item: "Date & Time of Journey",
+    },
     reportedOn: "Reported On",
-    description: { complaint: "Detailed Description", commendation: "What they did well" },
+    description: {
+      complaint: "Detailed Description",
+      commendation: "What they did well",
+      lost_item: "Description of the item",
+    },
     notSpecified: "Not specified",
     none: "N/A",
     evidence: "Attached Evidence",
@@ -215,6 +380,8 @@ const en: ApiMessages = {
         "Thank you for contributing to safer public transportation. Your report has been recorded and will be reviewed by our team.",
       commendation:
         "Thank you for recognising good service. Your commendation has been recorded and will be shared with the operator.",
+      lost_item:
+        "Your lost item report has been recorded. We'll share it with the bus operator and let you know if the item is found.",
     },
     reference: "Need to reference this report?",
     provideId: (id) => `Please provide this Report ID: ${id}`,
@@ -242,24 +409,35 @@ const si: ApiMessages = {
     loud_music: "අධික ශබ්දයෙන් සංගීතය",
     vehicle_condition: "වාහනයේ දුර්වල තත්ත්වය",
     staff_behaviour: "රියැදුරුගේ / කොන්දොස්තරගේ අකාරුණික හැසිරීම",
+    accessibility: "ප්‍රවේශ්‍යතාව (වැඩිහිටි / ආබාධිත මගීන්)",
     other: "වෙනත්",
     safe_driving: "ආරක්ෂිත, සැලකිලිමත් රිය පැදවීම",
     helpful_staff: "කාරුණික, උදව්කාරී කාර්ය මණ්ඩලය",
     clean_vehicle: "පිරිසිදු, හොඳින් නඩත්තු කළ බස් රථය",
     on_time: "නියමිත වේලාවට, සෑම නැවතුමකම නැවැත්වීම",
     fair_fare: "නිවැරදි ගාස්තුව සහ ප්‍රවේශපත්‍රය",
+    bag: "බෑගය",
+    phone: "දුරකථනය",
+    wallet: "පසුම්බිය",
+    documents: "ලේඛන / හැඳුනුම්පත",
+    keys: "යතුරු",
+    clothing: "ඇඳුම් / කුඩය",
   },
   receiptEmail: {
     subject: (id, type) =>
-      type === "commendation"
-        ? `ඔබේ BusWatch ප්‍රශංසාවට ස්තූතියි - අංකය: ${id}`
-        : `ඔබේ BusWatch පැමිණිලි රිසිට්පත - අංකය: ${id}`,
+      type === "lost_item"
+        ? `ඔබේ BusWatch නැතිවූ භාණ්ඩ වාර්තාව - අංකය: ${id}`
+        : type === "commendation"
+          ? `ඔබේ BusWatch ප්‍රශංසාවට ස්තූතියි - අංකය: ${id}`
+          : `ඔබේ BusWatch පැමිණිලි රිසිට්පත - අංකය: ${id}`,
     greeting: "ආයුබෝවන්!",
     thanks: {
       complaint:
         "පොදු ප්‍රවාහනයේ ගැටලුවක් වාර්තා කිරීමට කාලය ගත කළාට ස්තූතියි. ඔබේ අවධානය සැබෑ වෙනසක් ඇති කිරීමට උපකාරී වේ!",
       commendation:
         "හොඳ සේවාවක් අගය කිරීමට කාලය ගත කළාට ස්තූතියි. ඔබේ කාරුණික වචන අපි බස් රථ හිමිකරු වෙත යොමු කරන්නෙමු.",
+      lost_item:
+        "ඔබේ භාණ්ඩයක් නැති වීම ගැන අපි කනගාටු වෙමු. හැකි සෑම විටම අපි විස්තර බස් රථ හිමිකරු වෙත යොමු කරන අතර, යමක් දැනගත් වහාම ඔබට දන්වන්නෙමු.",
     },
     received:
       "අපට එය සාර්ථකව ලැබුණි. ඔබේ වාර්තා සඳහා, නිල <strong>රිසිට්පත මෙම ඊමේලයට අමුණා ඇත</strong>.",
@@ -293,6 +471,9 @@ const si: ApiMessages = {
     intro: (id) =>
       `BusWatch කණ්ඩායම ඔබේ වාර්තාව <strong>${id}</strong> පිළිබඳව ඔබට පණිවිඩයක් එවා ඇත:`,
     replyLink: "කියවා පිළිතුරු දෙන්න",
+    operatorSubject: (id) => `ඔබේ BusWatch වාර්තාව ${id} ගැන බස් රථ හිමිකරු පිළිතුරු දී ඇත`,
+    operatorIntro: (id, organisation) =>
+      `ඔබේ වාර්තාව <strong>${id}</strong> ගැන ${organisation ?? "බස් රථ හිමිකරු"} පිළිතුරු දී ඇත:`,
   },
   sms: {
     code: (code, minutes) =>
@@ -300,6 +481,7 @@ const si: ApiMessages = {
     received: (id) => `BusWatch: ඔබේ වාර්තාව අපට ලැබුණි. ඔබේ රිසිට්පත් අංකය ${id}.`,
     status: (id, status) => `BusWatch: ඔබේ වාර්තාව ${id} දැන් "${status}".`,
     message: (id) => `BusWatch: වාර්තාව ${id} පිළිබඳව කණ්ඩායම ඔබට පණිවිඩයක් එවා ඇත.`,
+    operator: (id) => `BusWatch: ඔබේ වාර්තාව ${id} ගැන බස් රථ හිමිකරු පිළිතුරු දී ඇත.`,
     link: (url) => ` විස්තර: ${url}`,
   },
   push: {
@@ -307,6 +489,8 @@ const si: ApiMessages = {
     statusBody: (id, status) => `${id} දැන්: ${status}`,
     messageTitle: "BusWatch වෙතින් නව පණිවිඩයක්",
     messageBody: (id) => `ඔබේ වාර්තාව ${id} ගැන. කියවා පිළිතුරු දීමට තට්ටු කරන්න.`,
+    operatorTitle: "බස් රථ හිමිකරු පිළිතුරු දුන්නා",
+    operatorBody: (id) => `ඔබේ වාර්තාව ${id} ගැන. කියවීමට තට්ටු කරන්න.`,
   },
   telegram: {
     linked: (id) =>
@@ -318,24 +502,112 @@ const si: ApiMessages = {
     stopped:
       "හරි. ඔබට තවදුරටත් මෙහි BusWatch යාවත්කාලීන නොලැබේ. ලුහුබැඳීමේ පිටුවෙන් ඕනෑම වේලාවක වාර්තාවක් නැවත අනුගමනය කළ හැක.",
   },
+  whatsapp: {
+    welcome:
+      "ආයුබෝවන්, මෙය BusWatch 🚌 බස් රථයක ගැටලුවක් වාර්තා කිරීමට හෝ හොඳ රියදුරෙකුට ප්‍රශංසා කිරීමට මෙතැනින්ම පුළුවන්, සිංහලෙන්, English හෝ தமிழ் භාෂාවෙන්. සිදු වූ දේ මට කියන්න. ඡායාරූප, හඬ පණිවිඩයක් හෝ ඔබේ ස්ථානයද එවිය හැක.\n\nවාර්තාවක් පරීක්ෂා කිරීමට එහි රිසිට්පත් අංකය (BW-2026-ABC123 වැනි) එවන්න.\n\nහදිසි අවස්ථාවකදී 119 අමතන්න.",
+    welcomeNoAi: (url) =>
+      `ආයුබෝවන්, මෙය BusWatch 🚌 වාර්තාවක් පරීක්ෂා කර මෙහි යාවත්කාලීන ලබා ගැනීමට රිසිට්පත් අංකය (BW-2026-ABC123 වැනි) එවන්න. ගැටලුවක් වාර්තා කිරීමට පෝරමය භාවිතා කරන්න: ${url}`,
+    buttons: {
+      report: "පැමිණිල්ලක් කරන්න",
+      commend: "රියදුරුට ප්‍රශංසා",
+      track: "වාර්තාව බලන්න",
+      follow: "මෙහි දැනුම් දෙන්න",
+      send: "වාර්තාව යවන්න",
+      change: "වෙනස් කරන්න",
+      cancel: "අවලංගු කරන්න",
+    },
+    reportPrompt:
+      "එය සිදු වීම ගැන කණගාටුයි. ඔබේම වචනවලින් කියන්න: සිදු වූ දේ, බස් අංකය (අංක තහඩුවේ ඇති, NB-1234 වැනි), මාර්ගය, සහ කොහේද කවදාද යන්න. ටයිප් කරන්න හෝ හඬ පණිවිඩයක් එවන්න; ඡායාරූප හෝ වීඩියෝද එවිය හැක.",
+    commendPrompt:
+      "ඉතා හොඳයි! රියදුරු හෝ කාර්ය මණ්ඩලය ගැන කියන්න: ඔවුන් හොඳින් කළේ කුමක්ද, බස් අංකය සහ මාර්ගය?",
+    trackPrompt: "ඔබේ රිසිට්පත් අංකය එවන්න. එය BW-2026-ABC123 වැනි ය.",
+    notFound: (id) =>
+      `${id} රිසිට්පත් අංකය සහිත වාර්තාවක් හමු නොවීය. කරුණාකර පරීක්ෂා කර නැවත උත්සාහ කරන්න.`,
+    status: (id, status, date) => `වාර්තාව *${id}*\nතත්ත්වය: *${status}*\nයාවත්කාලීන කළේ: ${date}`,
+    teamMessages: (count) =>
+      `කණ්ඩායම ඔබට පණිවිඩ ${count}ක් එවා ඇත: ලුහුබැඳීමේ පිටුවේ කියවා පිළිතුරු දෙන්න.`,
+    followPrompt: "මෙම වාර්තාව ගැන යාවත්කාලීන මෙහි WhatsApp හරහා ලබා ගන්නද?",
+    followed: (id) =>
+      `හරි ✅ වාර්තාව ${id} වෙනස් වූ විට හෝ කණ්ඩායම ඔබට ලියූ විට අපි මෙහි දන්වන්නෙමු. සියලු යාවත්කාලීන නැවැත්වීමට STOP යවන්න.`,
+    alreadyFollowing: (id) => `ඔබට දැනටමත් ${id} ගැන යාවත්කාලීන මෙහි ලැබේ.`,
+    mediaAdded: (photos, videos) =>
+      `ලැබුණා 📎 (මෙතෙක් ඡායාරූප ${photos}, වීඩියෝ ${videos}). ඒවා ඔබේ වාර්තාව සමඟ යවනු ලැබේ.`,
+    mediaFull: "මට එකතු කළ හැකි උපරිමය එයයි (ඡායාරූප 5 සහ වීඩියෝ 2). ඉතිරිය එකතු නොකළා.",
+    locationAdded: "📍 ස්ථානය ඔබේ වාර්තාවට එකතු කළා.",
+    voiceTooLong: "එම හඬ පණිවිඩය මට දිග වැඩියි. කෙටි එකක් එවන්න හෝ ටයිප් කරන්න.",
+    unsupported: "සමාවන්න, මට කියවිය හැක්කේ පෙළ, ඡායාරූප, වීඩියෝ, හඬ පණිවිඩ සහ ස්ථාන පමණි.",
+    aiBusy: "සමාවන්න, මම දැන් කාර්යබහුලයි. විනාඩියකින් නැවත උත්සාහ කරන්න.",
+    tooMany: "ඔබ පණිවිඩ බොහොමයක් එවා ඇත. ටික වේලාවකින් නැවත උත්සාහ කරන්න.",
+    checkTitle: {
+      complaint: "කරුණාකර ඔබේ වාර්තාව පරීක්ෂා කරන්න:",
+      commendation: "කරුණාකර ඔබේ ප්‍රශංසාව පරීක්ෂා කරන්න:",
+      lost_item: "කරුණාකර ඔබේ නැතිවූ භාණ්ඩ වාර්තාව පරීක්ෂා කරන්න:",
+    },
+    labels: {
+      category: "වර්ගය",
+      bus: "බස් රථය",
+      route: "මාර්ගය",
+      place: "ස්ථානය",
+      when: "කවදාද",
+      media: "අමුණා ඇත",
+      pin: "සිතියම් ලකුණ",
+      description: "සිදු වූ දේ",
+    },
+    mediaCount: (photos, videos) =>
+      [photos && `ඡායාරූප ${photos}`, videos && `වීඩියෝ ${videos}`].filter(Boolean).join(", "),
+    checkFooter: "නිවැරදි නම් “වාර්තාව යවන්න” ඔබන්න.",
+    missing:
+      "වාර්තාවට තවමත් සිදු වූ දේ, බස් අංකය සහ මාර්ගය (පැමිණිල්ලකට ස්ථානයද) අවශ්‍යයි. කරුණාකර ඒවා මුලින් කියන්න.",
+    changePrompt: "හරි, ඔබට වෙනස් කිරීමට අවශ්‍ය කුමක්ද?",
+    cancelled: "හරි, මම එම වාර්තාව ඉවත් කළා. ඕනෑම වේලාවක මට ලියන්න.",
+    sent: (id) =>
+      `ස්තූතියි 🙏 ඔබේ වාර්තාව යවා ඇත.\nරිසිට්පත් අංකය: *${id}*\n\nඑය සමාලෝචනය කළ විට හෝ කණ්ඩායමට තවත් විස්තර අවශ්‍ය වූ විට අපි මෙහි දන්වන්නෙමු. යාවත්කාලීන නැවැත්වීමට STOP යවන්න.`,
+    sentLink: (url) => `\nලුහුබඳින්න: ${url}`,
+    mediaFailed:
+      "සමහර ඡායාරූප හෝ වීඩියෝ එකතු කළ නොහැකි විය. ලුහුබැඳීමේ පිටුවේ පිළිතුරකින් කණ්ඩායමට දැනුම් දිය හැක.",
+    sendFailed: "සමාවන්න, ඔබේ වාර්තාව දැන් යැවිය නොහැකි විය. මොහොතකින් “වාර්තාව යවන්න” නැවත ඔබන්න.",
+    receiptCaption: (id) => `BusWatch රිසිට්පත ${id}`,
+    stopped:
+      "හරි. ඔබට තවදුරටත් මෙහි BusWatch යාවත්කාලීන නොලැබේ, අපේ කතාබහද මකා දැමුවා. නැවත ආරම්භ කිරීමට ඕනෑම වේලාවක ලියන්න.",
+  },
   pdf: {
     subtitle: "පොදු ප්‍රවාහන නිරීක්ෂණ පද්ධතිය",
-    title: { complaint: ["සිද්ධි", "වාර්තාව"], commendation: ["රියැදුරු", "ප්‍රශංසාව"] },
+    title: {
+      complaint: ["සිද්ධි", "වාර්තාව"],
+      commendation: ["රියැදුරු", "ප්‍රශංසාව"],
+      lost_item: ["නැතිවූ", "භාණ්ඩය"],
+    },
     reportId: "වාර්තා අංකය",
     date: "දිනය",
-    detailsHeading: { complaint: "සිද්ධි වාර්තාවේ විස්තර", commendation: "ප්‍රශංසාවේ විස්තර" },
+    detailsHeading: {
+      complaint: "සිද්ධි වාර්තාවේ විස්තර",
+      commendation: "ප්‍රශංසාවේ විස්තර",
+      lost_item: "නැතිවූ භාණ්ඩයේ විස්තර",
+    },
     summary: "වාර්තා සාරාංශය",
     identifier: "අද්විතීය වාර්තා අංකය",
     generatedOn: "වාර්තාව සකස් කළ දිනය",
-    overview: { complaint: "සිද්ධියේ දළ විශ්ලේෂණය", commendation: "හොඳින් කළ දේ" },
+    overview: {
+      complaint: "සිද්ධියේ දළ විශ්ලේෂණය",
+      commendation: "හොඳින් කළ දේ",
+      lost_item: "නැතිවූ භාණ්ඩය",
+    },
     busNumber: "බස් අංකය",
     routeNumber: "මාර්ග අංකය",
     busName: "බස් රථයේ නම",
     category: "වර්ගය",
     location: "ස්ථානය",
-    incidentAt: { complaint: "සිද්ධිය වූ දිනය සහ වේලාව", commendation: "ගමනේ දිනය සහ වේලාව" },
+    incidentAt: {
+      complaint: "සිද්ධිය වූ දිනය සහ වේලාව",
+      commendation: "ගමනේ දිනය සහ වේලාව",
+      lost_item: "ගමනේ දිනය සහ වේලාව",
+    },
     reportedOn: "වාර්තා කළ දිනය",
-    description: { complaint: "සවිස්තර විස්තරය", commendation: "ඔවුන් හොඳින් කළ දේ" },
+    description: {
+      complaint: "සවිස්තර විස්තරය",
+      commendation: "ඔවුන් හොඳින් කළ දේ",
+      lost_item: "භාණ්ඩයේ විස්තරය",
+    },
     notSpecified: "සඳහන් කර නැත",
     none: "නැත",
     evidence: "අමුණා ඇති සාක්ෂි",
@@ -347,6 +619,8 @@ const si: ApiMessages = {
         "ආරක්ෂිත පොදු ප්‍රවාහනයක් සඳහා දායක වූවාට ස්තූතියි. ඔබේ වාර්තාව සටහන් කර ඇති අතර අපගේ කණ්ඩායම එය සමාලෝචනය කරනු ඇත.",
       commendation:
         "හොඳ සේවාව අගය කළාට ස්තූතියි. ඔබේ ප්‍රශංසාව සටහන් කර ඇති අතර එය බස් රථ හිමිකරු සමඟ බෙදා ගනු ඇත.",
+      lost_item:
+        "ඔබේ නැතිවූ භාණ්ඩ වාර්තාව සටහන් කර ඇත. අපි එය බස් රථ හිමිකරු සමඟ බෙදාගෙන, භාණ්ඩය හමු වුවහොත් ඔබට දන්වන්නෙමු.",
     },
     reference: "මෙම වාර්තාව යොමු කිරීමට අවශ්‍යද?",
     provideId: (id) => `කරුණාකර මෙම වාර්තා අංකය සඳහන් කරන්න: ${id}`,
@@ -374,24 +648,35 @@ const ta: ApiMessages = {
     loud_music: "அதிக சத்தமான இசை",
     vehicle_condition: "வாகனத்தின் மோசமான நிலை",
     staff_behaviour: "ஓட்டுநர் / நடத்துநரின் முரட்டுத்தனம்",
+    accessibility: "அணுகல்தன்மை (முதியோர் / மாற்றுத்திறனாளி பயணிகள்)",
     other: "மற்றவை",
     safe_driving: "பாதுகாப்பான, கவனமான ஓட்டுதல்",
     helpful_staff: "அன்பான, உதவிகரமான பணியாளர்கள்",
     clean_vehicle: "சுத்தமான, நன்கு பராமரிக்கப்பட்ட பேருந்து",
     on_time: "சரியான நேரம், எல்லா நிறுத்தங்களிலும் நின்றது",
     fair_fare: "சரியான கட்டணம் மற்றும் பயணச்சீட்டு",
+    bag: "பை",
+    phone: "தொலைபேசி",
+    wallet: "பணப்பை",
+    documents: "ஆவணங்கள் / அடையாள அட்டை",
+    keys: "சாவிகள்",
+    clothing: "உடை / குடை",
   },
   receiptEmail: {
     subject: (id, type) =>
-      type === "commendation"
-        ? `உங்கள் BusWatch பாராட்டுக்கு நன்றி - எண்: ${id}`
-        : `உங்கள் BusWatch புகார் ரசீது - எண்: ${id}`,
+      type === "lost_item"
+        ? `உங்கள் BusWatch தொலைந்த பொருள் அறிக்கை - எண்: ${id}`
+        : type === "commendation"
+          ? `உங்கள் BusWatch பாராட்டுக்கு நன்றி - எண்: ${id}`
+          : `உங்கள் BusWatch புகார் ரசீது - எண்: ${id}`,
     greeting: "வணக்கம்!",
     thanks: {
       complaint:
         "பொதுப் போக்குவரத்தில் உள்ள பிரச்சினையைப் புகாரளிக்க நேரம் ஒதுக்கியதற்கு நன்றி. உங்கள் விழிப்புணர்வு உண்மையான மாற்றத்தை ஏற்படுத்த உதவுகிறது!",
       commendation:
         "நல்ல சேவையைப் பாராட்ட நேரம் ஒதுக்கியதற்கு நன்றி. உங்கள் அன்பான வார்த்தைகளை பேருந்து உரிமையாளரிடம் தெரிவிப்போம்.",
+      lost_item:
+        "உங்கள் பொருள் தொலைந்ததற்கு வருந்துகிறோம். முடிந்தவரை விவரங்களை பேருந்து உரிமையாளருக்கு அனுப்புவோம், ஏதேனும் தகவல் கிடைத்தவுடன் உங்களுக்குத் தெரிவிப்போம்.",
     },
     received:
       "அது எங்களுக்கு வெற்றிகரமாகக் கிடைத்தது. உங்கள் பதிவுக்காக, அதிகாரப்பூர்வ <strong>ரசீது இந்த மின்னஞ்சலுடன் இணைக்கப்பட்டுள்ளது</strong>.",
@@ -424,6 +709,10 @@ const ta: ApiMessages = {
     intro: (id) =>
       `உங்கள் அறிக்கை <strong>${id}</strong> பற்றி BusWatch குழு உங்களுக்கு ஒரு செய்தி அனுப்பியுள்ளது:`,
     replyLink: "படித்துப் பதிலளிக்கவும்",
+    operatorSubject: (id) =>
+      `உங்கள் BusWatch அறிக்கை ${id} பற்றி பேருந்து உரிமையாளர் பதிலளித்துள்ளார்`,
+    operatorIntro: (id, organisation) =>
+      `உங்கள் அறிக்கை <strong>${id}</strong> பற்றி ${organisation ?? "பேருந்து உரிமையாளர்"} பதிலளித்துள்ளார்:`,
   },
   sms: {
     code: (code, minutes) =>
@@ -431,6 +720,7 @@ const ta: ApiMessages = {
     received: (id) => `BusWatch: உங்கள் அறிக்கை எங்களுக்குக் கிடைத்தது. உங்கள் ரசீது எண் ${id}.`,
     status: (id, status) => `BusWatch: உங்கள் அறிக்கை ${id} இப்போது "${status}".`,
     message: (id) => `BusWatch: அறிக்கை ${id} பற்றி குழு உங்களுக்கு ஒரு செய்தி அனுப்பியுள்ளது.`,
+    operator: (id) => `BusWatch: உங்கள் அறிக்கை ${id} பற்றி பேருந்து உரிமையாளர் பதிலளித்துள்ளார்.`,
     link: (url) => ` விவரங்கள்: ${url}`,
   },
   push: {
@@ -438,6 +728,8 @@ const ta: ApiMessages = {
     statusBody: (id, status) => `${id} இப்போது: ${status}`,
     messageTitle: "BusWatch இலிருந்து புதிய செய்தி",
     messageBody: (id) => `உங்கள் அறிக்கை ${id} பற்றி. படித்துப் பதிலளிக்கத் தட்டவும்.`,
+    operatorTitle: "பேருந்து உரிமையாளர் பதிலளித்தார்",
+    operatorBody: (id) => `உங்கள் அறிக்கை ${id} பற்றி. படிக்கத் தட்டவும்.`,
   },
   telegram: {
     linked: (id) =>
@@ -449,24 +741,117 @@ const ta: ApiMessages = {
     stopped:
       "முடிந்தது. இனி இங்கே BusWatch புதுப்பிப்புகள் வராது. கண்காணிப்புப் பக்கத்திலிருந்து எப்போது வேண்டுமானாலும் ஓர் அறிக்கையை மீண்டும் பின்தொடரலாம்.",
   },
+  whatsapp: {
+    welcome:
+      "வணக்கம், இது BusWatch 🚌 பேருந்தில் நடந்த பிரச்சினையைப் புகாரளிக்க அல்லது நல்ல ஓட்டுநரைப் பாராட்ட இங்கேயே முடியும், தமிழ், English அல்லது සිංහල மொழியில். என்ன நடந்தது என்று சொல்லுங்கள். புகைப்படங்கள், குரல் செய்தி அல்லது உங்கள் இருப்பிடத்தையும் அனுப்பலாம்.\n\nஓர் அறிக்கையைப் பார்க்க அதன் ரசீது எண்ணை (BW-2026-ABC123 போன்றது) அனுப்புங்கள்.\n\nஅவசர நிலையில் 119 ஐ அழைக்கவும்.",
+    welcomeNoAi: (url) =>
+      `வணக்கம், இது BusWatch 🚌 ஓர் அறிக்கையைப் பார்த்து இங்கே புதுப்பிப்புகளைப் பெற ரசீது எண்ணை (BW-2026-ABC123 போன்றது) அனுப்புங்கள். பிரச்சினையைப் புகாரளிக்கப் படிவத்தைப் பயன்படுத்தவும்: ${url}`,
+    buttons: {
+      report: "புகாரளிக்கவும்",
+      commend: "ஓட்டுநரைப் பாராட்டு",
+      track: "அறிக்கையைப் பார்",
+      follow: "இங்கே தெரிவிக்கவும்",
+      send: "அறிக்கையை அனுப்பு",
+      change: "மாற்றவும்",
+      cancel: "ரத்துசெய்",
+    },
+    reportPrompt:
+      "அப்படி நடந்ததற்கு வருந்துகிறோம். உங்கள் சொந்த வார்த்தைகளில் சொல்லுங்கள்: என்ன நடந்தது, பேருந்து எண் (இலக்கத் தகட்டில் உள்ளது, NB-1234 போன்றது), வழித்தடம், எங்கே எப்போது. தட்டச்சு செய்யலாம் அல்லது குரல் செய்தி அனுப்பலாம்; புகைப்படங்கள், வீடியோக்களையும் அனுப்பலாம்.",
+    commendPrompt:
+      "அருமை! ஓட்டுநர் அல்லது பணியாளர்களைப் பற்றிச் சொல்லுங்கள்: அவர்கள் என்ன நன்றாகச் செய்தார்கள், பேருந்து எண், வழித்தடம்?",
+    trackPrompt: "உங்கள் ரசீது எண்ணை அனுப்புங்கள். அது BW-2026-ABC123 போல இருக்கும்.",
+    notFound: (id) =>
+      `${id} என்ற ரசீது எண்ணுடன் அறிக்கை எதுவும் கிடைக்கவில்லை. சரிபார்த்து மீண்டும் முயலவும்.`,
+    status: (id, status, date) =>
+      `அறிக்கை *${id}*\nநிலை: *${status}*\nபுதுப்பிக்கப்பட்டது: ${date}`,
+    teamMessages: (count) =>
+      `குழு உங்களுக்கு ${count} செய்தி(கள்) அனுப்பியுள்ளது: கண்காணிப்புப் பக்கத்தில் படித்துப் பதிலளிக்கவும்.`,
+    followPrompt: "இந்த அறிக்கை பற்றிய புதுப்பிப்புகளை இங்கே WhatsApp இல் பெற வேண்டுமா?",
+    followed: (id) =>
+      `முடிந்தது ✅ அறிக்கை ${id} மாறும்போது அல்லது குழு உங்களுக்கு எழுதும்போது இங்கே தெரிவிப்போம். எல்லாப் புதுப்பிப்புகளையும் நிறுத்த STOP அனுப்பவும்.`,
+    alreadyFollowing: (id) => `${id} பற்றிய புதுப்பிப்புகள் ஏற்கனவே இங்கே வருகின்றன.`,
+    mediaAdded: (photos, videos) =>
+      `கிடைத்தது 📎 (இதுவரை ${photos} புகைப்படம், ${videos} வீடியோ). அவை உங்கள் அறிக்கையுடன் செல்லும்.`,
+    mediaFull:
+      "என்னால் இணைக்கக்கூடிய அதிகபட்சம் இதுதான் (5 புகைப்படங்கள், 2 வீடியோக்கள்). மீதி சேர்க்கப்படவில்லை.",
+    locationAdded: "📍 இருப்பிடம் உங்கள் அறிக்கையில் சேர்க்கப்பட்டது.",
+    voiceTooLong:
+      "அந்தக் குரல் செய்தி மிக நீளமானது. சிறியதாக அனுப்பவும் அல்லது தட்டச்சு செய்யவும்.",
+    unsupported:
+      "மன்னிக்கவும், என்னால் உரை, புகைப்படங்கள், வீடியோக்கள், குரல் செய்திகள், இருப்பிடங்களை மட்டுமே படிக்க முடியும்.",
+    aiBusy: "மன்னிக்கவும், இப்போது பரபரப்பாக இருக்கிறேன். ஒரு நிமிடத்தில் மீண்டும் முயலவும்.",
+    tooMany: "நீங்கள் நிறைய செய்திகளை அனுப்பியுள்ளீர்கள். சிறிது நேரம் கழித்து மீண்டும் முயலவும்.",
+    checkTitle: {
+      complaint: "தயவுசெய்து உங்கள் அறிக்கையைச் சரிபார்க்கவும்:",
+      commendation: "தயவுசெய்து உங்கள் பாராட்டைச் சரிபார்க்கவும்:",
+      lost_item: "உங்கள் தொலைந்த பொருள் அறிக்கையைச் சரிபார்க்கவும்:",
+    },
+    labels: {
+      category: "வகை",
+      bus: "பேருந்து",
+      route: "வழித்தடம்",
+      place: "இடம்",
+      when: "எப்போது",
+      media: "இணைக்கப்பட்டவை",
+      pin: "வரைபடக் குறி",
+      description: "என்ன நடந்தது",
+    },
+    mediaCount: (photos, videos) =>
+      [photos && `${photos} புகைப்படம்`, videos && `${videos} வீடியோ`].filter(Boolean).join(", "),
+    checkFooter: "சரியாக இருந்தால் “அறிக்கையை அனுப்பு” என்பதை அழுத்தவும்.",
+    missing:
+      "அறிக்கைக்கு இன்னும் என்ன நடந்தது, பேருந்து எண், வழித்தடம் (புகாருக்கு இடமும்) தேவை. முதலில் அவற்றைச் சொல்லுங்கள்.",
+    changePrompt: "சரி, எதை மாற்ற விரும்புகிறீர்கள்?",
+    cancelled: "சரி, அந்த அறிக்கையை நீக்கிவிட்டேன். எப்போது வேண்டுமானாலும் எழுதுங்கள்.",
+    sent: (id) =>
+      `நன்றி 🙏 உங்கள் அறிக்கை அனுப்பப்பட்டது.\nரசீது எண்: *${id}*\n\nஅது மதிப்பாய்வு செய்யப்படும்போது அல்லது குழுவுக்கு மேலும் விவரங்கள் தேவைப்படும்போது இங்கே தெரிவிப்போம். புதுப்பிப்புகளை நிறுத்த STOP அனுப்பவும்.`,
+    sentLink: (url) => `\nகண்காணிக்க: ${url}`,
+    mediaFailed:
+      "சில புகைப்படங்கள் அல்லது வீடியோக்களை இணைக்க முடியவில்லை. கண்காணிப்புப் பக்கத்தில் பதில் மூலம் குழுவுக்குத் தெரிவிக்கலாம்.",
+    sendFailed:
+      "மன்னிக்கவும், உங்கள் அறிக்கையை இப்போது அனுப்ப முடியவில்லை. சிறிது நேரத்தில் “அறிக்கையை அனுப்பு” என்பதை மீண்டும் அழுத்தவும்.",
+    receiptCaption: (id) => `BusWatch ரசீது ${id}`,
+    stopped:
+      "முடிந்தது. இனி இங்கே BusWatch புதுப்பிப்புகள் வராது, எங்கள் உரையாடலையும் மறந்துவிட்டேன். மீண்டும் தொடங்க எப்போது வேண்டுமானாலும் எழுதுங்கள்.",
+  },
   pdf: {
     subtitle: "பொதுப் போக்குவரத்து கண்காணிப்பு அமைப்பு",
-    title: { complaint: ["சம்பவ", "அறிக்கை"], commendation: ["ஓட்டுநர்", "பாராட்டு"] },
+    title: {
+      complaint: ["சம்பவ", "அறிக்கை"],
+      commendation: ["ஓட்டுநர்", "பாராட்டு"],
+      lost_item: ["தொலைந்த", "பொருள்"],
+    },
     reportId: "அறிக்கை எண்",
     date: "தேதி",
-    detailsHeading: { complaint: "சம்பவ அறிக்கை விவரங்கள்", commendation: "பாராட்டு விவரங்கள்" },
+    detailsHeading: {
+      complaint: "சம்பவ அறிக்கை விவரங்கள்",
+      commendation: "பாராட்டு விவரங்கள்",
+      lost_item: "தொலைந்த பொருளின் விவரங்கள்",
+    },
     summary: "அறிக்கை சுருக்கம்",
     identifier: "தனித்துவமான அறிக்கை எண்",
     generatedOn: "அறிக்கை உருவாக்கப்பட்ட தேதி",
-    overview: { complaint: "சம்பவ கண்ணோட்டம்", commendation: "சிறப்பாகச் செய்தவை" },
+    overview: {
+      complaint: "சம்பவ கண்ணோட்டம்",
+      commendation: "சிறப்பாகச் செய்தவை",
+      lost_item: "தொலைந்த பொருள்",
+    },
     busNumber: "பேருந்து எண்",
     routeNumber: "வழித்தட எண்",
     busName: "பேருந்தின் பெயர்",
     category: "வகை",
     location: "இடம்",
-    incidentAt: { complaint: "சம்பவ தேதி மற்றும் நேரம்", commendation: "பயண தேதி மற்றும் நேரம்" },
+    incidentAt: {
+      complaint: "சம்பவ தேதி மற்றும் நேரம்",
+      commendation: "பயண தேதி மற்றும் நேரம்",
+      lost_item: "பயணத்தின் தேதி மற்றும் நேரம்",
+    },
     reportedOn: "அறிவிக்கப்பட்ட தேதி",
-    description: { complaint: "விரிவான விளக்கம்", commendation: "அவர்கள் சிறப்பாகச் செய்தவை" },
+    description: {
+      complaint: "விரிவான விளக்கம்",
+      commendation: "அவர்கள் சிறப்பாகச் செய்தவை",
+      lost_item: "பொருளின் விவரம்",
+    },
     notSpecified: "குறிப்பிடப்படவில்லை",
     none: "இல்லை",
     evidence: "இணைக்கப்பட்ட ஆதாரங்கள்",
@@ -478,6 +863,8 @@ const ta: ApiMessages = {
         "பாதுகாப்பான பொதுப் போக்குவரத்துக்குப் பங்களித்ததற்கு நன்றி. உங்கள் அறிக்கை பதிவு செய்யப்பட்டுள்ளது, எங்கள் குழு அதைப் பரிசீலிக்கும்.",
       commendation:
         "நல்ல சேவையைப் பாராட்டியதற்கு நன்றி. உங்கள் பாராட்டு பதிவு செய்யப்பட்டு பேருந்து உரிமையாளருடன் பகிரப்படும்.",
+      lost_item:
+        "உங்கள் தொலைந்த பொருள் அறிக்கை பதிவு செய்யப்பட்டது. அதை பேருந்து உரிமையாளருடன் பகிர்ந்து, பொருள் கிடைத்தால் உங்களுக்குத் தெரிவிப்போம்.",
     },
     reference: "இந்த அறிக்கையைக் குறிப்பிட வேண்டுமா?",
     provideId: (id) => `தயவுசெய்து இந்த அறிக்கை எண்ணைக் குறிப்பிடவும்: ${id}`,

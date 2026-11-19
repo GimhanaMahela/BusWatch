@@ -25,6 +25,8 @@ export interface ContactChannels {
   sms: boolean;
   push: boolean;
   telegram: boolean;
+  /** The BusWatch WhatsApp bot's number (+94771234567), or null when the bot is off */
+  whatsapp: string | null;
 }
 
 export const getContactChannels = () => call<ContactChannels>(apiClient.get("/passenger/channels"));

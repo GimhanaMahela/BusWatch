@@ -7,8 +7,12 @@ import {
   getFleetSummary,
   listFleetReports,
 } from "../repositories/operator.repository.js";
+import { findReportById, updateReportStatus } from "../repositories/report.repository.js";
+import { notifyPassenger } from "../services/notification.service.js";
+import { invalidateCache } from "../utils/ttl-cache.js";
 import {
   fleetReportsQuerySchema,
+  type LostItemFoundInput,
   type OperatorResponseInput,
 } from "../validators/operator.validator.js";
 
@@ -66,12 +70,57 @@ export const respond = async (
     return;
   }
   const operator = await findAdminById(id);
+  const organisation = operator?.organisation ?? null;
   await addOperatorResponse({
     reportId: report.id,
     operatorId: id,
-    organisation: operator?.organisation ?? null,
+    organisation,
     body: req.body.body,
   });
   await countEvent("operator_response");
+  // A lost item can't wait for an admin to pass the news on (complaint responses can be hidden by
+  // admins first, so those are only shown on the tracking page)
+  if (report.type === "lost_item") {
+    const full = await findReportById(report.id);
+    if (full) await notifyPassenger(full, { kind: "operator", body: req.body.body, organisation });
+  }
   res.status(201).json(await findFleetReport(id, report.id));
+};
+
+// @desc    "We found it": closes a lost item report and tells the passenger where to collect it
+// @route   POST /api/operator/reports/:id/found
+// @access  Private (operator)
+export const markFound = async (
+  req: Request<IdParams, object, LostItemFoundInput>,
+  res: Response,
+) => {
+  const id = operatorId(req as Request);
+  const report = await findFleetReport(id, req.params.id);
+  if (!report || report.type !== "lost_item") {
+    res.status(404).json({ msg: "Lost item report not found" });
+    return;
+  }
+  if (report.status === "resolved") {
+    res.status(409).json({ msg: "This item is already marked as found." });
+    return;
+  }
+  const operator = await findAdminById(id);
+  const organisation = operator?.organisation ?? null;
+  await addOperatorResponse({
+    reportId: report.id,
+    operatorId: id,
+    organisation,
+    body: req.body.body,
+  });
+  await updateReportStatus(report.id, {
+    status: "resolved",
+    note: req.body.body,
+    changedBy: operator?.email ?? "operator",
+  });
+  await countEvent("operator_response");
+  invalidateCache("public:");
+  const full = await findReportById(report.id);
+  if (full)
+    await notifyPassenger(full, { kind: "status", status: "resolved", note: req.body.body });
+  res.json(await findFleetReport(id, report.id));
 };

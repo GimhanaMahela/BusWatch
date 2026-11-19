@@ -7,9 +7,11 @@ import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import PendingActionsRoundedIcon from "@mui/icons-material/PendingActionsRounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import {
   Alert,
+  Button,
   Box,
   Card,
   CardActionArea,
@@ -36,6 +38,7 @@ const PAGE_SIZE = 10;
 
 function FleetReportCard({ report }: { report: FleetReport }) {
   const commendation = report.type === "commendation";
+  const lost = report.type === "lost_item";
   const awaiting = !commendation && report.status !== "resolved" && (report.responses ?? 0) === 0;
   return (
     <Card>
@@ -43,6 +46,8 @@ function FleetReportCard({ report }: { report: FleetReport }) {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
           {commendation ? (
             <ThumbUpAltRoundedIcon color="success" fontSize="small" />
+          ) : lost ? (
+            <TravelExploreRoundedIcon color="info" fontSize="small" />
           ) : (
             <ReportProblemRoundedIcon color="warning" fontSize="small" />
           )}
@@ -102,7 +107,7 @@ function FleetReportCard({ report }: { report: FleetReport }) {
 function OperatorDashboardView() {
   const { admin } = useAuth();
   const summary = useFleetSummary();
-  const [type, setType] = useState<"" | "complaint" | "commendation">("complaint");
+  const [type, setType] = useState<"" | "complaint" | "commendation" | "lost_item">("complaint");
   const [status, setStatus] = useState("");
   const [busNumber, setBusNumber] = useState("");
   const [page, setPage] = useState(1);
@@ -151,6 +156,27 @@ function OperatorDashboardView() {
             hint="Open complaints you haven't answered"
           />
         </Grid>
+        {s.lostItemsOpen > 0 && (
+          <Grid size={12} sx={{ order: -1 }}>
+            <Alert
+              severity="info"
+              icon={<TravelExploreRoundedIcon />}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => filter(() => setType("lost_item"))}
+                >
+                  Show
+                </Button>
+              }
+            >
+              {s.lostItemsOpen === 1
+                ? "A passenger is looking for something they left on one of your buses."
+                : `${s.lostItemsOpen} passengers are looking for things they left on your buses.`}
+            </Alert>
+          </Grid>
+        )}
         <Grid size={{ xs: 6, md: 3 }}>
           <StatTile
             label="Checked complaints"
@@ -212,6 +238,10 @@ function OperatorDashboardView() {
         <Tabs value={type} onChange={(_, value: typeof type) => filter(() => setType(value))}>
           <Tab value="complaint" label="Complaints" />
           <Tab value="commendation" label="Commendations" />
+          <Tab
+            value="lost_item"
+            label={s.lostItemsOpen ? `Lost items (${s.lostItemsOpen})` : "Lost items"}
+          />
           <Tab value="" label="All" />
         </Tabs>
         <TextField

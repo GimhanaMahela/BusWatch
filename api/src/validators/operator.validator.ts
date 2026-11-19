@@ -2,14 +2,14 @@ import { z } from "zod";
 import {
   MAX_FLEET_SIZE,
   MAX_OPERATOR_RESPONSE_LENGTH,
-  PUBLIC_STATUSES,
+  OPERATOR_LOST_ITEM_STATUSES,
   REPORT_TYPES,
 } from "../config/constants.js";
 
 export const fleetReportsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
   limit: z.coerce.number().int().min(1).max(100).catch(20),
-  status: z.enum(PUBLIC_STATUSES).optional().catch(undefined),
+  status: z.enum(OPERATOR_LOST_ITEM_STATUSES).optional().catch(undefined),
   type: z.enum(REPORT_TYPES).optional().catch(undefined),
   busNumber: z.string().trim().max(20).optional().catch(undefined),
 });
@@ -48,3 +48,14 @@ export const responseVisibilitySchema = z.object({
 });
 
 export type ResponseVisibilityInput = z.infer<typeof responseVisibilitySchema>;
+
+/** Operator portal: "We found it" on a lost item, with where to collect it */
+export const lostItemFoundSchema = z.object({
+  body: z
+    .string({ error: "Say where the passenger can collect it." })
+    .trim()
+    .min(1, "Say where the passenger can collect it.")
+    .max(MAX_OPERATOR_RESPONSE_LENGTH, `Keep it under ${MAX_OPERATOR_RESPONSE_LENGTH} characters.`),
+});
+
+export type LostItemFoundInput = z.infer<typeof lostItemFoundSchema>;

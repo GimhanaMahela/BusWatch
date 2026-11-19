@@ -64,13 +64,44 @@ const EnvSchema = z.object({
     z.string().regex(/^[\w-]{1,256}$/, "Use letters, digits, _ and -"),
   ),
 
+  // The BusWatch WhatsApp bot, through Meta's WhatsApp Cloud API (see the README). Off unless the
+  // access token and phone number ID are set.
+  WHATSAPP_ACCESS_TOKEN: optional(z.string()),
+  WHATSAPP_PHONE_NUMBER_ID: optional(z.string()),
+  // App secret of the Meta app: every webhook call is signed with it
+  WHATSAPP_APP_SECRET: optional(z.string()),
+  // Any string you choose; Meta sends it back once when you register the webhook URL
+  WHATSAPP_VERIFY_TOKEN: optional(z.string()),
+  // The bot's number as passengers dial it, e.g. +94771234567 (for "Chat on WhatsApp" buttons)
+  WHATSAPP_DISPLAY_NUMBER: optional(
+    z.string().regex(/^\+[1-9]\d{7,14}$/, "Use the form +94771234567"),
+  ),
+  // Optional approved message template for updates sent more than 24 hours after the passenger's
+  // last message (WhatsApp only allows templates then). Body: {{1}} receipt ID, {{2}} the update.
+  WHATSAPP_UPDATE_TEMPLATE: optional(z.string()),
+  WHATSAPP_API_VERSION: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^v\d+\.\d+$/)
+      .default("v23.0"),
+  ),
+
   // AI help for admins (Phase 4): category suggestions, translation, summaries, and blurring faces
-  // and number plates in photos. Off when unset.
-  ANTHROPIC_API_KEY: optional(z.string()),
+  // and number plates in photos, with Google Gemini's free tier. Off when unset.
+  GEMINI_API_KEY: optional(z.string()),
   AI_MODEL: z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.string().default("claude-opus-5-5"),
+    z.string().default("gemini-flash-latest"),
   ),
+  // Used when AI_MODEL is overloaded or out of free quota; "" turns the fallback off
+  AI_FALLBACK_MODEL: z.string().default("gemini-flash-lite-latest"),
+  // "false" hides the BusWatch helper chat on the public site (it shares the free Gemini quota with
+  // the admin AI help, so switch it off if the quota runs out)
+  AI_CHAT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   // "true": analyse every new report straight after it is submitted (otherwise admins click Analyse)
   AI_AUTO_ANALYSE: z
     .enum(["true", "false"])

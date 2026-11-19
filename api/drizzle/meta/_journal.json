@@ -57,6 +57,27 @@
       "when": 1793969472857,
       "tag": "0007_phase4_ai_help",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794205173299,
+      "tag": "0008_phase4_helper_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794556908749,
+      "tag": "0009_phase4_whatsapp_bot",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795071751800,
+      "tag": "0010_phase5_passenger_safety",
+      "breakpoints": true
     }
   ]
 }

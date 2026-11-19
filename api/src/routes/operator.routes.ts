@@ -3,7 +3,7 @@ import * as operatorController from "../controllers/operator.controller.js";
 import { requireOperator } from "../middleware/auth.middleware.js";
 import { messageLimiter } from "../middleware/rate-limit.middleware.js";
 import { validateBody, validateUuidParam } from "../middleware/validate.middleware.js";
-import { operatorResponseSchema } from "../validators/operator.validator.js";
+import { lostItemFoundSchema, operatorResponseSchema } from "../validators/operator.validator.js";
 
 // Operator portal (Phase 4): every route is for signed-in bus operators only
 const router = Router();
@@ -18,6 +18,14 @@ router.post(
   validateUuidParam("id"),
   validateBody(operatorResponseSchema),
   operatorController.respond,
+);
+
+router.post(
+  "/reports/:id/found",
+  messageLimiter,
+  validateUuidParam("id"),
+  validateBody(lostItemFoundSchema),
+  operatorController.markFound,
 );
 
 export default router;

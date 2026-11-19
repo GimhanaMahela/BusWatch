@@ -1,12 +1,13 @@
 import type { NextRequest } from "next/server";
 import { categoryLabel, statusLabel } from "@/constants/reportConstants";
 import { renderOgCard } from "@/lib/ogImage";
+import { activeTheme } from "@/theme/themes";
 import type { PublicReport } from "@/types/report";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#B7791F",
   reviewed: "#0284C7",
-  escalated: "#7A4DF0",
+  escalated: activeTheme.light.secondary.main,
   resolved: "#12A150",
   rejected: "#5B6478",
 };
@@ -48,7 +49,7 @@ export async function GET(
     subtitle: `${categoryLabel(report.category)} · Route ${report.routeNumber}`,
     badge: {
       text: statusLabel(report.status),
-      color: STATUS_COLORS[report.status] ?? "#2457F5",
+      color: STATUS_COLORS[report.status] ?? activeTheme.light.primary.main,
     },
   });
   response.headers.set("Cache-Control", "public, max-age=300, s-maxage=300");

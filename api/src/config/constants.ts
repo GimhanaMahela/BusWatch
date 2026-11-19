@@ -17,9 +17,18 @@ export const OPEN_STATUSES = [
   "escalated",
 ] as const satisfies readonly ReportStatus[];
 
-/** A complaint about an incident, or praise for a driver or crew ("Commend a driver"). */
-export const REPORT_TYPES = ["complaint", "commendation"] as const;
+/**
+ * A complaint about an incident, praise for a driver or crew ("Commend a driver"), or something a
+ * passenger left on a bus ("Lost something?").
+ */
+export const REPORT_TYPES = ["complaint", "commendation", "lost_item"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
+
+/** Types the BusWatch helper chat and WhatsApp bot can write (lost items use the web form). */
+export const ASSISTANT_REPORT_TYPES = [
+  "complaint",
+  "commendation",
+] as const satisfies readonly ReportType[];
 
 export const COMPLAINT_CATEGORIES = [
   "reckless_driving",
@@ -31,6 +40,7 @@ export const COMPLAINT_CATEGORIES = [
   "loud_music",
   "vehicle_condition",
   "staff_behaviour",
+  "accessibility",
   "other",
 ] as const;
 
@@ -43,25 +53,66 @@ export const COMMENDATION_CATEGORIES = [
   "other",
 ] as const;
 
-/** Every category value stored in the database ("other" is shared by both types). */
+/** What was left on the bus ("Lost something?") */
+export const LOST_ITEM_CATEGORIES = [
+  "bag",
+  "phone",
+  "wallet",
+  "documents",
+  "keys",
+  "clothing",
+  "other",
+] as const;
+
+/** Every category value stored in the database ("other" is shared by every type). */
 export const REPORT_CATEGORIES = [
   ...COMPLAINT_CATEGORIES,
   ...COMMENDATION_CATEGORIES.filter((c) => c !== "other"),
+  ...LOST_ITEM_CATEGORIES.filter((c) => c !== "other"),
 ] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
 
 export const CATEGORIES_BY_TYPE: Record<ReportType, readonly ReportCategory[]> = {
   complaint: COMPLAINT_CATEGORIES,
   commendation: COMMENDATION_CATEGORIES,
+  lost_item: LOST_ITEM_CATEGORIES,
 };
+
+/** Accessibility complaints: what went wrong, ticked by the passenger (at least one). */
+export const ACCESSIBILITY_ISSUES = [
+  "priority_seat",
+  "passed_by",
+  "high_step",
+  "no_help_boarding",
+  "no_space_mobility_aid",
+  "rushed",
+] as const;
+export type AccessibilityIssue = (typeof ACCESSIBILITY_ISSUES)[number];
+
+/** Safety mode: what happened, ticked on the quick harassment form. */
+export const SAFETY_KINDS = [
+  "verbal",
+  "staring",
+  "touching",
+  "followed",
+  "filmed",
+  "other",
+] as const;
+export type SafetyKind = (typeof SAFETY_KINDS)[number];
 
 /** Languages passengers can use the site in; emails and PDF receipts follow the report's language. */
 export const LANGUAGES = ["en", "si", "ta"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-/** How the passenger reached the form: directly, or by scanning the QR sticker inside a bus. */
-export const REPORT_SOURCES = ["web", "qr"] as const;
+/**
+ * How the report reached us: the website, the website opened from the QR sticker inside a bus, or
+ * a chat with the BusWatch WhatsApp bot.
+ */
+export const REPORT_SOURCES = ["web", "qr", "whatsapp"] as const;
 export type ReportSource = (typeof REPORT_SOURCES)[number];
+
+/** Sources the website's forms may claim ("whatsapp" is only set by the bot itself). */
+export const WEB_REPORT_SOURCES = ["web", "qr"] as const satisfies readonly ReportSource[];
 
 /** Statuses after which the passenger may rate how their report was handled */
 export const RATEABLE_STATUSES = [
@@ -121,6 +172,15 @@ export const METRIC_EVENTS = [
   "operator_response",
   "ai_analysis",
   "ai_blur",
+  "assistant_chat",
+  "assistant_draft_opened",
+  "whatsapp_message",
+  "whatsapp_linked",
+  "lost_item_submitted",
+  "fare_checked",
+  "safety_report_submitted",
+  "trip_share_started",
+  "emergency_shown",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -137,6 +197,8 @@ export const CLIENT_METRIC_EVENTS = [
   "impact_view",
   "scorecard_view",
   "confirmation_offered",
+  "assistant_draft_opened",
+  "emergency_shown",
 ] as const satisfies readonly MetricEvent[];
 
 // ---------------------------------------------------------------- Two-way contact (Phase 3)
@@ -199,6 +261,65 @@ export const MAX_OPERATOR_RESPONSE_LENGTH = 2000;
 
 /** AI help: descriptions longer than this get a summary */
 export const AI_SUMMARY_MIN_LENGTH = 400;
+
+/** BusWatch helper chat: how much of a conversation the browser may send each time */
+export const ASSISTANT = {
+  maxMessages: 30,
+  maxMessageLength: 2000,
+} as const;
+
+/** The BusWatch WhatsApp bot */
+export const WHATSAPP = {
+  /** WhatsApp only allows free-form messages this long after the passenger's last message */
+  replyWindowHours: 24,
+  /** A chat that has been quiet this long starts afresh (and its history is forgotten) */
+  chatIdleHours: 24,
+  /** Turns of conversation kept for the AI (each passenger message and each reply is one) */
+  maxHistory: 20,
+  /** Messages one number may send per hour (each costs some of the free AI quota) */
+  maxMessagesPerHour: 40,
+  /** Voice notes longer than this are not transcribed */
+  maxVoiceBytes: 5 * 1024 * 1024,
+} as const;
+
+// ---------------------------------------------------------------- Passenger safety (Phase 5)
+
+/**
+ * Official fares: admins keep the NTC fare-stage table for each service class and the stops (with
+ * their fare stage) of each route. The fare for a journey is the table's fare for the number of
+ * stages travelled.
+ */
+export const SERVICE_CLASSES = ["normal", "semi_luxury", "luxury"] as const;
+export type ServiceClass = (typeof SERVICE_CLASSES)[number];
+
+export const FARES = {
+  /** Stages one fare table can cover */
+  maxStages: 400,
+  /** Stops one route can have */
+  maxStops: 300,
+  /** Highest fare an admin can enter or a passenger can say they paid (rupees) */
+  maxFare: 100_000,
+} as const;
+
+/**
+ * "Share my trip": a passenger sends their position to a link a trusted contact can open. Only the
+ * latest position is kept, and it is wiped when the trip ends.
+ */
+export const TRIP_SHARE = {
+  /** A shared trip stops on its own after this long */
+  maxHours: 6,
+  /** Ended trips are deleted after this many days */
+  keepDays: 2,
+} as const;
+
+/** Lost items are time-sensitive: operators see them straight away, before an admin checks them. */
+export const OPERATOR_LOST_ITEM_STATUSES = [
+  "pending",
+  "reviewed",
+  "escalated",
+  "resolved",
+] as const satisfies readonly ReportStatus[];
+
 /** Buses one operator account can be given */
 export const MAX_FLEET_SIZE = 500;
 

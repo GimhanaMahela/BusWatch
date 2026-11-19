@@ -21,7 +21,14 @@
     "routeTitle": "Route {route}",
     "routeDescription": "Checked passenger reports and commendations for route {route}.",
     "myReportsTitle": "My reports",
-    "myReportsDescription": "See every report you sent with your email or mobile number. Sign in with a one-time code, no password."
+    "myReportsDescription": "See every report you sent with your email or mobile number. Sign in with a one-time code, no password.",
+    "lostTitle": "Lost something on a bus?",
+    "lostDescription": "Tell us what you left on the bus. We pass it to the bus operator and let you know if it's found.",
+    "fareTitle": "Fare checker",
+    "fareDescription": "Check the official bus fare between two stops, and report overcharging with proof.",
+    "safetyTitle": "Safety mode",
+    "safetyDescription": "A quick, quiet way to report harassment on a bus, emergency numbers, and live trip sharing with someone you trust.",
+    "tripTitle": "Shared trip"
   },
   "common": {
     "language": "Language",
@@ -48,7 +55,8 @@
     "homeLink": "BusWatch home",
     "mainNav": "Main",
     "impact": "Impact",
-    "myReports": "My reports"
+    "myReports": "My reports",
+    "safety": "Safety"
   },
   "footer": {
     "tagline": "Your eye on public transport. Report incidents in minutes and follow every step until they are resolved.",
@@ -64,7 +72,10 @@
     "terms": "Terms of service",
     "madeFor": "Made for safer journeys in Sri Lanka.",
     "impact": "Our impact",
-    "myReports": "My reports"
+    "myReports": "My reports",
+    "safety": "Safety mode",
+    "lost": "Lost something?",
+    "fare": "Fare checker"
   },
   "install": {
     "button": "Install the app",
@@ -85,7 +96,14 @@
     "helpful_staff": "Kind, helpful crew",
     "clean_vehicle": "Clean, well-kept bus",
     "on_time": "On time, every halt served",
-    "fair_fare": "Correct fare and ticket"
+    "fair_fare": "Correct fare and ticket",
+    "accessibility": "Accessibility (elderly / disabled passengers)",
+    "bag": "Bag",
+    "phone": "Phone",
+    "wallet": "Wallet / purse",
+    "documents": "Documents / ID",
+    "keys": "Keys",
+    "clothing": "Clothing / umbrella"
   },
   "statuses": {
     "pending": "Pending",
@@ -155,7 +173,19 @@
     "commendCta": "Commend a driver",
     "closingTitle": "Your report is evidence. Let's make it count.",
     "closingText": "Patterns across reports show operators and authorities exactly where things go wrong.",
-    "closingCta": "Start a report"
+    "closingCta": "Start a report",
+    "heroChecked": "Checked by our team",
+    "statsTitle": "BusWatch so far",
+    "statsLink": "See our impact",
+    "safetyTitle": "Safety mode",
+    "safetyText": "Report harassment quickly and quietly, call for help, or share your trip live with someone you trust.",
+    "safetyCta": "Open safety mode",
+    "lostTitle": "Lost something?",
+    "lostText": "Left a bag or phone on a bus? We pass it to the bus operator and tell you when it's found.",
+    "lostCta": "Report a lost item",
+    "fareTitle": "Check your fare",
+    "fareText": "See the official fare between two stops. Overcharged? Report it with the proof attached.",
+    "fareCta": "Check a fare"
   },
   "about": {
     "eyebrow": "About BusWatch",
@@ -234,7 +264,17 @@
     "phone": "Your mobile number (optional)",
     "phoneHelp": "For SMS updates and to sign in to My reports. Never shown publicly.",
     "phoneInvalid": "Enter a mobile number like 077 123 4567.",
-    "reviewPhone": "Mobile for updates"
+    "reviewPhone": "Mobile for updates",
+    "safetyHint": "Want a quicker, quieter form? Safety mode takes a report in a few taps and can share your trip with someone you trust.",
+    "safetyOpen": "Safety mode",
+    "accessibilityQuestion": "What went wrong?",
+    "accessibilityRequired": "Tick at least one.",
+    "fareTitle": "Attach the official fare",
+    "fareHint": "Optional: check the official fare for your journey and attach it as proof.",
+    "fareAttached": "Official fare Rs. {fare} attached.",
+    "fareOpen": "Check fare",
+    "reviewFare": "Fare",
+    "reviewFareValue": "Official Rs. {official}, you paid Rs. {charged}"
   },
   "commend": {
     "eyebrow": "Good service",
@@ -267,7 +307,10 @@
     "receiptPdf": "Receipt PDF",
     "another": "Report another incident",
     "anotherCommendation": "Commend another driver",
-    "texted": "We've texted the receipt ID to your phone."
+    "texted": "We've texted the receipt ID to your phone.",
+    "lostTitle": "We're on it",
+    "lostText": "We've passed your lost item report to the BusWatch team and, where we can, the bus operator. We'll let you know as soon as we hear anything.",
+    "anotherLost": "Report another lost item"
   },
   "offline": {
     "queuedTitle": "Saved on this device",
@@ -321,7 +364,20 @@
     },
     "confirmedByOthers": "{count, plural, one {# other passenger} other {# other passengers}} confirmed seeing this too. That gives your report more weight.",
     "operatorResponded": "Response from the bus operator",
-    "operatorRespondedNamed": "Response from the bus operator, {name}"
+    "operatorRespondedNamed": "Response from the bus operator, {name}",
+    "lostItem": "Lost item",
+    "noteLostReceived": "Lost item report received. We've passed it on to the bus operator where we can.",
+    "lost": {
+      "pending": "We've received your lost item report and are passing it on.",
+      "reviewed": "The team and the bus operator are looking for your item.",
+      "escalated": "Your report has been passed on to the bus operator.",
+      "resolved": "Your item has been found. See the message below for where to collect it.",
+      "rejected": "We're sorry, your item hasn't been found and this report is closed."
+    },
+    "accessibilityIssues": "What went wrong",
+    "officialFare": "Official fare",
+    "fareValue": "Rs. {official} from {from} to {to}",
+    "farePaid": "you paid Rs. {charged}"
   },
   "rating": {
     "title": "How did we do?",
@@ -424,7 +480,9 @@
     "reportCta": "Report an incident on this bus",
     "commendCta": "Commend this bus's crew",
     "back": "All results",
-    "reportsCount": "{count, plural, one {# report} other {# reports}}"
+    "reportsCount": "{count, plural, one {# report} other {# reports}}",
+    "accessibilityTitle": "Accessibility",
+    "accessibilitySubtitle": "{count} checked complaints from elderly or disabled passengers, or on their behalf"
   },
   "push": {
     "title": "Get notified on this device",
@@ -443,6 +501,19 @@
     "text": "Free updates in the Telegram app when your report changes or the team writes to you. Tap the button, then press Start.",
     "button": "Open Telegram",
     "hint": "Send /stop to the bot at any time to stop."
+  },
+  "whatsapp": {
+    "followTitle": "Get updates on WhatsApp",
+    "followText": "Free updates in WhatsApp when your report changes or the team writes to you. Tap the button, then press send.",
+    "followButton": "Open WhatsApp",
+    "followHint": "Send STOP to BusWatch on WhatsApp at any time to stop.",
+    "followMessage": "Track {receiptId}",
+    "chatTitle": "Prefer WhatsApp?",
+    "chatText": "Report a problem, praise a driver or track a report by chatting with BusWatch on WhatsApp. Type or send a voice note in Sinhala, Tamil or English, with photos.",
+    "chatButton": "Chat on WhatsApp",
+    "hello": "Hi BusWatch",
+    "helperLink": "Continue on WhatsApp",
+    "footer": "BusWatch on WhatsApp"
   },
   "messages": {
     "title": "Messages",
@@ -514,5 +585,172 @@
     "thanksText": "Your confirmation was added to the report about bus {bus}. Reports backed up by several passengers carry more weight with the team.",
     "home": "Back to home",
     "reportDifferent": "Report a different incident"
+  },
+  "helper": {
+    "title": "BusWatch helper",
+    "subtitle": "Ask in English, සිංහල or தமிழ்",
+    "open": "Chat with the BusWatch helper",
+    "fab": "Need help?",
+    "newChat": "Start a new chat",
+    "greeting": "Hi! I can answer questions about BusWatch, or help you write a report or praise a driver, step by step. What happened?",
+    "notice": "Answers are written by AI and can be wrong. Please don't share names or phone numbers here. In an emergency, call 119.",
+    "placeholder": "Type your message…",
+    "send": "Send",
+    "thinking": "The helper is typing…",
+    "quickReport": "I want to report a problem on a bus",
+    "quickCommend": "I want to praise a driver",
+    "quickTrack": "How do I check my report?",
+    "quickHow": "How does BusWatch work?",
+    "draftComplaint": "Your report so far",
+    "draftCommendation": "Your commendation so far",
+    "draftBus": "Bus",
+    "draftRoute": "Route",
+    "draftPlace": "Place",
+    "draftTime": "When",
+    "draftCategory": "Category",
+    "openForm": "Open the form",
+    "openFormHint": "Check it, add photos and your contact details, then send it yourself.",
+    "error": "The helper couldn't answer. Please try again.",
+    "offline": "The helper needs an internet connection. You can still fill in the report form offline.",
+    "links": {
+      "submit_report": "Report an incident",
+      "commend_driver": "Commend a driver",
+      "track": "Track a report",
+      "my_reports": "My reports",
+      "impact": "Our impact",
+      "about": "About BusWatch",
+      "privacy": "Privacy policy"
+    }
+  },
+  "accessibilityIssues": {
+    "priority_seat": "Priority seat not given up",
+    "passed_by": "Didn't stop for an elderly or disabled passenger",
+    "high_step": "Step too high / no ramp",
+    "no_help_boarding": "No help getting on or off",
+    "no_space_mobility_aid": "No room for a wheelchair, crutches or pram",
+    "rushed": "Moved off before they were seated or off"
+  },
+  "safetyKinds": {
+    "verbal": "Comments or verbal abuse",
+    "staring": "Staring",
+    "touching": "Unwanted touching",
+    "followed": "Followed",
+    "filmed": "Photographed or filmed",
+    "other": "Something else"
+  },
+  "serviceClasses": {
+    "normal": "Normal",
+    "semi_luxury": "Semi-luxury",
+    "luxury": "Luxury / A/C"
+  },
+  "emergency": {
+    "title": "Is someone in danger right now?",
+    "text": "Call for help first. You can finish this report afterwards.",
+    "calmTitle": "In an emergency, call first",
+    "calmText": "These calls are free from any phone.",
+    "police": "Police {number}",
+    "ambulance": "Ambulance {number}",
+    "fire": "Fire and rescue {number}",
+    "dismiss": "No one is in danger, hide this"
+  },
+  "lost": {
+    "eyebrow": "Lost and found",
+    "title": "Lost something on a bus?",
+    "subtitle": "Tell us what you left behind. We pass it to the bus operator straight away and let you know if it's found.",
+    "busHelp": "From the number plate or the ticket",
+    "whatLost": "What did you lose?",
+    "chooseCategory": "Choose what you lost.",
+    "description": "Describe it",
+    "descriptionPlaceholder": "e.g. Black backpack with a laptop and a blue water bottle, left on the back seat.",
+    "descriptionHelp": "Colour, brand and anything that shows it's yours (but not your ID or card numbers).",
+    "when": "When were you on the bus?",
+    "where": "Where did you get off?",
+    "wherePlaceholder": "e.g. Kadawatha bus stand",
+    "contactTitle": "How can we tell you it's found? (at least one)",
+    "phoneHelp": "We text you when there's news.",
+    "contactRequired": "Give an email address or mobile number so we can tell you if it's found.",
+    "howItWorks": "If the bus operator uses BusWatch, they see your report straight away (never your contact details). Most items turn up within a day or two.",
+    "send": "Send",
+    "failed": "Couldn't send your report. Please try again."
+  },
+  "fare": {
+    "eyebrow": "Fare checker",
+    "title": "What should your fare be?",
+    "subtitle": "Choose your route and stops to see the official fare. Paid more? Report it with the proof attached.",
+    "howItWorks": "Fares follow the NTC fare-stage list: the number of fare stages between your stops sets the fare.",
+    "loading": "Loading fares",
+    "unavailable": "The fare checker isn't available right now. Please try again later.",
+    "noRoutes": "We don't have fares for any routes yet.",
+    "route": "Route",
+    "routePlaceholder": "Number or towns, e.g. 01 or Kandy",
+    "routeMissing": "We don't have fares for that route yet.",
+    "from": "Got on at",
+    "to": "Got off at",
+    "serviceClass": "Bus type",
+    "paid": "What you paid (optional)",
+    "paidHelp": "To see if you were overcharged",
+    "check": "Check fare",
+    "failed": "Couldn't check the fare. Please try again.",
+    "officialFare": "Official fare",
+    "resultDetail": "{from} to {to}: {stages} fare stages, {serviceClass} bus.",
+    "effectiveFrom": "Fares from {date}.",
+    "overcharged": "You paid Rs. {amount} more than the official fare.",
+    "fair": "You paid the right fare.",
+    "report": "Report it",
+    "disclaimer": "Based on the fare list the BusWatch team keeps up to date. If it looks wrong, tell us in your report."
+  },
+  "safety": {
+    "quickExit": "Quick exit",
+    "eyebrow": "Safety mode",
+    "title": "Are you safe?",
+    "subtitle": "Report harassment in a few taps, call for help, or share your trip with someone you trust. Only the bus number and route are needed.",
+    "helpline": "Women's helpline {number}",
+    "reportTitle": "Quick report",
+    "reportText": "Goes to the BusWatch team. The bus operator never sees your contact details.",
+    "sent": "Sent. Your receipt ID is {receiptId}.",
+    "track": "Track it",
+    "queued": "You're offline. It will send by itself when you're back online.",
+    "whatHappened": "What happened? (tick any)",
+    "details": "Anything else (optional)",
+    "detailsPlaceholder": "A few words are enough",
+    "where": "Where (optional)",
+    "contactTitle": "Want updates? (optional)",
+    "contactHelp": "Only the BusWatch team sees this.",
+    "send": "Send quietly",
+    "privacy": "Nothing on this page makes a sound. Quick exit leaves for another site straight away.",
+    "failed": "Couldn't send. Please try again.",
+    "tripTitle": "Share my trip"
+  },
+  "trip": {
+    "aBus": "a bus",
+    "shareMessage": "I'm on {bus}. Follow my trip live on BusWatch: {link}",
+    "shareTitle": "Follow my trip",
+    "denied": "Location is blocked. Allow location for this site in your browser settings so your contact can see where you are.",
+    "unsupported": "This browser can't share your location.",
+    "waiting": "Finding your location...",
+    "sharing": "Sharing your location. Last sent {seconds} seconds ago.",
+    "share": "Send the link",
+    "sms": "SMS",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "stop": "Stop sharing",
+    "privacy": "Keep this page open. Only your latest position is kept, and it's deleted when you stop. Sharing stops by itself after {hours} hours.",
+    "intro": "Send a live link to a friend or family member. They see the bus and where you are, until you stop.",
+    "start": "Start sharing",
+    "failed": "Couldn't start sharing. Please try again.",
+    "viewEyebrow": "Shared trip",
+    "viewTitle": "Following a trip",
+    "viewSubtitle": "Someone shared their bus journey with you. This page updates by itself.",
+    "loading": "Loading the trip",
+    "notFound": "This link has expired or isn't valid.",
+    "bus": "Bus",
+    "route": "Route",
+    "started": "Started",
+    "ended": "They stopped sharing. The trip has ended.",
+    "expired": "This trip link has expired.",
+    "lastSeen": "Last position {when}.",
+    "accuracy": "(within about {metres} m)",
+    "openMap": "Open in Google Maps",
+    "noPosition": "Waiting for their first position..."
   }
 }

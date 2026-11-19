@@ -1,5 +1,6 @@
-import { and, asc, count, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import {
+  OPERATOR_LOST_ITEM_STATUSES,
   PUBLIC_STATUSES,
   REPORT_STATUSES,
   type ReportStatus,
@@ -61,6 +62,8 @@ export const setOrganisation = async (operatorId: string, organisation: string |
 /**
  * Reports about this operator's buses that an admin has checked (pending ones are unverified,
  * rejected ones didn't stand) and not hidden. Same fairness rule as the public scorecards.
+ * Lost items are the exception: they can't wait for an admin, and accuse nobody, so operators see
+ * them as soon as they arrive (unless an admin closed or hid them).
  */
 const fleetReports = (operatorId: string): SQL =>
   and(
@@ -68,7 +71,10 @@ const fleetReports = (operatorId: string): SQL =>
       SELECT ${operatorBuses.busNumber} FROM ${operatorBuses}
       WHERE ${operatorBuses.operatorId} = ${operatorId}
     )`,
-    inArray(reports.status, [...PUBLIC_STATUSES]),
+    or(
+      and(ne(reports.type, "lost_item"), inArray(reports.status, [...PUBLIC_STATUSES])),
+      and(eq(reports.type, "lost_item"), inArray(reports.status, [...OPERATOR_LOST_ITEM_STATUSES])),
+    ),
     eq(reports.hiddenFromPublic, false),
   )!;
 
@@ -90,6 +96,8 @@ const operatorColumns = {
   images: sql<string[]>`coalesce(${reports.blurredImages}, '{}')`,
   // English translation from AI help, when the passenger wrote in Sinhala or Tamil
   translation: sql<string | null>`${reports.aiInsights} ->> 'englishTranslation'`,
+  // Accessibility issues ticked, or the official fare for an overcharging complaint
+  details: reports.details,
 };
 
 const confirmationCount = sql<number>`(
@@ -166,32 +174,38 @@ export const getFleetSummary = async (operatorId: string) => {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const countInt = sql<number>`count(*)::int`;
 
-  const [byTypeStatus, last30Days, awaitingResponse, topBuses, fleet] = await Promise.all([
-    db
-      .select({ type: reports.type, status: reports.status, count: countInt })
-      .from(reports)
-      .where(inFleet)
-      .groupBy(reports.type, reports.status),
-    db.$count(reports, and(inFleet, sql`${reports.reportedAt} >= ${since.toISOString()}`)),
-    // Complaints still open that the operator hasn't answered yet
-    db.$count(
-      reports,
-      and(
-        inFleet,
-        eq(reports.type, "complaint"),
-        inArray(reports.status, ["reviewed", "escalated"]),
-        sql`NOT EXISTS (SELECT 1 FROM ${operatorResponses} WHERE ${operatorResponses.reportId} = ${outerReportId})`,
+  const [byTypeStatus, last30Days, awaitingResponse, topBuses, fleet, lostItemsOpen] =
+    await Promise.all([
+      db
+        .select({ type: reports.type, status: reports.status, count: countInt })
+        .from(reports)
+        .where(inFleet)
+        .groupBy(reports.type, reports.status),
+      db.$count(reports, and(inFleet, sql`${reports.reportedAt} >= ${since.toISOString()}`)),
+      // Complaints still open that the operator hasn't answered yet
+      db.$count(
+        reports,
+        and(
+          inFleet,
+          eq(reports.type, "complaint"),
+          inArray(reports.status, ["reviewed", "escalated"]),
+          sql`NOT EXISTS (SELECT 1 FROM ${operatorResponses} WHERE ${operatorResponses.reportId} = ${outerReportId})`,
+        ),
       ),
-    ),
-    db
-      .select({ busNumber: reports.busNumber, count: count() })
-      .from(reports)
-      .where(and(inFleet, eq(reports.type, "complaint")))
-      .groupBy(reports.busNumber)
-      .orderBy(desc(count()), asc(reports.busNumber))
-      .limit(5),
-    getFleet(operatorId),
-  ]);
+      db
+        .select({ busNumber: reports.busNumber, count: count() })
+        .from(reports)
+        .where(and(inFleet, eq(reports.type, "complaint")))
+        .groupBy(reports.busNumber)
+        .orderBy(desc(count()), asc(reports.busNumber))
+        .limit(5),
+      getFleet(operatorId),
+      // Lost items nobody has marked as found yet
+      db.$count(
+        reports,
+        and(inFleet, eq(reports.type, "lost_item"), ne(reports.status, "resolved")),
+      ),
+    ]);
 
   const complaintsByStatus = Object.fromEntries(REPORT_STATUSES.map((s) => [s, 0])) as Record<
     ReportStatus,
@@ -199,8 +213,10 @@ export const getFleetSummary = async (operatorId: string) => {
   >;
   let complaints = 0;
   let commendations = 0;
+  let lostItems = 0;
   for (const row of byTypeStatus) {
     if (row.type === "commendation") commendations += row.count;
+    else if (row.type === "lost_item") lostItems += row.count;
     else {
       complaints += row.count;
       complaintsByStatus[row.status] = row.count;
@@ -214,6 +230,8 @@ export const getFleetSummary = async (operatorId: string) => {
     last30Days,
     awaitingResponse,
     topBuses,
+    lostItems,
+    lostItemsOpen,
   };
 };
 
