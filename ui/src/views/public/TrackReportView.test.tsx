@@ -122,9 +122,7 @@ describe("TrackReportView", () => {
     });
     renderWithProviders(<TrackReportView receiptId="BW-2026-ABCDEF" />, { locale: "si" });
 
-    expect(
-      await screen.findByText("ඔබේ කාරුණික වචන බස් හිමිකරු වෙත යොමු කර ඇත."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("ඔබේ කාරුණික වචන බස් හිමිකරු වෙත යොමු කර ඇත.")).toBeInTheDocument();
     expect(screen.getAllByText("ප්‍රශංසාව ලැබුණා.")).toHaveLength(1);
     expect(screen.getByText("කාරුණික, උදව්කාරී කාර්ය මණ්ඩලය")).toBeInTheDocument();
     expect(screen.queryByText("ස්ථානය")).not.toBeInTheDocument();
