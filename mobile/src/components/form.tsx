@@ -122,3 +122,62 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 });
+
+/** Tick any number of options (chips that toggle) */
+export function MultiChips<T extends string>({
+  label,
+  options,
+  values,
+  onChange,
+  color,
+}: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  values: readonly T[];
+  onChange: (values: T[]) => void;
+  color: string;
+}) {
+  const theme = useTheme();
+  const toggle = (value: T) =>
+    onChange(values.includes(value) ? values.filter((v) => v !== value) : [...values, value]);
+  return (
+    <View style={styles.field}>
+      <AppText variant="label">{label}</AppText>
+      <View accessibilityLabel={label} style={styles.chips}>
+        {options.map((option) => {
+          const selected = values.includes(option.value);
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected }}
+              onPress={() => toggle(option.value)}
+              style={[
+                styles.chip,
+                {
+                  borderColor: selected ? color : `${color}40`,
+                  backgroundColor: selected ? color : `${color}14`,
+                },
+              ]}
+            >
+              <Ionicons
+                name={selected ? "checkbox" : "square-outline"}
+                size={16}
+                color={selected ? "#FFFFFF" : color}
+              />
+              <AppText
+                style={{
+                  color: selected ? "#FFFFFF" : theme.text,
+                  fontSize: 15,
+                  fontWeight: selected ? "700" : "500",
+                }}
+              >
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}

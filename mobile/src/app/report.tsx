@@ -10,10 +10,7 @@ import {
   type ScrollViewInstance,
 } from "react-native";
 
-import NetInfo from "@react-native-community/netinfo";
-
-import { ApiError, TURNSTILE_SITE_KEY } from "@/api/client";
-import { submitReport, type SubmitResult } from "@/api/reports";
+import { TURNSTILE_SITE_KEY } from "@/api/client";
 import { ChoiceChips, TextField } from "@/components/form";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { Turnstile } from "@/components/Turnstile";
@@ -29,11 +26,11 @@ import {
   isAppReportType,
   type AppReportType,
   MAX_DESCRIPTION,
-  toFormData,
   validateDraft,
   type DraftErrors,
   type ReportDraft,
 } from "@/lib/reportDraft";
+import { submitOrQueue } from "@/lib/submitOrQueue";
 import { useCurrentLocation } from "@/lib/useCurrentLocation";
 import { accents, categoryStyle, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
@@ -98,19 +95,30 @@ export default function ReportScreen() {
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const scroll = useRef<ScrollViewInstance>(null);
 
-  // ?type=commendation|lost_item picks the form; ?bus=…&route=…&src=qr comes from a sticker scan
+  // ?type=commendation|lost_item picks the form; ?bus=…&route=…&src=qr comes from a sticker scan;
+  // category, location and description come from the helper chat's draft. All are untrusted.
   const params = useLocalSearchParams<{
     type?: string;
     bus?: string;
     route?: string;
     src?: string;
+    category?: string;
+    location?: string;
+    description?: string;
   }>();
-  const [draft, setDraft] = useState<ReportDraft>(() => ({
-    ...emptyDraft(isAppReportType(params.type) ? params.type : "complaint"),
-    busNumber: parseBusNumber(params.bus),
-    routeNumber: parseRoute(params.route),
-    source: params.src === "qr" ? "qr" : "app",
-  }));
+  const [draft, setDraft] = useState<ReportDraft>(() => {
+    const type = isAppReportType(params.type) ? params.type : "complaint";
+    const category = CATEGORIES_FOR[type].find((option) => option === params.category) ?? "";
+    return {
+      ...emptyDraft(type),
+      busNumber: parseBusNumber(params.bus),
+      routeNumber: parseRoute(params.route),
+      source: params.src === "qr" ? "qr" : "app",
+      category,
+      location: (params.location ?? "").slice(0, 200),
+      description: (params.description ?? "").slice(0, MAX_DESCRIPTION),
+    };
+  });
   const text = TEXT[draft.type];
   const look = TYPE_LOOK[draft.type];
   const [errors, setErrors] = useState<DraftErrors>({});
@@ -127,24 +135,7 @@ export default function ReportScreen() {
 
   // Sends the report, or keeps it on the phone when there is no connection (like the website)
   const send = useMutation({
-    mutationFn: async (): Promise<SubmitResult | "queued"> => {
-      if ((await NetInfo.fetch()).isConnected === false) {
-        await outbox.enqueue(draft, locale);
-        return "queued";
-      }
-      try {
-        const result = await submitReport(toFormData(draft, locale, captcha));
-        await outbox.recordSent(result.receiptId);
-        return result;
-      } catch (error) {
-        // No HTTP status: the request never reached the server (signal dropped mid-send)
-        if (error instanceof ApiError && error.status === undefined) {
-          await outbox.enqueue(draft, locale);
-          return "queued";
-        }
-        throw error;
-      }
-    },
+    mutationFn: () => submitOrQueue(draft, locale, captcha, outbox),
     onSuccess: (result) => {
       router.replace({
         pathname: "/report-sent",

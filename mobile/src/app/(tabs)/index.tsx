@@ -86,6 +86,42 @@ export default function HomeScreen() {
         />
       </View>
 
+      <SectionTitle icon="compass" color={accents.teal}>
+        {t("app.exploreTitle")}
+      </SectionTitle>
+      <View style={styles.grid}>
+        <ActionTile
+          icon="calculator"
+          color={accents.teal}
+          title={t("fare.eyebrow")}
+          subtitle={t("fare.title")}
+          onPress={() => router.push("/fare")}
+        />
+        <ActionTile
+          icon="shield-checkmark"
+          color={accents.pink}
+          title={t("safety.eyebrow")}
+          subtitle={t("safety.tripTitle")}
+          onPress={() => router.push("/safety")}
+        />
+      </View>
+      <View style={styles.grid}>
+        <ActionTile
+          icon="stats-chart"
+          color={accents.blue}
+          title={t("impact.eyebrow")}
+          subtitle={t("impact.lookupTitle")}
+          onPress={() => router.push("/impact")}
+        />
+        <ActionTile
+          icon="chatbubbles"
+          color={accents.orange}
+          title={t("helper.title")}
+          subtitle={t("helper.subtitle")}
+          onPress={() => router.push("/chat")}
+        />
+      </View>
+
       <Card>
         <SectionTitle icon="sparkles" color={accents.orange}>
           {t("home.howTitle")}

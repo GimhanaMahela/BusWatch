@@ -63,6 +63,12 @@ function RootStack() {
         <Stack.Screen name="report" options={{ title: t("submit.title") }} />
         <Stack.Screen name="outbox" options={{ title: t("app.outboxTitle") }} />
         <Stack.Screen name="scan" options={{ title: t("app.scanTitle") }} />
+        <Stack.Screen name="fare" options={{ title: t("fare.eyebrow") }} />
+        <Stack.Screen name="impact" options={{ title: t("impact.eyebrow") }} />
+        <Stack.Screen name="safety" options={{ title: t("safety.eyebrow") }} />
+        <Stack.Screen name="chat" options={{ title: t("helper.title") }} />
+        <Stack.Screen name="bus/[busNumber]" options={{ title: t("scorecard.busEyebrow") }} />
+        <Stack.Screen name="route/[routeNumber]" options={{ title: t("scorecard.routeEyebrow") }} />
         <Stack.Screen
           name="report-sent"
           options={{ title: t("submit.title"), headerBackVisible: false, gestureEnabled: false }}
