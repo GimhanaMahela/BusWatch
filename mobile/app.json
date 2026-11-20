@@ -30,6 +30,20 @@
       "expo-localization",
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "TransitX attaches the photos you choose to your report.",
+          "cameraPermission": "TransitX uses the camera to take photos for your report.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TransitX adds where the incident happened to your report."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#0068C2",

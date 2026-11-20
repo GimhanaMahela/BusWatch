@@ -18,6 +18,14 @@ describe("createTranslator", () => {
     expect(createTranslator("ta")("app.settings")).not.toBe("Settings");
   });
 
+  it("renders rich-text tags through the given functions", () => {
+    const t = createTranslator("en");
+    const plain = (chunks: string[]) => chunks.join("");
+    expect(t("submit.consent", { terms: plain, privacy: plain })).toBe(
+      "By sending this report you agree to our terms and privacy policy.",
+    );
+  });
+
   it("returns the key when a message is missing everywhere", () => {
     expect(createTranslator("si")("nothing.here")).toBe("nothing.here");
   });

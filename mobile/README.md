@@ -8,7 +8,10 @@ root `node_modules` with Next.js. It still reuses two folders from the repo thro
 
 - `ui/messages/*.json`: all English, Sinhala and Tamil text, formatted with `intl-messageformat`
   (the same ICU syntax as next-intl). App-only strings live in `src/messages/` under `app.*`.
-- `api/src/config/constants.ts`: statuses, categories and report types.
+- `api/src/config/constants.ts`: statuses, categories, report types and upload limits.
+- `api/src/utils/phone.ts`: the phone-number check the server uses.
+
+Shared files must not import anything: their imports would resolve outside the app.
 
 ## Run it
 
@@ -33,15 +36,23 @@ npm run doctor   # expo-doctor: SDK version and config problems
 
 CI runs all four in the `mobile` job of `.github/workflows/ci.yml`.
 
+## Adding a dependency
+
+Install with `npx expo install <package>` (it picks the version that matches the SDK), then run
+`npm run relock`. On Linux, `npm install` drops macOS-only optional packages such as `fsevents`
+from the lockfile, and `npm ci` on CI then fails with "Missing: fsevents from lock file".
+`relock` rebuilds the lockfile from the registry; run `npm ci` afterwards.
+
 ## Layout
 
 ```
 src/
-├── app/            # Screens (Expo Router): (tabs)/ Home, Track, Settings; track/[receiptId]
+├── app/            # Screens (Expo Router): (tabs)/ Home, Track, Settings; track/[receiptId];
+│                   #   report (the complaint form) and report-sent (the receipt)
 ├── api/            # HTTP calls: client.ts (axios + ApiError), reports.ts
-├── components/     # Themed building blocks (ui.tsx)
+├── components/     # Themed building blocks (ui, form), PhotoPicker, Turnstile (CAPTCHA WebView)
 ├── i18n/           # Language provider and translator
-├── lib/            # Small pure helpers (receipt IDs, dates)
+├── lib/            # Report form model and checks, location, receipt IDs, dates
 ├── messages/       # App-only text in en / si / ta
 └── theme/          # TransitX palette, light and dark
 ```
