@@ -1,0 +1,6 @@
+{
+  "settings": "Settings",
+  "version": "Version {version}",
+  "reportOnWebsite": "The report form opens on the TransitX website for now. It moves into the app in the next release.",
+  "apiServer": "Server"
+}
