@@ -17,7 +17,7 @@ import { submitReport, type SubmitResult } from "@/api/reports";
 import { ChoiceChips, TextField } from "@/components/form";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { Turnstile } from "@/components/Turnstile";
-import { AppText, Button, Card } from "@/components/ui";
+import { AppText, Button, Card, SectionTitle, type IconName } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useOutbox } from "@/lib/OutboxProvider";
 import {
@@ -31,7 +31,7 @@ import {
   type ReportDraft,
 } from "@/lib/reportDraft";
 import { useCurrentLocation } from "@/lib/useCurrentLocation";
-import { spacing } from "@/theme/colors";
+import { accents, categoryStyle, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
 const plain = (chunks: string[]) => chunks.join("");
@@ -146,7 +146,9 @@ export default function ReportScreen() {
         )}
 
         <Card>
-          <AppText variant="heading">{t("submit.stepBus")}</AppText>
+          <SectionTitle icon="bus" color={accents.blue}>
+            {t("submit.stepBus")}
+          </SectionTitle>
           <TextField
             label={t("submit.busNumber")}
             value={draft.busNumber}
@@ -177,6 +179,8 @@ export default function ReportScreen() {
             options={APP_COMPLAINT_CATEGORIES.map((value) => ({
               value,
               label: t(`categories.${value}`),
+              icon: categoryStyle[value]?.icon as IconName | undefined,
+              color: categoryStyle[value]?.color,
             }))}
             value={draft.category}
             onChange={(value) => update("category", value)}
@@ -185,7 +189,9 @@ export default function ReportScreen() {
         </Card>
 
         <Card>
-          <AppText variant="heading">{t("submit.stepIncident")}</AppText>
+          <SectionTitle icon="location" color={accents.orange}>
+            {t("submit.stepIncident")}
+          </SectionTitle>
           <TextField
             label={t("submit.where")}
             value={draft.location}
@@ -201,11 +207,17 @@ export default function ReportScreen() {
                   lng: draft.longitude.toFixed(5),
                 })}
               </AppText>
-              <Button variant="outline" label={t("location.removePin")} onPress={removePin} />
+              <Button
+                variant="outline"
+                icon="close-circle-outline"
+                label={t("location.removePin")}
+                onPress={removePin}
+              />
             </View>
           ) : (
             <Button
               variant="outline"
+              icon="navigate"
               label={locating ? t("app.locating") : t("location.useMine")}
               loading={locating}
               onPress={() => void fillMyLocation()}
@@ -229,7 +241,9 @@ export default function ReportScreen() {
         </Card>
 
         <Card>
-          <AppText variant="heading">{t("submit.stepEvidence")}</AppText>
+          <SectionTitle icon="camera" color={accents.violet}>
+            {t("submit.stepEvidence")}
+          </SectionTitle>
           <PhotoPicker photos={draft.photos} onChange={(photos) => update("photos", photos)} />
           <TextField
             label={t("submit.email")}
@@ -274,6 +288,8 @@ export default function ReportScreen() {
           {t("submit.consent", { terms: plain, privacy: plain })}
         </AppText>
         <Button
+          variant="accent"
+          icon="paper-plane"
           label={t("submit.send")}
           onPress={submit}
           loading={send.isPending}

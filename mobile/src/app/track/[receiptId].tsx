@@ -1,15 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { ApiError } from "@/api/client";
 import { STATUS_TEXT_GROUP, trackReport, type PublicReport } from "@/api/reports";
 import { FollowReport } from "@/components/FollowReport";
-import { AppText, Card, Field } from "@/components/ui";
+import { StatusProgress } from "@/components/StatusProgress";
+import { AppText, Badge, Card, Field, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
 import { normaliseReceiptId } from "@/lib/receiptId";
-import { spacing } from "@/theme/colors";
+import { accents, gradients, radiusLarge, spacing, statusColors } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
 const TYPE_LABEL_KEY: Partial<Record<PublicReport["type"], string>> = {
@@ -77,18 +86,25 @@ export default function ReportStatusScreen() {
       contentContainerStyle={styles.content}
       refreshControl={refresh}
     >
-      <View style={{ gap: spacing.xs }}>
-        <AppText variant="label">
+      <LinearGradient
+        colors={gradients.deep}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <Text style={styles.headerLabel}>
           {t("track.receiptId")}
           {typeLabelKey ? ` · ${t(typeLabelKey)}` : ""}
-        </AppText>
-        <AppText variant="title">{report.receiptId}</AppText>
-      </View>
+        </Text>
+        <Text style={styles.headerId} selectable>
+          {report.receiptId}
+        </Text>
+        <Badge label={status} color={statusColors[report.status]} solid />
+      </LinearGradient>
 
-      <Card style={{ borderColor: theme.primary }}>
-        <AppText variant="heading" style={{ color: theme.primary }}>
-          {t("track.progress", { status })}
-        </AppText>
+      <Card accent={statusColors[report.status]}>
+        <AppText variant="heading">{t("track.progress", { status })}</AppText>
+        <StatusProgress status={report.status} />
         <AppText>{t(`${STATUS_TEXT_GROUP[report.type]}.${report.status}`)}</AppText>
         {report.confirmations > 0 && (
           <AppText variant="secondary">
@@ -100,24 +116,46 @@ export default function ReportStatusScreen() {
       <FollowReport receiptId={report.receiptId} />
 
       <Card>
-        <AppText variant="heading">{t("track.details")}</AppText>
-        <Field label={t("track.category")} value={t(`categories.${report.category}`)} />
-        {report.busNumber ? <Field label={t("track.bus")} value={report.busNumber} /> : null}
-        {report.routeNumber ? <Field label={t("track.route")} value={report.routeNumber} /> : null}
-        {report.location ? <Field label={t("track.location")} value={report.location} /> : null}
-        <Field label={t("track.submitted")} value={formatDateTime(report.reportedAt, locale)} />
+        <SectionTitle icon="document-text" color={accents.sky}>
+          {t("track.details")}
+        </SectionTitle>
+        <Field
+          icon="pricetag-outline"
+          label={t("track.category")}
+          value={t(`categories.${report.category}`)}
+        />
+        {report.busNumber ? (
+          <Field icon="bus-outline" label={t("track.bus")} value={report.busNumber} />
+        ) : null}
+        {report.routeNumber ? (
+          <Field icon="git-commit-outline" label={t("track.route")} value={report.routeNumber} />
+        ) : null}
+        {report.location ? (
+          <Field icon="location-outline" label={t("track.location")} value={report.location} />
+        ) : null}
+        <Field
+          icon="calendar-outline"
+          label={t("track.submitted")}
+          value={formatDateTime(report.reportedAt, locale)}
+        />
         {report.resolvedAt ? (
-          <Field label={t("track.resolved")} value={formatDateTime(report.resolvedAt, locale)} />
+          <Field
+            icon="checkmark-circle-outline"
+            label={t("track.resolved")}
+            value={formatDateTime(report.resolvedAt, locale)}
+          />
         ) : null}
       </Card>
 
       {report.timeline.length > 0 && (
         <Card>
-          <AppText variant="heading">{t("track.timeline")}</AppText>
+          <SectionTitle icon="time" color={accents.violet}>
+            {t("track.timeline")}
+          </SectionTitle>
           {[...report.timeline].reverse().map((entry) => (
             <View
               key={`${entry.status}-${entry.changedAt}`}
-              style={[styles.timelineEntry, { borderLeftColor: theme.primary }]}
+              style={[styles.timelineEntry, { borderLeftColor: statusColors[entry.status] }]}
             >
               <AppText variant="label">{formatDateTime(entry.changedAt, locale)}</AppText>
               <AppText style={{ fontWeight: "600" }}>{t(`statuses.${entry.status}`)}</AppText>
@@ -128,12 +166,12 @@ export default function ReportStatusScreen() {
       )}
 
       {report.operatorResponses.map((response) => (
-        <Card key={response.createdAt}>
-          <AppText variant="heading">
+        <Card key={response.createdAt} accent={accents.teal}>
+          <SectionTitle icon="chatbubbles" color={accents.teal}>
             {response.organisation
               ? t("track.operatorRespondedNamed", { name: response.organisation })
               : t("track.operatorResponded")}
-          </AppText>
+          </SectionTitle>
           <AppText>{response.body}</AppText>
         </Card>
       ))}
@@ -145,4 +183,13 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl },
   timelineEntry: { borderLeftWidth: 3, paddingLeft: spacing.md, paddingVertical: spacing.xs },
+  header: { borderRadius: radiusLarge + 6, padding: spacing.lg, gap: spacing.sm },
+  headerLabel: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  headerId: { color: "#FFFFFF", fontSize: 28, fontWeight: "800", letterSpacing: 1 },
 });
