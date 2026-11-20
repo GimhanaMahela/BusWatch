@@ -7,11 +7,15 @@ import { useTheme } from "@/theme/useTheme";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-/** A tab bar icon; the navigator passes our theme colours, which are always strings */
-const icon = (name: IconName) => {
-  function TabIcon({ color, size }: { color: ColorValue; size: number }) {
+/** A tab icon: outlined at rest, filled and tinted when its tab is open */
+const icon = (outline: IconName, filled: IconName) => {
+  function TabIcon({ color, focused }: { color: ColorValue; focused: boolean; size: number }) {
     return (
-      <Ionicons name={name} color={typeof color === "string" ? color : undefined} size={size} />
+      <Ionicons
+        name={focused ? filled : outline}
+        color={typeof color === "string" ? color : undefined}
+        size={24}
+      />
     );
   }
   return TabIcon;
@@ -25,19 +29,42 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSecondary,
+        tabBarLabelStyle: { fontSize: 12, fontWeight: "700" },
+        tabBarStyle: {
+          backgroundColor: theme.surface,
+          borderTopColor: theme.divider,
+          height: 68,
+          paddingTop: 6,
+          paddingBottom: 10,
+        },
+        headerStyle: { backgroundColor: theme.surface },
+        headerTitleStyle: { fontWeight: "800", color: theme.text },
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{ title: t("header.home"), tabBarIcon: icon("home-outline") }}
+        options={{
+          title: "TransitX",
+          tabBarLabel: t("header.home"),
+          headerTitleStyle: { fontWeight: "900", color: theme.primary, fontSize: 22 },
+          tabBarIcon: icon("home-outline", "home"),
+        }}
       />
       <Tabs.Screen
         name="track"
-        options={{ title: t("header.track"), tabBarIcon: icon("search-outline") }}
+        options={{ title: t("header.track"), tabBarIcon: icon("search-outline", "search") }}
+      />
+      <Tabs.Screen
+        name="my-reports"
+        options={{
+          title: t("header.myReports"),
+          tabBarIcon: icon("person-circle-outline", "person-circle"),
+        }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: t("app.settings"), tabBarIcon: icon("settings-outline") }}
+        options={{ title: t("app.settings"), tabBarIcon: icon("settings-outline", "settings") }}
       />
     </Tabs>
   );

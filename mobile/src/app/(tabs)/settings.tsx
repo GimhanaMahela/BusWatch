@@ -1,12 +1,20 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { API_URL } from "@/api/client";
-import { AppText, Card, Screen } from "@/components/ui";
+import { AppText, Card, Screen, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
-import { LOCALE_NAMES, LOCALES } from "@/i18n/translate";
-import { radius, spacing } from "@/theme/colors";
+import { LOCALE_NAMES, LOCALES, type Locale } from "@/i18n/translate";
+import { accents, radius, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
+
+// Each language gets its own colour and its own script as a monogram
+const LANGUAGE_LOOK: Record<Locale, { color: string; mark: string }> = {
+  en: { color: accents.blue, mark: "Aa" },
+  si: { color: accents.orange, mark: "අ" },
+  ta: { color: accents.violet, mark: "அ" },
+};
 
 export default function SettingsScreen() {
   const { t, locale, setLocale } = useI18n();
@@ -15,34 +23,43 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <Card>
-        <AppText variant="heading">{t("common.language")}</AppText>
+        <SectionTitle icon="language" color={accents.violet}>
+          {t("common.language")}
+        </SectionTitle>
         <View accessibilityRole="radiogroup" style={{ gap: spacing.sm }}>
           {LOCALES.map((option) => {
             const selected = option === locale;
+            const look = LANGUAGE_LOOK[option];
             return (
               <Pressable
                 key={option}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
+                accessibilityLabel={LOCALE_NAMES[option]}
                 onPress={() => setLocale(option)}
                 style={[
                   styles.option,
                   {
-                    borderColor: selected ? theme.primary : theme.divider,
-                    borderWidth: selected ? 2 : 1,
+                    borderColor: selected ? look.color : theme.divider,
+                    backgroundColor: selected ? `${look.color}14` : theme.surface,
                   },
                 ]}
               >
-                <AppText style={selected ? { color: theme.primary, fontWeight: "600" } : null}>
+                <View style={[styles.mark, { backgroundColor: look.color }]}>
+                  <Text style={styles.markText}>{look.mark}</Text>
+                </View>
+                <AppText style={{ flex: 1, fontWeight: selected ? "700" : "500" }}>
                   {LOCALE_NAMES[option]}
                 </AppText>
+                {selected && <Ionicons name="checkmark-circle" size={24} color={look.color} />}
               </Pressable>
             );
           })}
         </View>
       </Card>
 
-      <View style={{ gap: spacing.xs }}>
+      <View style={styles.about}>
+        <AppText style={[styles.brand, { color: theme.primary }]}>TransitX</AppText>
         <AppText variant="secondary">
           {t("app.version", { version: Constants.expoConfig?.version ?? "?" })}
         </AppText>
@@ -58,9 +75,16 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   option: {
-    minHeight: 48,
+    minHeight: 60,
     borderRadius: radius,
+    borderWidth: 2,
     paddingHorizontal: spacing.md,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
+  mark: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  markText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
+  about: { alignItems: "center", gap: 2, paddingTop: spacing.md },
+  brand: { fontSize: 22, fontWeight: "900", letterSpacing: -0.3 },
 });

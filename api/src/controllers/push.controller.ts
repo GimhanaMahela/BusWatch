@@ -2,13 +2,16 @@ import type { Request, Response } from "express";
 import { env } from "../config/env.js";
 import { countEvent } from "../repositories/metric.repository.js";
 import {
+  deleteExpoPushToken,
   deletePushSubscription,
+  isExpoPushSubscribed,
   isPushSubscribed,
+  saveExpoPushToken,
   savePushSubscription,
 } from "../repositories/push.repository.js";
 import { findReportByReceiptId } from "../repositories/report.repository.js";
 import { isPushConfigured } from "../services/push.service.js";
-import type { PushSubscriptionBody } from "../validators/passenger.validator.js";
+import type { ExpoPushBody, PushSubscriptionBody } from "../validators/passenger.validator.js";
 
 type ReceiptParams = { receiptId: string };
 
@@ -67,4 +70,44 @@ export const status = async (
   const report = await findReport(req, res);
   if (!report) return;
   res.json({ subscribed: await isPushSubscribed(report.id, req.body.endpoint) });
+};
+
+// @desc    Notify this phone (TransitX app) about the report
+// @route   POST /api/reports/track/:receiptId/app-push
+// @access  Public (the receipt ID is the passenger's key)
+export const subscribeApp = async (
+  req: Request<ReceiptParams, object, ExpoPushBody>,
+  res: Response,
+) => {
+  const report = await findReport(req, res);
+  if (!report) return;
+  const alreadySubscribed = await isExpoPushSubscribed(report.id, req.body.token);
+  await saveExpoPushToken(report.id, req.body.token);
+  if (!alreadySubscribed) await countEvent("push_subscribed");
+  res.status(201).json({ subscribed: true });
+};
+
+// @desc    Stop notifying this phone about the report
+// @route   POST /api/reports/track/:receiptId/app-push/unsubscribe
+// @access  Public
+export const unsubscribeApp = async (
+  req: Request<ReceiptParams, object, ExpoPushBody>,
+  res: Response,
+) => {
+  const report = await findReport(req, res);
+  if (!report) return;
+  await deleteExpoPushToken(report.id, req.body.token);
+  res.json({ subscribed: false });
+};
+
+// @desc    Is this phone following the report?
+// @route   POST /api/reports/track/:receiptId/app-push/status
+// @access  Public
+export const statusApp = async (
+  req: Request<ReceiptParams, object, ExpoPushBody>,
+  res: Response,
+) => {
+  const report = await findReport(req, res);
+  if (!report) return;
+  res.json({ subscribed: await isExpoPushSubscribed(report.id, req.body.token) });
 };

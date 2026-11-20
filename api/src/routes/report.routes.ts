@@ -28,6 +28,7 @@ import {
 import { confirmReportSchema } from "../validators/confirmation.validator.js";
 import {
   adminMessageSchema,
+  expoPushSchema,
   passengerMessageSchema,
   pushSubscriptionSchema,
   pushUnsubscribeSchema,
@@ -79,6 +80,25 @@ router.post(
   pushLimiter,
   validateBody(pushUnsubscribeSchema),
   pushController.status,
+);
+// The same for phones running the TransitX app (Expo push tokens)
+router.post(
+  "/track/:receiptId/app-push",
+  pushLimiter,
+  validateBody(expoPushSchema),
+  pushController.subscribeApp,
+);
+router.post(
+  "/track/:receiptId/app-push/unsubscribe",
+  pushLimiter,
+  validateBody(expoPushSchema),
+  pushController.unsubscribeApp,
+);
+router.post(
+  "/track/:receiptId/app-push/status",
+  pushLimiter,
+  validateBody(expoPushSchema),
+  pushController.statusApp,
 );
 router.get("/track/:receiptId/telegram", pushLimiter, telegramController.followLink);
 // "Me too": find a report about the same bus, category and day, and confirm it

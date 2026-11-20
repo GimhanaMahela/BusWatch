@@ -58,3 +58,4 @@ docs/Creds.odt
 # Mobile: temporary folders from moving node_modules aside (npm run relock)
 .mobile_nm_tmp/
 .node_modules.relock/
+.root_nm_aside/

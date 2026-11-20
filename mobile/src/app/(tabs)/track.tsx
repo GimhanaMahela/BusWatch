@@ -1,13 +1,14 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { AppText, Button, Card, Screen } from "@/components/ui";
+import { AppText, Button, Card, Hero, Screen, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
 import { useOutbox } from "@/lib/OutboxProvider";
 import { normaliseReceiptId } from "@/lib/receiptId";
-import { radius, spacing } from "@/theme/colors";
+import { accents, radius, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
 export default function TrackScreen() {
@@ -23,10 +24,11 @@ export default function TrackScreen() {
 
   return (
     <Screen>
-      <AppText variant="title">{t("track.title")}</AppText>
-      <AppText variant="secondary">{t("track.subtitle")}</AppText>
+      <Hero title={t("track.title")} subtitle={t("track.subtitle")} />
       <Card>
-        <AppText variant="label">{t("receiptSearch.label")}</AppText>
+        <SectionTitle icon="receipt" color={accents.sky}>
+          {t("receiptSearch.label")}
+        </SectionTitle>
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -39,14 +41,21 @@ export default function TrackScreen() {
           accessibilityLabel={t("receiptSearch.label")}
           style={[
             styles.input,
-            { color: theme.text, borderColor: theme.divider, backgroundColor: theme.background },
+            { color: theme.text, borderColor: theme.surfaceAlt, backgroundColor: theme.surfaceAlt },
           ]}
         />
-        <Button label={t("receiptSearch.button")} onPress={submit} disabled={!receiptId} />
+        <Button
+          icon="search"
+          label={t("receiptSearch.button")}
+          onPress={submit}
+          disabled={!receiptId}
+        />
       </Card>
       {sent.length > 0 && (
         <Card>
-          <AppText variant="heading">{t("app.sentFromPhone")}</AppText>
+          <SectionTitle icon="phone-portrait" color={accents.violet}>
+            {t("app.sentFromPhone")}
+          </SectionTitle>
           {sent.map((report) => (
             <Pressable
               key={report.receiptId}
@@ -59,10 +68,16 @@ export default function TrackScreen() {
               }
               style={[styles.recent, { borderTopColor: theme.divider }]}
             >
-              <AppText style={{ color: theme.primary, fontWeight: "600" }}>
-                {report.receiptId}
-              </AppText>
-              <AppText variant="secondary">{formatDateTime(report.sentAt, locale)}</AppText>
+              <View style={[styles.recentIcon, { backgroundColor: `${accents.sky}1F` }]}>
+                <Ionicons name="document-text" size={18} color={accents.sky} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText style={{ fontWeight: "700", letterSpacing: 0.5 }}>
+                  {report.receiptId}
+                </AppText>
+                <AppText variant="secondary">{formatDateTime(report.sentAt, locale)}</AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
             </Pressable>
           ))}
         </Card>
@@ -72,13 +87,27 @@ export default function TrackScreen() {
 }
 
 const styles = StyleSheet.create({
-  recent: { borderTopWidth: 1, paddingVertical: spacing.sm, gap: 2 },
+  recent: {
+    borderTopWidth: 1,
+    paddingVertical: spacing.sm + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm + 4,
+  },
+  recentIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   input: {
-    minHeight: 48,
-    borderWidth: 1,
+    minHeight: 54,
+    borderWidth: 1.5,
     borderRadius: radius,
     paddingHorizontal: spacing.md,
-    fontSize: 18,
-    letterSpacing: 1,
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 1.5,
   },
 });
