@@ -13,5 +13,11 @@
   "outboxEmpty": "Nothing is waiting to be sent.",
   "sendNow": "Send now",
   "sentFromPhone": "Sent from this phone",
-  "pushDenied": "Notifications are blocked for TransitX. Allow them in your phone's Settings, then try again."
+  "pushDenied": "Notifications are blocked for TransitX. Allow them in your phone's Settings, then try again.",
+  "scanTitle": "Scan bus QR",
+  "scanTile": "Use the sticker inside the bus",
+  "scanHint": "Point your camera at the TransitX sticker inside the bus.",
+  "scanInvalid": "That isn't a TransitX bus sticker. Try the QR code inside the bus.",
+  "allowCamera": "Allow camera",
+  "cameraDenied": "Camera access is off for TransitX. Turn it on in your phone's Settings."
 }

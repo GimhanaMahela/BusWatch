@@ -41,7 +41,9 @@ export default function ReportSentScreen() {
     emailed,
     texted,
     queued,
+    type,
   } = useLocalSearchParams<{
+    type?: string;
     receiptId?: string;
     emailed?: string;
     texted?: string;
@@ -70,7 +72,22 @@ export default function ReportSentScreen() {
 
   return (
     <Screen>
-      <Banner colors={gradients.success} icon="checkmark" title={t("success.title")} />
+      <Banner
+        colors={gradients.success}
+        icon="checkmark"
+        title={t(
+          type === "commendation"
+            ? "success.commendTitle"
+            : type === "lost_item"
+              ? "success.lostTitle"
+              : "success.title",
+        )}
+      />
+      {type === "commendation" || type === "lost_item" ? (
+        <AppText variant="secondary" style={{ textAlign: "center" }}>
+          {t(type === "commendation" ? "success.commendText" : "success.lostText")}
+        </AppText>
+      ) : null}
       <Card style={styles.ticket}>
         <AppText variant="label" style={{ textAlign: "center" }}>
           {t("track.receiptId")}
@@ -100,8 +117,14 @@ export default function ReportSentScreen() {
         <Button
           variant="outline"
           icon="add-circle-outline"
-          label={t("success.another")}
-          onPress={() => router.replace("/report")}
+          label={t(
+            type === "commendation"
+              ? "success.anotherCommendation"
+              : type === "lost_item"
+                ? "success.anotherLost"
+                : "success.another",
+          )}
+          onPress={() => router.replace({ pathname: "/report", params: type ? { type } : {} })}
         />
       </View>
     </Screen>
