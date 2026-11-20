@@ -38,3 +38,6 @@ Thumbs.db
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Private notes with credentials; never commit
+docs/Creds.odt

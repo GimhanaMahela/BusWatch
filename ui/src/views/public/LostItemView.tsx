@@ -83,8 +83,8 @@ const startIcon = (icon: ReactNode) => ({
 });
 
 /**
- * "Lost something?": one short form. It goes to the BusWatch team and, straight away, to the bus
- * operator if they use BusWatch. A way to reach the passenger is required.
+ * "Lost something?": one short form. It goes to the TransitX team and, straight away, to the bus
+ * operator if they use TransitX. A way to reach the passenger is required.
  */
 function LostItemView() {
   const t = useTranslations("lost");
@@ -182,7 +182,7 @@ function LostItemView() {
   if (result?.kind === "queued") return <QueuedPanel type="lost_item" onReset={reset} />;
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 8 } }}>
       <PageIntro
         icon={<TravelExploreRoundedIcon />}
         color="info"

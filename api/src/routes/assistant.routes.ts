@@ -4,7 +4,7 @@ import { assistantLimiter, emergencyLimiter } from "../middleware/rate-limit.mid
 import { validateBody } from "../middleware/validate.middleware.js";
 import { chatSchema, emergencyCheckSchema } from "../validators/assistant.validator.js";
 
-// The BusWatch helper chat on the public site (no account needed)
+// The TransitX helper chat on the public site (no account needed)
 const router = Router();
 
 router.get("/status", assistantController.status);

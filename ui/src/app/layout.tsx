@@ -46,14 +46,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     // Absolute URLs for share previews; Next falls back to the deployment URL when unset
     metadataBase: siteUrl ? new URL(siteUrl) : undefined,
-    title: { default: t("title"), template: "%s · BusWatch" },
+    title: { default: t("title"), template: "%s · TransitX" },
     description: t("description"),
-    applicationName: "BusWatch",
+    applicationName: "TransitX",
     manifest: "/manifest.json",
     icons: { icon: "/favicon.ico", apple: "/logo192.png" },
-    appleWebApp: { capable: true, title: "BusWatch", statusBarStyle: "default" },
+    appleWebApp: { capable: true, title: "TransitX", statusBarStyle: "default" },
     openGraph: {
-      siteName: "BusWatch",
+      siteName: "TransitX",
       type: "website",
       title: t("title"),
       description: t("description"),

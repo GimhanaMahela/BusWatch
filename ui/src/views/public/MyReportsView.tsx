@@ -327,7 +327,7 @@ function MyReportsView() {
   return (
     <>
       <HeroBand eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
-      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 7 }}>
             {session ? (

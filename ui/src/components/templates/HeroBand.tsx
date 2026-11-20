@@ -15,7 +15,7 @@ interface HeroBandProps {
  */
 function HeroBand({ eyebrow, title, subtitle, children }: HeroBandProps) {
   return (
-    <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 4 } }}>
+    <Container maxWidth="xl" sx={{ pt: { xs: 3, md: 4 } }}>
       <Box
         sx={{
           position: "relative",

@@ -1,12 +1,37 @@
 import type {
   AccessibilityIssue,
+  AccidentInvolvement,
+  BusService,
+  Commendee,
+  InjuryLevel,
   Language,
   ReportCategory,
   ReportStatus,
   ReportType,
   SafetyKind,
+  RoadHazard,
   ServiceClass,
+  VehicleKind,
 } from "@/constants/reportConstants";
+
+/**
+ * A road incident: the vehicle (not for road hazards), and the accident or road problem. `plate`
+ * only comes to admins; the tracking page never gets it.
+ */
+export interface RoadIncidentDetails {
+  vehicle?: {
+    kind: VehicleKind;
+    plate?: string | null;
+    colour: string | null;
+    make: string | null;
+  };
+  accident?: {
+    involvement: AccidentInvolvement;
+    injuries: InjuryLevel;
+    vehiclesInvolved: number | null;
+  };
+  hazard?: RoadHazard;
+}
 
 /** The official fare, worked out by the server from the admins' fare tables */
 export interface FareEvidence {
@@ -27,6 +52,9 @@ export interface ReportDetails {
   fare?: FareEvidence;
   /** Filed from the quick safety-mode form */
   safety?: { kinds: SafetyKind[] };
+  road?: RoadIncidentDetails;
+  /** Commendations: who the passenger is thanking */
+  commendee?: Commendee;
 }
 
 /** What the browser sends: the fare is only the passenger's choice; the server looks it up */
@@ -40,6 +68,16 @@ export interface ReportDetailsInput {
     charged?: number;
   };
   safety?: { kinds: SafetyKind[] };
+  road?: {
+    vehicle?: { kind: VehicleKind; plate: string; colour: string; make: string };
+    accident?: {
+      involvement: AccidentInvolvement;
+      injuries: InjuryLevel;
+      vehiclesInvolved: number | null;
+    };
+    hazard?: RoadHazard;
+  };
+  commendee?: Commendee;
 }
 
 export interface StatusChange {
@@ -79,7 +117,7 @@ export interface PublicMessage {
   read: boolean;
 }
 
-/** How a report reached BusWatch: the website, its QR sticker link, or the WhatsApp bot */
+/** How a report reached TransitX: the website, its QR sticker link, or the WhatsApp bot */
 export type ReportSource = "web" | "qr" | "whatsapp";
 
 /** Which channels reached the passenger after an update */
@@ -145,6 +183,7 @@ export interface Report {
   busNumber: string;
   routeNumber: string;
   busName?: string | null;
+  busService?: BusService | null;
   category: ReportCategory;
   location: string | null;
   latitude?: number | null;
@@ -192,6 +231,7 @@ export interface PublicReport {
   category: ReportCategory;
   busNumber: string;
   routeNumber: string;
+  busService?: BusService | null;
   location: string | null;
   incidentAt?: string;
   reportedAt: string;
@@ -214,9 +254,11 @@ export interface PublicReport {
 
 export interface SubmitReportFields {
   type?: ReportType;
+  /** Empty for a road incident */
   busNumber: string;
   routeNumber: string;
   busName?: string;
+  busService?: BusService | "";
   category: ReportCategory | "";
   incidentAt?: string;
   location?: string;
@@ -279,6 +321,16 @@ export interface ReportStats {
     found: number;
     byStatus: Record<ReportStatus, number>;
   };
+  /** Any vehicle or the road itself: never part of the bus figures above */
+  roadIncidents: {
+    total: number;
+    last30Days: number;
+    open: number;
+    seriousInjuries: number;
+    byStatus: Record<ReportStatus, number>;
+    byCategory: { category: ReportCategory; count: number }[];
+    byVehicle: { kind: VehicleKind; count: number }[];
+  };
   engagement: EngagementStats;
 }
 
@@ -334,6 +386,7 @@ export interface EngagementStats {
   safetyReports: number;
   tripsShared: number;
   emergencyShown: number;
+  roadIncidents: number;
 }
 
 /** A report in "My reports" */

@@ -1,13 +1,17 @@
 "use client";
 
+import AirlineSeatReclineNormalRoundedIcon from "@mui/icons-material/AirlineSeatReclineNormalRounded";
 import AltRouteRoundedIcon from "@mui/icons-material/AltRouteRounded";
 import CloudOffRoundedIcon from "@mui/icons-material/CloudOffRounded";
+import ConfirmationNumberRoundedIcon from "@mui/icons-material/ConfirmationNumberRounded";
 import DirectionsBusRoundedIcon from "@mui/icons-material/DirectionsBusRounded";
 import EmailRoundedIcon from "@mui/icons-material/EmailRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 import {
   Alert,
@@ -35,11 +39,16 @@ import {
 } from "react";
 import { toApiError } from "@/api/apiClient";
 import { trackEvent } from "@/api/metricsApi";
-import { CategoryPicker, PhoneField } from "@/components/molecules";
+import { CategoryPicker, ChoiceCards, PhoneField } from "@/components/molecules";
 import { QueuedPanel, SubmittedPanel, type Receipt } from "@/components/organisms";
 import {
+  BUS_SERVICES,
   COMMENDATION_CATEGORIES,
+  COMMENDATION_CATEGORIES_FOR,
+  COMMENDEES,
+  type BusService,
   type CommendationCategory,
+  type Commendee,
   type Language,
 } from "@/constants/reportConstants";
 import { useSmsAvailable } from "@/hooks/useContactChannels";
@@ -53,6 +62,8 @@ import { rememberReceipt } from "@/lib/trackingHistory";
 const MAX_DESCRIPTION = 2000;
 
 interface CommendForm {
+  commendee: Commendee | "";
+  busService: BusService | "";
   busNumber: string;
   routeNumber: string;
   category: CommendationCategory | "";
@@ -65,6 +76,8 @@ interface CommendForm {
 }
 
 const EMPTY_FORM: CommendForm = {
+  commendee: "",
+  busService: "",
   busNumber: "",
   routeNumber: "",
   category: "",
@@ -82,7 +95,26 @@ interface Draft {
 }
 
 const isEmptyDraft = ({ form }: Draft) =>
-  !form.category && !form.description.trim() && !form.location.trim() && !form.incidentAt;
+  !form.commendee &&
+  !form.category &&
+  !form.description.trim() &&
+  !form.location.trim() &&
+  !form.incidentAt;
+
+const COMMENDEE_ICONS: Record<Commendee, ReactNode> = {
+  driver: <AirlineSeatReclineNormalRoundedIcon />,
+  conductor: <ConfirmationNumberRoundedIcon />,
+  crew: <GroupsRoundedIcon />,
+  service: <StorefrontRoundedIcon />,
+};
+
+/** The reasons that fit who is being thanked (all of them until that is chosen) */
+const categoriesFor = (commendee: Commendee | "") =>
+  commendee
+    ? COMMENDATION_CATEGORIES.filter((c) =>
+        COMMENDATION_CATEGORIES_FOR[commendee].includes(c.value),
+      )
+    : COMMENDATION_CATEGORIES;
 
 type Result = { kind: "sent"; receipt: Receipt } | { kind: "queued" };
 
@@ -96,13 +128,19 @@ const startIcon = (icon: ReactNode) => ({
   input: { startAdornment: <InputAdornment position="start">{icon}</InputAdornment> },
 });
 
-/** "Commend a driver": one short step, no evidence, location optional. */
-function CommendDriverView() {
+/**
+ * "Commend good service": thank the driver, the conductor, both, or the bus service as a whole.
+ * One short step, no evidence, location optional.
+ */
+function CommendView() {
   const t = useTranslations("commend");
   // No phone field when no SMS gateway is set up: there would be nothing to send to it
   const smsAvailable = useSmsAvailable();
   const ts = useTranslations("submit");
   const tCategory = useTranslations("categories");
+  const tService = useTranslations("busServices");
+  const tCommendee = useTranslations("commendees");
+  const tCommendeeHint = useTranslations("commendeeHints");
   const locale = useLocale() as Language;
   const online = useOnlineStatus();
 
@@ -114,6 +152,8 @@ function CommendDriverView() {
 
   const [formData, setFormData] = useState<CommendForm>(prefilled);
   const [source, setSource] = useState<"web" | "qr">(fromQr ? "qr" : "web");
+  const [commendeeError, setCommendeeError] = useState(false);
+  const [busServiceError, setBusServiceError] = useState(false);
   const [categoryError, setCategoryError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
@@ -152,16 +192,30 @@ function CommendDriverView() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.category) {
-      setCategoryError(true);
-      return;
-    }
+    const missing = {
+      commendee: !formData.commendee,
+      busService: !formData.busService,
+      category: !formData.category,
+    };
+    setCommendeeError(missing.commendee);
+    setBusServiceError(missing.busService);
+    setCategoryError(missing.category);
+    if (missing.commendee || missing.busService || missing.category) return;
     setSubmitting(true);
     setErrorText("");
     try {
       const outcome = await submitOrQueue(
         {
-          ...formData,
+          busNumber: formData.busNumber,
+          routeNumber: formData.routeNumber,
+          busService: formData.busService,
+          category: formData.category,
+          description: formData.description,
+          location: formData.location,
+          passengerEmail: formData.passengerEmail,
+          passengerPhone: formData.passengerPhone,
+          website: formData.website,
+          details: JSON.stringify({ commendee: formData.commendee }),
           type: "commendation",
           incidentAt: formData.incidentAt ? new Date(formData.incidentAt).toISOString() : "",
           language: locale,
@@ -205,7 +259,7 @@ function CommendDriverView() {
   const reportHref = `/submit-report${busQuery(formData.busNumber || qrBus, formData.routeNumber, fromQr ? "qr" : undefined)}`;
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 8 } }}>
       <Box sx={{ textAlign: "center", mb: 4 }}>
         <Box
           sx={{
@@ -265,12 +319,43 @@ function CommendDriverView() {
         onSubmit={(e: FormEvent<HTMLFormElement>) => void handleSubmit(e)}
         sx={{ p: { xs: 2.5, sm: 4 }, display: "grid", gap: 2.5 }}
       >
+        <ChoiceCards
+          label={t("whoQuestion")}
+          options={COMMENDEES.map(({ value }) => ({
+            value,
+            label: tCommendee(value),
+            description: tCommendeeHint(value),
+            icon: COMMENDEE_ICONS[value],
+          }))}
+          value={formData.commendee}
+          onChange={(commendee) => {
+            markStarted();
+            // Drop a reason that doesn't fit, e.g. "safe driving" for a conductor
+            const keep = COMMENDATION_CATEGORIES_FOR[commendee].includes(formData.category);
+            setFormData({ ...formData, commendee, category: keep ? formData.category : "" });
+            setCommendeeError(false);
+          }}
+          error={commendeeError ? t("chooseWho") : undefined}
+        />
+
+        <CategoryPicker
+          color="success"
+          label={ts("busServiceQuestion")}
+          options={BUS_SERVICES.map((b) => ({ value: b.value, label: tService(b.value) }))}
+          value={formData.busService}
+          onChange={(busService) => {
+            markStarted();
+            setFormData({ ...formData, busService });
+            setBusServiceError(false);
+          }}
+          error={busServiceError ? ts("chooseBusService") : undefined}
+        />
+
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               fullWidth
               required
-              autoFocus={!qrBus}
               label={ts("busNumber")}
               placeholder="NE-9999"
               name="busNumber"
@@ -302,7 +387,7 @@ function CommendDriverView() {
         <CategoryPicker
           color="success"
           label={t("whatWasGood")}
-          options={COMMENDATION_CATEGORIES.map((c) => ({
+          options={categoriesFor(formData.commendee).map((c) => ({
             value: c.value,
             label: tCategory(c.value),
           }))}
@@ -444,4 +529,4 @@ function CommendDriverView() {
   );
 }
 
-export default CommendDriverView;
+export default CommendView;

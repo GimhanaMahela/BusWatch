@@ -23,3 +23,4 @@ export { default as StoryCard } from "./StoryCard";
 export { default as ChoiceChips } from "./ChoiceChips";
 export { default as EmergencyBanner } from "./EmergencyBanner";
 export { default as PageIntro } from "./PageIntro";
+export { default as ChoiceCards } from "./ChoiceCards";

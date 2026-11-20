@@ -1,0 +1,19 @@
+ALTER TABLE "admins" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "daily_metrics" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "fare_routes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "fare_tables" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "impact_stories" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "operator_buses" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "operator_responses" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "passenger_codes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "push_subscriptions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "report_confirmations" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "report_messages" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "report_notes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "report_status_changes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "reports" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "telegram_subscriptions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "trip_shares" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "whatsapp_chats" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "whatsapp_inbound" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "whatsapp_subscriptions" ENABLE ROW LEVEL SECURITY;

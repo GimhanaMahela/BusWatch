@@ -96,7 +96,7 @@ function SafetyView() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 3, md: 6 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 6 } }}>
       <Box
         sx={{
           position: "sticky",

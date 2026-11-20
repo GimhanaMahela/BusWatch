@@ -17,15 +17,16 @@ const contrast = (a: string, b: string) => {
 describe("theme selection (NEXT_PUBLIC_THEME)", () => {
   it("reads a theme name, ignoring case and spaces", () => {
     expect(resolveThemeName("aurora")).toBe("aurora");
+    expect(resolveThemeName("TransitX")).toBe("transitx");
     expect(resolveThemeName(" Emerald ")).toBe("emerald");
     expect(resolveThemeName("CLASSIC")).toBe("classic");
   });
 
   it("falls back to the default for unset or unknown values", () => {
-    expect(DEFAULT_THEME).toBe("sunset");
-    expect(resolveThemeName(undefined)).toBe("sunset");
-    expect(resolveThemeName("")).toBe("sunset");
-    expect(resolveThemeName("neon")).toBe("sunset");
+    expect(DEFAULT_THEME).toBe("transitx");
+    expect(resolveThemeName(undefined)).toBe("transitx");
+    expect(resolveThemeName("")).toBe("transitx");
+    expect(resolveThemeName("neon")).toBe("transitx");
   });
 });
 

@@ -1,12 +1,12 @@
-// Site themes. Pick one with NEXT_PUBLIC_THEME in the repo's .env file (sunset, aurora, emerald or
-// classic); unset or unknown values use "sunset". The value is built into the site, so restart
-// `npm run dev` or rebuild after changing it.
+// Site themes. Pick one with NEXT_PUBLIC_THEME in the repo's .env file (transitx, sunset, aurora,
+// emerald or classic); unset or unknown values use "transitx", the brand colours. The value is
+// built into the site, so restart `npm run dev` or rebuild after changing it.
 //
 // No "use client": server code (layout, share images, the web app manifest) reads it too.
 
-export const THEME_NAMES = ["sunset", "aurora", "emerald", "classic"] as const;
+export const THEME_NAMES = ["transitx", "sunset", "aurora", "emerald", "classic"] as const;
 export type ThemeName = (typeof THEME_NAMES)[number];
-export const DEFAULT_THEME: ThemeName = "sunset";
+export const DEFAULT_THEME: ThemeName = "transitx";
 
 interface PaletteColor {
   main: string;
@@ -158,7 +158,47 @@ const emerald: ThemePreset = {
   buttonRadius: 10,
 };
 
-/** The original BusWatch blue and violet. */
+/**
+ * TransitX: the logo's colours. Navy and transit blue lead, with the logo's orange (the "X" and
+ * the warning sign) as the highlight colour on a cool off-white.
+ */
+const transitx: ThemePreset = {
+  name: "transitx",
+  label: "TransitX",
+  light: {
+    primary: { main: "#0068C2", light: "#0082DB", dark: "#00295C" },
+    secondary: { main: "#E85D00", light: "#FE6E01", dark: "#C2410C" },
+    accent: "#FE6E01",
+    success: "#15803D",
+    warning: "#D97706",
+    error: "#DC2626",
+    info: "#0284C7",
+    background: { default: "#F4F7FC", paper: "#FFFFFF" },
+    text: { primary: "#0A1B33", secondary: "#4A5B75" },
+    divider: "#DFE6F1",
+    textGradient: "linear-gradient(110deg, #00295C 0%, #0082DB 55%, #FE6E01 100%)",
+  },
+  dark: {
+    primary: { main: "#4DB3FF", light: "#8FD0FF", dark: "#0082DB" },
+    secondary: { main: "#FF8A3D", light: "#FFAD73", dark: "#FE6E01" },
+    accent: "#FF8A3D",
+    success: "#4ADE80",
+    warning: "#FBBF24",
+    error: "#F87171",
+    info: "#38BDF8",
+    background: { default: "#06101F", paper: "#0D1B30" },
+    text: { primary: "#EAF2FC", secondary: "#A0B3CC" },
+    divider: "#1C2D47",
+    textGradient: "linear-gradient(110deg, #8FD0FF 0%, #4DB3FF 50%, #FF8A3D 100%)",
+  },
+  brandGradient: "linear-gradient(135deg, #029EEE 0%, #0082DB 40%, #0060B8 75%, #00295C 120%)",
+  deepGradient: "linear-gradient(135deg, #00152F 0%, #00295C 45%, #0060B8 90%, #0082DB 120%)",
+  glow: "0 104 194",
+  headingFont: "sans",
+  buttonRadius: 10,
+};
+
+/** The original blue and violet. */
 const classic: ThemePreset = {
   name: "classic",
   label: "Classic Blue",
@@ -195,7 +235,13 @@ const classic: ThemePreset = {
   buttonRadius: 10,
 };
 
-export const THEMES: Record<ThemeName, ThemePreset> = { sunset, aurora, emerald, classic };
+export const THEMES: Record<ThemeName, ThemePreset> = {
+  transitx,
+  sunset,
+  aurora,
+  emerald,
+  classic,
+};
 
 /** Reads a theme name, falling back to the default for unset or unknown values. */
 export const resolveThemeName = (value: string | undefined): ThemeName => {

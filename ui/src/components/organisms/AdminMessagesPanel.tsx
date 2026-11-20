@@ -42,7 +42,7 @@ export const describeDelivery = (delivery: Delivery) => {
 
 /**
  * Admin side of "Messages between admin and passenger": ask for details, read replies.
- * The passenger sees "BusWatch team", never the admin's email.
+ * The passenger sees "TransitX team", never the admin's email.
  */
 function AdminMessagesPanel({ report }: { report: Report }) {
   const send = useSendAdminMessage(report.id);
@@ -83,7 +83,7 @@ function AdminMessagesPanel({ report }: { report: Report }) {
   return (
     <SectionPanel
       title="Messages with the passenger"
-      subtitle="Shown on their tracking page as “BusWatch team”."
+      subtitle="Shown on their tracking page as “TransitX team”."
       icon={<ForumRoundedIcon fontSize="small" />}
     >
       {messages.length === 0 ? (

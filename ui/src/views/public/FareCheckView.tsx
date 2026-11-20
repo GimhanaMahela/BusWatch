@@ -14,7 +14,7 @@ function FareCheckView() {
   const router = useRouter();
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 8 } }}>
       <PageIntro
         icon={<PaymentsRoundedIcon />}
         eyebrow={t("eyebrow")}

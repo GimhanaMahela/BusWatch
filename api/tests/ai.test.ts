@@ -171,7 +171,39 @@ describe("AI help: analysing a report", () => {
     expect(res.body.aiInsights.model).toBe("gemini-flash-lite-latest");
   });
 
-  it("is for the BusWatch team only", async () => {
+  it("moves on to the lighter model when the main one doesn't answer in time", async () => {
+    const token = await createAdminAndLogin();
+    const id = await fileReport();
+    ai.parse
+      .mockImplementationOnce(() => {
+        throw new DOMException("The operation timed out.", "TimeoutError");
+      })
+      .mockResolvedValueOnce({ ...insights(), model: undefined });
+
+    const res = await request(app).post(`/api/reports/${id}/ai/analyse`).set("x-auth-token", token);
+    expect(res.status).toBe(200);
+    // A model that timed out isn't asked again: that would only wait again
+    const urls = ai.parse.mock.calls.map((call) => call[1] as string);
+    expect(urls).toHaveLength(2);
+    expect(urls[1]).toContain("/models/gemini-flash-lite-latest:generateContent");
+    expect(res.body.aiInsights.model).toBe("gemini-flash-lite-latest");
+  });
+
+  it("says the AI is too slow, rather than failing, when no model answers", async () => {
+    const token = await createAdminAndLogin();
+    const id = await fileReport();
+    const timeout = () => {
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    };
+    ai.parse.mockImplementationOnce(timeout).mockImplementationOnce(timeout);
+
+    const res = await request(app).post(`/api/reports/${id}/ai/analyse`).set("x-auth-token", token);
+    expect(res.status).toBe(503);
+    expect(res.body.msg).toMatch(/taking too long/);
+    expect(ai.parse).toHaveBeenCalledTimes(2);
+  });
+
+  it("is for the TransitX team only", async () => {
     const id = await fileReport();
     const operator = await createAdminAndLogin("owner@bus.lk", "operator");
     const res = await request(app)

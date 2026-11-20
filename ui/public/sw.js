@@ -1,4 +1,4 @@
-/* BusWatch service worker: keeps the passenger pages usable without a signal.
+/* TransitX service worker: keeps the passenger pages usable without a signal.
  *
  * Hand-written on purpose (no build plugin), so it works with Turbopack and stays easy to read.
  * - Pages: network first (with a short timeout), falling back to the last cached copy, then /offline.
@@ -11,7 +11,7 @@
  *
  * Bump VERSION to drop every old cache on the next visit.
  */
-const VERSION = "v1";
+const VERSION = "v3";
 const PAGE_CACHE = `buswatch-pages-${VERSION}`;
 const ASSET_CACHE = `buswatch-assets-${VERSION}`;
 const OFFLINE_URL = "/offline";
@@ -20,7 +20,7 @@ const MAX_ASSETS = 400;
 const PUSH_ONLY = new URL(self.location.href).searchParams.get("mode") === "push-only";
 
 // Pages a passenger may need on the bus. Their scripts and styles are cached alongside.
-const PRECACHE_PAGES = ["/", "/submit-report", "/commend-a-driver", "/track", OFFLINE_URL];
+const PRECACHE_PAGES = ["/", "/submit-report", "/commend", "/track", OFFLINE_URL];
 const PRECACHE_ASSETS = ["/manifest.json", "/favicon.ico", "/logo192.png", "/logo512.png"];
 
 const STATIC_ASSET = /^\/_next\/(static|image)\/|\.(?:png|jpe?g|svg|ico|webp|woff2?)$/;
@@ -153,7 +153,7 @@ self.addEventListener("push", (event) => {
   const url = typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/track";
   event.waitUntil(
     (async () => {
-      await self.registration.showNotification(data.title || "BusWatch", {
+      await self.registration.showNotification(data.title || "TransitX", {
         body: data.body || "",
         tag: data.tag,
         renotify: Boolean(data.tag),

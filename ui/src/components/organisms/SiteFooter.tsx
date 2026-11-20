@@ -8,7 +8,8 @@ const COLUMNS = [
     title: "passengers",
     links: [
       { key: "report", href: "/submit-report" },
-      { key: "commend", href: "/commend-a-driver" },
+      { key: "road", href: "/submit-report?subject=vehicle" },
+      { key: "commend", href: "/commend" },
       { key: "track", href: "/track" },
       { key: "myReports", href: "/my-reports" },
       { key: "safety", href: "/safety" },
@@ -17,7 +18,7 @@ const COLUMNS = [
     ],
   },
   {
-    title: "buswatch",
+    title: "brand",
     links: [
       { key: "impact", href: "/impact" },
       { key: "about", href: "/about-us" },
@@ -65,7 +66,7 @@ function SiteFooter() {
           filter: "brightness(2.2) saturate(0.6)",
         }}
       />
-      <Container maxWidth="lg" sx={{ position: "relative", py: { xs: 6, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ position: "relative", py: { xs: 6, md: 8 } }}>
         <Grid container spacing={5}>
           <Grid size={{ xs: 12, md: 5 }}>
             <BrandMark tone="light" />
@@ -111,7 +112,7 @@ function SiteFooter() {
         </Grid>
         <Divider sx={{ my: 4, borderColor: "rgba(255 255 255 / 0.15)" }} />
         <Typography variant="body2" sx={{ color: "rgba(255 255 255 / 0.65)" }}>
-          © {new Date().getFullYear()} BusWatch · {t("madeFor")}
+          © {new Date().getFullYear()} TransitX · {t("madeFor")}
         </Typography>
       </Container>
     </Box>

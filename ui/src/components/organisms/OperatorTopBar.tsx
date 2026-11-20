@@ -26,7 +26,7 @@ function OperatorTopBar() {
       <Toolbar
         sx={{
           gap: 1.5,
-          maxWidth: 1200,
+          maxWidth: 1536,
           width: "100%",
           mx: "auto",
           borderRadius: 99,

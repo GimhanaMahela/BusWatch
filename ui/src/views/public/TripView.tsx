@@ -43,7 +43,7 @@ function TripView({ id }: { id: string }) {
   });
 
   return (
-    <Container maxWidth="sm" sx={{ py: { xs: 4, md: 8 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 8 } }}>
       <PageIntro
         icon={<ShareLocationRoundedIcon />}
         color="secondary"

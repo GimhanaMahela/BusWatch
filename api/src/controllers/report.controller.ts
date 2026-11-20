@@ -68,9 +68,16 @@ export const canReply = (report: ReportWithRelations, now = Date.now()) => {
   return !closedAt || now - closedAt.getTime() < REPLY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 };
 
+/** A road incident's plate is for admins only; everything else in the details may be shown. */
+export const publicDetails = (details: ReportDetails | null) => {
+  if (!details?.road?.vehicle) return details;
+  const { plate: _plate, ...vehicle } = details.road.vehicle;
+  return { ...details, road: { ...details.road, vehicle } };
+};
+
 /**
  * What a passenger may see about their own report: no media, contact details, internal notes or
- * admin names (messages show "BusWatch team").
+ * admin names (messages show "TransitX team").
  */
 export const toPublicView = (report: ReportWithRelations) => {
   const timeline: PublicTimelineEntry[] = report.statusHistory.map(
@@ -92,6 +99,7 @@ export const toPublicView = (report: ReportWithRelations) => {
     category: report.category,
     busNumber: report.busNumber,
     routeNumber: report.routeNumber,
+    busService: report.busService,
     location: report.location,
     incidentAt: report.incidentAt,
     reportedAt: report.reportedAt,
@@ -103,8 +111,9 @@ export const toPublicView = (report: ReportWithRelations) => {
     ratedAt: report.ratedAt,
     messages,
     canReply: canReply(report),
-    // Accessibility issues ticked, the official fare, or what was ticked on the safety form
-    details: report.details,
+    // Accessibility issues ticked, the official fare, what was ticked on the safety form, or a
+    // road incident's vehicle (without its plate: tracking links get shared)
+    details: publicDetails(report.details),
     // Other passengers who said "me too" (a count only)
     confirmations: report.confirmations.length,
     // The bus operator's responses, unless an admin hid them
@@ -127,6 +136,8 @@ const storedDetails = async (input?: ReportDetailsInput): Promise<ReportDetails 
   if (input.accessibility) details.accessibility = input.accessibility;
   if (input.safety) details.safety = input.safety;
   if (input.fare) details.fare = await officialFare(input.fare);
+  if (input.road) details.road = input.road;
+  if (input.commendee) details.commendee = input.commendee;
   return Object.keys(details).length ? details : null;
 };
 
@@ -140,7 +151,17 @@ export const submitReport = async (
   req: Request<object, object, SubmitReportInput>,
   res: Response,
 ) => {
-  const { website: _honeypot, busNumber, details: detailsInput, ...fields } = req.body;
+  const {
+    website: _honeypot,
+    busNumber,
+    routeNumber,
+    busName,
+    busService,
+    details: detailsInput,
+    ...fields
+  } = req.body;
+  // Road incidents aren't about a route bus: no bus number, route or bus name is kept
+  const isRoad = fields.type === "road_incident";
   const files = (req.files ?? {}) as UploadedMedia;
 
   let details: ReportDetails | null;
@@ -162,7 +183,10 @@ export const submitReport = async (
   const { saved, pdfUrl, emailSent, smsSent } = await fileReport({
     ...fields,
     description: fields.description ?? safetyDescription(details),
-    busNumber: busNumber.toUpperCase(),
+    busNumber: isRoad ? "" : (busNumber ?? "").toUpperCase(),
+    routeNumber: isRoad ? "" : (routeNumber ?? ""),
+    busName: isRoad ? undefined : busName,
+    busService: isRoad ? null : (busService ?? null),
     details,
     images,
     videos,
@@ -252,6 +276,10 @@ export const getStats = async (_req: Request, res: Response) => {
   res.json(await getReportStats());
 };
 
+/** Road incidents aren't about a route bus, so no operator ever sees them. */
+const operatorsFor = async (report: ReportWithRelations) =>
+  report.type === "road_incident" ? [] : findOperatorsForBus(report.busNumber);
+
 // @desc    Get report by ID (Admin only)
 // @route   GET /api/reports/:id
 // @access  Private (Admin)
@@ -262,7 +290,7 @@ export const getReportById = async (req: Request<IdParams>, res: Response) => {
     return;
   }
   // Which operator accounts run this bus (they see it once an admin has checked it)
-  res.json({ ...report, operators: await findOperatorsForBus(report.busNumber) });
+  res.json({ ...report, operators: await operatorsFor(report) });
 };
 
 // @desc    Get report by Receipt ID (Admin only)
@@ -376,5 +404,5 @@ export const setOperatorResponseVisibility = async (
     return;
   }
   const report = await findReportById(id);
-  res.json(report ? { ...report, operators: await findOperatorsForBus(report.busNumber) } : null);
+  res.json(report ? { ...report, operators: await operatorsFor(report) } : null);
 };

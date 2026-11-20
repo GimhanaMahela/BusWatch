@@ -19,6 +19,7 @@ import AccessibleRoundedIcon from "@mui/icons-material/AccessibleRounded";
 import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TrafficRoundedIcon from "@mui/icons-material/TrafficRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
@@ -163,7 +164,7 @@ function ExampleReceipt() {
   );
 }
 
-/** Live figures from the Impact page, or what BusWatch promises when they can't be loaded. */
+/** Live figures from the Impact page, or what TransitX promises when they can't be loaded. */
 function StatsTile({ impact }: { impact: PublicImpact | null }) {
   const t = useTranslations("home");
   const ti = useTranslations("impact");
@@ -253,7 +254,7 @@ function HomeView({ impact = null }: { impact?: PublicImpact | null }) {
 
   return (
     <Box>
-      <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 4 }, pb: { xs: 6, md: 10 } }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 3, md: 4 }, pb: { xs: 6, md: 10 } }}>
         <Box
           sx={{
             display: "grid",
@@ -337,6 +338,15 @@ function HomeView({ impact = null }: { impact?: PublicImpact | null }) {
                 >
                   {t("reportCta")}
                 </GradientButton>
+                <Button
+                  href="/submit-report?subject=vehicle"
+                  size="large"
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<TrafficRoundedIcon />}
+                >
+                  {t("roadCta")}
+                </Button>
                 <WhatsAppButton
                   label={tw("chatButton")}
                   message={tw("hello")}
@@ -523,7 +533,7 @@ function HomeView({ impact = null }: { impact?: PublicImpact | null }) {
             </Box>
           </BentoTile>
 
-          {/* Commend a driver */}
+          {/* Commend good service */}
           <BentoTile
             variant="tint"
             tone="success"
@@ -541,7 +551,7 @@ function HomeView({ impact = null }: { impact?: PublicImpact | null }) {
               {t("commendText")}
             </Typography>
             <Button
-              href="/commend-a-driver"
+              href="/commend"
               variant="contained"
               color="success"
               endIcon={<ArrowForwardRoundedIcon />}
@@ -645,29 +655,36 @@ function HomeView({ impact = null }: { impact?: PublicImpact | null }) {
             }
           />
 
-          {/* More help: safety mode, lost and found, fare checker */}
+          {/* More help: road incidents, safety mode, lost and found, fare checker */}
           {(
             [
+              {
+                key: "road",
+                href: "/submit-report?subject=vehicle",
+                icon: <TrafficRoundedIcon />,
+                tone: "warning",
+                sx: span(1, 3),
+              },
               {
                 key: "safety",
                 href: "/safety",
                 icon: <ShieldRoundedIcon />,
                 tone: "secondary",
-                sx: span(1, 4),
+                sx: span(1, 3),
               },
               {
                 key: "lost",
                 href: "/lost-something",
                 icon: <TravelExploreRoundedIcon />,
                 tone: "info",
-                sx: span(1, 4),
+                sx: span(1, 3),
               },
               {
                 key: "fare",
                 href: "/fare-check",
                 icon: <PaymentsRoundedIcon />,
                 tone: "primary",
-                sx: span(2, 4),
+                sx: span(1, 3),
               },
             ] as const
           ).map((tile) => (

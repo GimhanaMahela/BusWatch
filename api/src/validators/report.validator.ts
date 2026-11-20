@@ -1,7 +1,16 @@
 import { z } from "zod";
 import {
   ACCESSIBILITY_ISSUES,
+  ACCIDENT_INVOLVEMENT,
+  BUS_SERVICES,
   CATEGORIES_BY_TYPE,
+  COMMENDEES,
+  INJURY_LEVELS,
+  ROAD_CATEGORIES_WITHOUT_VEHICLE,
+  ROAD_HAZARDS,
+  ROAD_INCIDENT,
+  VEHICLE_KINDS,
+  type ReportCategory,
   FARES,
   SAFETY_KINDS,
   SERVICE_CLASSES,
@@ -22,11 +31,47 @@ const optionalText = z.preprocess(blankToUndefined, z.string().trim().optional()
 const optionalNumber = (min: number, max: number) =>
   z.preprocess(blankToUndefined, z.coerce.number().min(min).max(max).optional());
 
-const requiredText = (field: string) =>
-  z
-    .string({ error: `${field} is required.` })
-    .trim()
-    .min(1, `${field} is required.`);
+const optionalShortText = (max: number) =>
+  z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+    z.string().trim().max(max).nullable().default(null),
+  );
+
+/** A road incident's vehicle, accident or hazard (checked against the category below). */
+const roadDetailsSchema = z
+  .object({
+    vehicle: z
+      .object({
+        kind: z.enum(VEHICLE_KINDS, { error: "Choose the kind of vehicle." }),
+        // Plates are written many ways ("WP CAB-1234", "65-1234"); keep it tidy, not strict
+        plate: optionalShortText(ROAD_INCIDENT.maxPlateLength).transform((plate) =>
+          plate ? plate.toUpperCase().replace(/\s+/g, " ") : null,
+        ),
+        colour: optionalShortText(ROAD_INCIDENT.maxVehicleText),
+        make: optionalShortText(ROAD_INCIDENT.maxVehicleText),
+      })
+      .strict()
+      .optional(),
+    accident: z
+      .object({
+        involvement: z.enum(ACCIDENT_INVOLVEMENT, { error: "Say whether you were in it." }),
+        injuries: z.enum(INJURY_LEVELS).default("unknown"),
+        vehiclesInvolved: z
+          .number()
+          .int()
+          .min(1)
+          .max(ROAD_INCIDENT.maxVehiclesInvolved)
+          .nullable()
+          .default(null),
+      })
+      .strict()
+      .optional(),
+    hazard: z.enum(ROAD_HAZARDS, { error: "Choose what is wrong with the road." }).optional(),
+  })
+  .strict();
+
+const roadNeedsVehicle = (category: ReportCategory) =>
+  !(ROAD_CATEGORIES_WITHOUT_VEHICLE as readonly ReportCategory[]).includes(category);
 
 /**
  * Structured extras for some categories. Multipart forms send them as one JSON string. The fare is
@@ -57,6 +102,8 @@ export const reportDetailsSchema = z
           .transform((kinds) => [...new Set(kinds)]),
       })
       .optional(),
+    road: roadDetailsSchema.optional(),
+    commendee: z.enum(COMMENDEES, { error: "Choose who you are thanking." }).optional(),
   })
   .strict();
 
@@ -80,17 +127,25 @@ export const submitReportSchema = z
       blankToUndefined,
       z.enum(REPORT_TYPES, { error: "Invalid report type." }).default("complaint"),
     ),
-    busNumber: requiredText("Bus Number").max(20, "Bus Number must be 20 characters or fewer."),
-    routeNumber: requiredText("Route Number").max(
-      60,
-      "Route Number must be 60 characters or fewer.",
+    // Required for every report about a route bus; road incidents are about any vehicle (the
+    // plate goes in details.road) and are stored with these empty
+    busNumber: optionalText.pipe(
+      z.string().max(20, "Bus Number must be 20 characters or fewer.").optional(),
+    ),
+    routeNumber: optionalText.pipe(
+      z.string().max(60, "Route Number must be 60 characters or fewer.").optional(),
     ),
     busName: optionalText,
+    // Private, SLTB or Metro Bus (the web form asks; older clients and the WhatsApp bot don't)
+    busService: z.preprocess(
+      blankToUndefined,
+      z.enum(BUS_SERVICES, { error: "Choose the kind of bus." }).optional(),
+    ),
     category: z.preprocess(
       blankToUndefined,
       z.enum(REPORT_CATEGORIES, { error: "Invalid incident category." }).default("other"),
     ),
-    // Required for complaints (checked below); optional when commending a driver, for a lost item
+    // Required for complaints (checked below); optional for a commendation, for a lost item
     // and on the quick safety-mode form
     location: optionalText,
     // Required, except on the quick safety-mode form (the ticked boxes say what happened)
@@ -141,12 +196,24 @@ export const submitReportSchema = z
       z.undefined({ error: "Invalid submission." }).optional(),
     ),
   })
+  .superRefine((data, ctx) => {
+    if (data.type === "road_incident") return;
+    if (!data.busNumber) {
+      ctx.addIssue({ code: "custom", message: "Bus Number is required.", path: ["busNumber"] });
+    }
+    if (!data.routeNumber) {
+      ctx.addIssue({ code: "custom", message: "Route Number is required.", path: ["routeNumber"] });
+    }
+  })
   .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
     error: "Invalid map coordinates.",
     path: ["latitude"],
   })
   .refine(
-    (data) => data.type !== "complaint" || data.details?.safety || data.location !== undefined,
+    (data) =>
+      (data.type !== "complaint" && data.type !== "road_incident") ||
+      data.details?.safety ||
+      data.location !== undefined,
     { error: "Location is required.", path: ["location"] },
   )
   .refine((data) => data.details?.safety || data.description !== undefined, {
@@ -184,7 +251,36 @@ export const submitReportSchema = z
     (data) =>
       !data.details?.safety || (data.type === "complaint" && data.category === "harassment"),
     { error: "Invalid submission.", path: ["details"] },
-  );
+  )
+  .refine((data) => !data.details?.commendee || data.type === "commendation", {
+    error: "Invalid submission.",
+    path: ["details"],
+  })
+  // Road incidents: a vehicle unless it is about the road itself, an accident's details only for
+  // an accident, and what is wrong only for a road hazard
+  .superRefine((data, ctx) => {
+    const road = data.details?.road;
+    if (data.type !== "road_incident") {
+      if (road) ctx.addIssue({ code: "custom", message: "Invalid submission.", path: ["details"] });
+      return;
+    }
+    const issue = (message: string) => ctx.addIssue({ code: "custom", message, path: ["details"] });
+    if (roadNeedsVehicle(data.category) !== Boolean(road?.vehicle)) {
+      issue(
+        roadNeedsVehicle(data.category) ? "Choose the kind of vehicle." : "Invalid submission.",
+      );
+    }
+    if ((data.category === "accident") !== Boolean(road?.accident)) {
+      issue(data.category === "accident" ? "Say whether you were in it." : "Invalid submission.");
+    }
+    if ((data.category === "road_hazard") !== Boolean(road?.hazard)) {
+      issue(
+        data.category === "road_hazard"
+          ? "Choose what is wrong with the road."
+          : "Invalid submission.",
+      );
+    }
+  });
 
 export type SubmitReportInput = z.infer<typeof submitReportSchema>;
 

@@ -1,4 +1,4 @@
-# BusWatch API
+# TransitX API
 
 TypeScript REST API: Express 5, PostgreSQL (Drizzle ORM), Zod validation, Cloudinary media, PDF receipts
 (PDFKit) and email (Nodemailer). Setup and scripts are in the [root README](../README.md); structure

@@ -1,6 +1,6 @@
-# BusWatch Architecture
+# TransitX Architecture
 
-BusWatch is a monorepo with two TypeScript apps, one root `package.json` (one install, one
+TransitX is a monorepo with two TypeScript apps, one root `package.json` (one install, one
 `node_modules`) and one root `.env`:
 
 | App    | Stack                                                                                                             | Entry point     |
@@ -261,10 +261,10 @@ photos the operator portal returns. Routes: `GET /api/reports/ai/status`, `POST 
 (`gemini-flash-lite-latest`, its own free quota). Failures become 502/503 with a message, never a 500. Tests stub `fetch`, so
 the service code runs without network calls.
 
-**BusWatch helper chat.** `services/assistant.service.ts` reuses `generate` from the AI service with
+**TransitX helper chat.** `services/assistant.service.ts` reuses `generate` from the AI service with
 the whole conversation (`POST /api/assistant/chat`, public, `assistantLimiter`, at most
 `ASSISTANT.maxMessages` messages ending with the passenger's). The system prompt holds everything the
-helper knows about BusWatch, the emergency numbers and today's date in Sri Lanka; the reply is
+helper knows about TransitX, the emergency numbers and today's date in Sri Lanka; the reply is
 structured as `{ reply, link, draft }`. `cleanDraft` keeps only what the forms accept (category of the
 right type, a valid bus number, a past "YYYY-MM-DDTHH:mm" time) and the prompt keeps contact details
 out of it. In the UI, `organisms/ChatHelper` (in `PublicLayout`) keeps the chat in `sessionStorage`

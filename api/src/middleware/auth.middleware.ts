@@ -20,7 +20,7 @@ export const signPassengerToken = (contact: PassengerContact) =>
     expiresIn: `${PASSENGER_SESSION_DAYS}d`,
   });
 
-/** Any signed-in account (BusWatch team or bus operator): a valid JWT in x-auth-token. */
+/** Any signed-in account (TransitX team or bus operator): a valid JWT in x-auth-token. */
 export const requireAccount: RequestHandler = (req, res, next) => {
   const token = req.header("x-auth-token");
   if (!token) {
@@ -42,7 +42,7 @@ const isStaff = (role?: AdminRole) =>
   (STAFF_ROLES as readonly (AdminRole | undefined)[]).includes(role);
 
 /**
- * The BusWatch team only (superadmins and admins). Every admin-console route uses this, so bus
+ * The TransitX team only (superadmins and admins). Every admin-console route uses this, so bus
  * operators can never reach passenger details, other fleets or internal notes.
  */
 export const requireAuth: RequestHandler = (req, res, next) => {

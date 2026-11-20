@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import PDFDocument from "pdfkit";
-import type { Language, ReportType } from "../config/constants.js";
+import type { BusService, Language, ReportType } from "../config/constants.js";
+import type { ReportDetails } from "../db/schema.js";
 import { DATE_LOCALES, messagesFor } from "../i18n/messages.js";
 import { generateReceiptId } from "../utils/receipt-id.js";
 
@@ -11,12 +12,15 @@ export interface ReceiptData {
   busNumber: string;
   routeNumber: string;
   busName?: string;
+  busService?: BusService | null;
   category?: string;
   location?: string | null;
   incidentAt?: Date | string;
   reportedAt: Date | string;
   description: string;
   images?: string[];
+  /** A road incident's vehicle, accident or road problem */
+  details?: ReportDetails | null;
 }
 
 export interface ReceiptResult {
@@ -277,12 +281,12 @@ const downloadImages = (urls: string[]): Promise<DownloadedImage[]> =>
 
 // --- Colour palette ---
 const COLORS = {
-  brand: "#0056b3", // BusWatch blue (main accent)
-  accent: "#FF8C00", // orange highlight
+  brand: "#0068C2", // TransitX blue (main accent)
+  accent: "#FE6E01", // TransitX orange highlight
   commend: "#12A150", // green accent for commendations
   text: "#333333",
   muted: "#666666",
-  background: "#F8F9FA",
+  background: "#F4F7FC",
   border: "#E0E0E0",
   success: "#28A745",
 };
@@ -346,7 +350,7 @@ export const generatePdfReceipt = async (reportData: ReceiptData): Promise<Recei
 
     const middle = doc.page.height / 2;
     const fullWidth = { x: 0, width: doc.page.width, align: "center" as const };
-    writeText(doc, "BusWatch", {
+    writeText(doc, "TransitX", {
       ...fullWidth,
       y: middle - 150,
       size: 36,
@@ -404,10 +408,50 @@ export const generatePdfReceipt = async (reportData: ReceiptData): Promise<Recei
     doc.y += 20;
 
     heading(t.overview[type]);
+    // A road incident is about any vehicle (or the road): its own rows instead of the bus's. The
+    // receipt is the passenger's own record, so the plate they gave is on it (police, insurance).
+    const road = reportData.details?.road;
+    const r = messages.road;
+    const subjectRows =
+      type === "road_incident"
+        ? [
+            ...(road?.vehicle
+              ? [
+                  { label: r.vehicle, value: r.vehicleKinds[road.vehicle.kind] },
+                  { label: r.plate, value: road.vehicle.plate || t.notSpecified },
+                  {
+                    label: r.colourMake,
+                    value:
+                      [road.vehicle.colour, road.vehicle.make].filter(Boolean).join(", ") ||
+                      t.notSpecified,
+                  },
+                ]
+              : []),
+            ...(road?.accident
+              ? [
+                  { label: r.accident, value: r.involvement[road.accident.involvement] },
+                  { label: r.injuries, value: r.injuryLevels[road.accident.injuries] },
+                  {
+                    label: r.vehiclesInvolved,
+                    value: road.accident.vehiclesInvolved?.toString() ?? t.notSpecified,
+                  },
+                ]
+              : []),
+            ...(road?.hazard ? [{ label: r.hazard, value: r.hazards[road.hazard] }] : []),
+          ]
+        : [
+            ...(reportData.details?.commendee
+              ? [{ label: t.commendee, value: t.commendees[reportData.details.commendee] }]
+              : []),
+            { label: t.busNumber, value: reportData.busNumber || t.none },
+            { label: t.routeNumber, value: reportData.routeNumber || t.none },
+            { label: t.busName, value: reportData.busName || t.none },
+            ...(reportData.busService
+              ? [{ label: t.busService, value: t.busServices[reportData.busService] }]
+              : []),
+          ];
     const detailRows = [
-      { label: t.busNumber, value: reportData.busNumber || t.none },
-      { label: t.routeNumber, value: reportData.routeNumber || t.none },
-      { label: t.busName, value: reportData.busName || t.none },
+      ...subjectRows,
       {
         label: t.category,
         value: reportData.category

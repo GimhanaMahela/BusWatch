@@ -1,4 +1,6 @@
-# BusWatch
+# TransitX
+
+![TransitX: Report, Resolve, Improve](docs/brand/transitx-logo.png)
 
 Passengers report public transport incidents (reckless driving, overcharging, harassment, …) with
 photos, videos and a map pin, get a receipt ID, and track what happens to their report. Admins
@@ -12,7 +14,8 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   with the bus number filled in, and the report is counted as "from a QR code".
 - **Works with a weak signal**: installable app (manifest + service worker). Unfinished forms, photos
   included, are kept on the phone; reports sent while offline wait in an outbox and go out automatically.
-- **Commend a driver** (`/commend-a-driver`): a one-step form for praise, kept out of complaint statistics.
+- **Commend good service** (`/commend`; the old `/commend-a-driver` redirects): a one-step form to thank
+  the driver, the conductor, both, or the bus service as a whole, kept out of complaint statistics.
 - **Rate the outcome**: once a complaint is closed, the passenger rates it 1–5 on the tracking page
   (linked from the resolution email).
 - **Share a tracking link**: phone share sheet or copy, with a preview image showing the current status.
@@ -37,15 +40,15 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   reported with and gets a one-time code; the list shows every report and flags new team messages.
 - **Messages between admin and passenger**: admins ask for details from the report page ("Which seat
   were you in?"); the passenger reads and replies on the tracking page, where the team appears as
-  "BusWatch team". Unread replies are flagged in the admin reports table.
+  "TransitX team". Unread replies are flagged in the admin reports table.
 - **SMS or WhatsApp updates**: an optional mobile number on the forms. Receipts, status changes and new
   messages are texted from your own Android phone (free, SMS Gateway for Android) or through Notify.lk
   or Twilio (`SMS_PROVIDER`). Texts link to the report and never contain the team's message itself.
   With no SMS set up, the phone field is hidden.
-- **Telegram updates**: "Get updates on Telegram" on the tracking and receipt pages opens the BusWatch
+- **Telegram updates**: "Get updates on Telegram" on the tracking and receipt pages opens the TransitX
   bot; pressing Start follows the report, `/stop` ends all updates. Free, no phone number needed.
 - **Browser push notifications**: "Get notified on this device" on the tracking and receipt pages
-  (Web Push, `VAPID_*` keys). On iPhone it works once BusWatch is added to the Home Screen.
+  (Web Push, `VAPID_*` keys). On iPhone it works once TransitX is added to the Home Screen.
 
 **Wider ecosystem**
 
@@ -68,12 +71,12 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   the photos with faces and number plates blurred; operators only ever see those. Uses Google
   Gemini's free tier (`AI_MODEL`, default `gemini-flash-latest`; free key at aistudio.google.com); `AI_AUTO_ANALYSE=true` analyses each new report on arrival.
 
-- **BusWatch helper chat** (same `GEMINI_API_KEY`; `AI_CHAT_ENABLED=false` hides it): a chat bubble on
-  every public page answers questions about BusWatch in English, Sinhala or Tamil and helps passengers
+- **TransitX helper chat** (same `GEMINI_API_KEY`; `AI_CHAT_ENABLED=false` hides it): a chat bubble on
+  every public page answers questions about TransitX in English, Sinhala or Tamil and helps passengers
   put a complaint or commendation into words. It never sends anything itself: "Open the form" fills in
   the normal form, where the passenger checks it, adds photos and contact details, and sends it.
 
-- **WhatsApp bot** (optional, Meta's WhatsApp Cloud API): passengers chat with BusWatch on WhatsApp
+- **WhatsApp bot** (optional, Meta's WhatsApp Cloud API): passengers chat with TransitX on WhatsApp
   in English, Sinhala or Tamil. The helper asks for the bus, route, place and what happened (typed or
   as a **voice note**), takes photos, videos and a shared location, shows the finished report and files
   it when the passenger presses **Send report**. They get the receipt ID and PDF in the chat, and status
@@ -109,6 +112,37 @@ review, escalate and resolve reports, keep internal notes, and see analytics suc
   `GEMINI_API_KEY` set, an AI check catches what keywords miss. The passenger can dismiss it and
   carry on filing.
 
+**Bus, other vehicle or the road (one report form)**
+
+- **What was involved?** The report form (`/submit-report`) starts by asking whether it was **a bus**,
+  **another vehicle** or **the road itself**:
+  - **A bus**: which service (**private bus**, **SLTB bus** or **Metro Bus**), then the bus number,
+    route (and the bus name for private buses) and the bus complaint categories, as before. The
+    service is kept with the report and shown on the tracking page, admin screens and PDF receipt.
+  - **Another vehicle**: the kind of vehicle (car, van, lorry, tipper, three-wheeler, motorcycle,
+    tour or staff bus, school van, taxi, government vehicle, tractor), and if seen, the number
+    plate (even part of it), colour and make. Then what happened (dangerous overtaking, speeding,
+    drunk driving, jumping a red light, no helmet, black smoke, illegal parking, hit and run,
+    accident…). There is no bus number or route.
+  - **The road itself**: what is wrong with the road.
+
+  Other-vehicle and road reports are filed as a separate report type ("road incident") with the same
+  receipt, tracking page and updates. Old `/report-incident` links open the form with "Another
+  vehicle" chosen.
+
+- **Accidents**: whether the passenger was in it or saw it, whether anyone was hurt and how many
+  vehicles were involved. Choosing "Serious injuries" brings up the 119 / 1990 call buttons straight
+  away. The PDF receipt lists the vehicle and plate, so it can go to the police or an insurer.
+- **Road hazards**: potholes, broken traffic lights, street lights out, flooding, fallen trees,
+  landslides, missing signs, debris and animals on the road. No vehicle is asked for.
+- **Dashcam video**: videos can now be up to 30 MB each (photos stay at 10 MB), on every report form.
+- **Kept apart from buses**: road incidents never count in bus complaint figures, the impact page,
+  scorecards, the heatmap or the operator portal, even when the vehicle is a bus. Admins get a
+  **Road incidents** tab with its own totals (and accidents with serious injuries), can search by
+  plate, and see the most reported kind of vehicle on Analytics.
+- **Plates stay private**: the plate is stored in the report's details and shown to admins only.
+  The tracking page, shared links and the preview image never include it.
+
 Status changes and messages go out on every channel the passenger gave (email, SMS, WhatsApp, push, Telegram), in their
 language; the admin sees which ones reached them.
 
@@ -143,7 +177,7 @@ added from the dashboard's **Admins** dialog.
 
 | Feature                  | Variables                                                    | Without them                                      |
 | ------------------------ | ------------------------------------------------------------ | ------------------------------------------------- |
-| Emails (receipts, codes) | `EMAIL_SERVICE_*`                                            | Skipped (codes printed in dev)                    |
+| Emails (receipts, codes) | `EMAIL_SERVICE_*`, `EMAIL_FROM`                              | Skipped (codes printed in dev)                    |
 | SMS / WhatsApp           | `SMS_PROVIDER` + `ANDROID_SMS_*`, `NOTIFYLK_*` or `TWILIO_*` | Phone field hidden (in dev: shown, texts printed) |
 | Telegram                 | `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_WEBHOOK_SECRET` hosted)    | The Telegram card is hidden                       |
 | WhatsApp bot             | `WHATSAPP_*` (see below), `GEMINI_API_KEY` for the chat      | WhatsApp buttons are hidden                       |
@@ -162,6 +196,30 @@ Generate push keys once with `npx web-push generate-vapid-keys`. For WhatsApp th
 `TWILIO_FROM=whatsapp:+…`; messages a passenger didn't start need templates approved by WhatsApp, so
 start with SMS.
 
+### Supabase (hosted PostgreSQL)
+
+TransitX talks to Supabase as plain PostgreSQL (no Supabase client library):
+
+1. Create a project and open **Connect**. Put the **Transaction pooler** string (port 6543) in
+   `DATABASE_URL` and the **Session pooler** (port 5432) or **Direct connection** string in
+   `DATABASE_DIRECT_URL`. URL-encode special characters in the password.
+2. Run `npm run db:migrate`. It creates every table through `DATABASE_DIRECT_URL`.
+3. Start the API. The connection is encrypted automatically. To verify Supabase's certificate as well,
+   download it (**Project Settings → Database → SSL Configuration**) into `DATABASE_CA_CERT`.
+
+Every table has row level security on with no policies, so Supabase's auto-generated Data API can't
+read or change anything with the public anon key. The app connects as the tables' owner and isn't
+affected. You can also turn the Data API off under **Project Settings → Data API**. New tables need
+`.enableRLS()` in `schema.ts`; a test fails otherwise.
+
+### Email (SMTP)
+
+Set `EMAIL_SERVICE_HOST`, `EMAIL_SERVICE_PORT`, `EMAIL_SERVICE_USER`, `EMAIL_SERVICE_PASS` and
+`EMAIL_FROM` (see `.env.example` for Brevo, Resend and Gmail). Port 465 uses SSL and 587 uses STARTTLS.
+Supabase's own email service only sends Supabase Auth emails and can't send TransitX's receipts and
+updates. `npm run email:test` checks the login, and `npm run email:test -- you@example.com` also sends a
+test message. The API logs "SMTP server ready." at startup when the settings work.
+
 ### Site theme
 
 Pick the look with `NEXT_PUBLIC_THEME` in `.env`, then restart `npm run dev` (or rebuild):
@@ -171,7 +229,7 @@ Pick the look with `NEXT_PUBLIC_THEME` in `.env`, then restart `npm run dev` (or
 | `sunset` (default) | **Lanka Sunset**: crimson to saffron gradients on warm cream, teal accents |
 | `aurora`           | **Midnight Aurora**: indigo, violet and pink glows on deep navy            |
 | `emerald`          | **Emerald Trust**: calm civic greens with a gold accent                    |
-| `classic`          | **Classic Blue**: the original BusWatch blue and violet                    |
+| `classic`          | **Classic Blue**: the original TransitX blue and violet                    |
 
 Each theme has light and dark modes (the visitor's switch in the header). Themes live in
 `ui/src/theme/themes.ts`; add one there and to `THEME_NAMES` to make a new choice.
@@ -191,7 +249,7 @@ Each theme has light and dark modes (the visitor's switch in the header). Themes
    `GEMINI_API_KEY` so the bot can chat (without it, it only tracks reports).
 5. Optional: WhatsApp only allows free-form messages within 24 hours of the passenger's last message.
    For later updates, create a **Utility** message template (e.g. `report_update`, body
-   `BusWatch update for report {{1}}: {{2}}`, in English and, if you like, Sinhala `si` and Tamil `ta`),
+   `TransitX update for report {{1}}: {{2}}`, in English and, if you like, Sinhala `si` and Tamil `ta`),
    and set `WHATSAPP_UPDATE_TEMPLATE` to its name once Meta approves it.
 
 Replies to passengers' messages are free. Template messages are charged by Meta per message.
@@ -205,8 +263,25 @@ Replies to passengers' messages are free. Template messages are charged by Meta 
 | `start` / `start:ui`                  | Run the compiled API / serve the built UI                 |
 | `test` (`test:api`, `test:ui`)        | Vitest: API tests and UI component tests                  |
 | `lint`, `typecheck`, `format(:check)` | ESLint, TypeScript, Prettier                              |
+| `db:migrate`, `db:generate`           | Apply / create database migrations                        |
+| `email:test [address]`                | Check the SMTP settings (and send a test email)           |
+| `db:seed [--reset] [--allow-remote]`  | Fill a local database with sample data (see below)        |
 
 CI runs `format:check`, `lint`, `typecheck`, `test` and `build` on every push and pull request.
+
+### Sample data
+
+`npm run db:seed` fills a migrated, empty database with made-up data for development and demos:
+about 220 reports of every type over the last ten months, with timelines, notes, messages, "me too"
+confirmations, operator replies and ratings. It also adds impact stories in all three languages,
+fare tables and routes, a live shared trip, daily usage counters, three staff accounts
+(`superadmin@`, `admin@`, `moderator@example.com`) and five operator accounts. Every account's
+password is `TransitX-dev-2026` (set `SEED_PASSWORD` to change it), and the script prints them all.
+
+The data is the same on every run, with dates relative to today. The fare tables are illustrative,
+not the official NTC fares. The script refuses to run when `NODE_ENV=production`, against a database
+that isn't on this machine unless you pass `--allow-remote`, and on a database that already has
+accounts or reports unless you pass `--reset`, which wipes every table first.
 
 ## Docker
 
@@ -223,4 +298,5 @@ start.
 
 One Vercel project deploys both apps from the repo root (`vercel.json`): the UI as a Next.js app and
 the API as a serverless function under `/api`. Set the variables from `.env.example` in the project settings;
-`DATABASE_URL` should point to a hosted Postgres (Neon, Supabase, …). Migrations run during the build.
+`DATABASE_URL` should point to a hosted Postgres (for Supabase, the transaction pooler, with
+`DATABASE_DIRECT_URL` for migrations; see above). Migrations run during the build.

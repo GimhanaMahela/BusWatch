@@ -8,7 +8,7 @@ import { isOperator } from "@/types/admin";
 
 /**
  * Renders its children only for a signed-in account of the right kind; otherwise redirects to
- * login. The admin console is for the BusWatch team; bus operators go to their own portal.
+ * login. The admin console is for the TransitX team; bus operators go to their own portal.
  */
 function AdminGuard({
   children,

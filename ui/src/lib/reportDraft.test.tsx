@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearDraft } from "@/lib/offlineStore";
 import { renderWithProviders } from "@/test/renderWithProviders";
-import CommendDriverView from "@/views/public/CommendDriverView";
+import CommendView from "@/views/public/CommendView";
 import SubmitReportView from "@/views/public/SubmitReportView";
 import { COMMEND_DRAFT_KEY, putDraftIntoForm, REPORT_DRAFT_KEY } from "./reportDraft";
 
@@ -40,13 +40,13 @@ describe("putDraftIntoForm", () => {
       incidentAt: "",
       description: "The conductor helped my grandmother with her bags.",
     });
-    expect(path).toBe("/commend-a-driver");
+    expect(path).toBe("/commend");
 
-    renderWithProviders(<CommendDriverView />);
+    renderWithProviders(<CommendView />);
     expect(await screen.findByDisplayValue("NC-5678")).toBeInTheDocument();
     expect(
       screen.getByDisplayValue("The conductor helped my grandmother with her bags."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Kind, helpful crew" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Kind, polite and helpful" })).toBeChecked();
   });
 });

@@ -19,7 +19,7 @@ export const verify = (req: Request, res: Response) => {
   res.type("text/plain").send(challenge);
 };
 
-// @desc    Messages to the BusWatch WhatsApp number, delivered by Meta
+// @desc    Messages to the TransitX WhatsApp number, delivered by Meta
 // @route   POST /api/whatsapp/webhook
 // @access  Meta (checked with the X-Hub-Signature-256 header)
 export const webhook = async (req: Request, res: Response) => {

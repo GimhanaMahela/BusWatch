@@ -76,7 +76,7 @@ function ScorecardView(props: ScorecardViewProps) {
 
   if (!card) {
     return (
-      <Container maxWidth="md" sx={{ py: 6 }}>
+      <Container maxWidth="xl" sx={{ py: 6 }}>
         {back}
         <Alert severity="warning">{tImpact("unavailable")}</Alert>
       </Container>
@@ -93,7 +93,7 @@ function ScorecardView(props: ScorecardViewProps) {
           {t("reportCta")}
         </GradientButton>
         <Button
-          href={`/commend-a-driver${busQuery(props.card?.busNumber ?? "")}`}
+          href={`/commend${busQuery(props.card?.busNumber ?? "")}`}
           variant="outlined"
           color="success"
           startIcon={<ThumbUpAltRoundedIcon />}
@@ -117,7 +117,7 @@ function ScorecardView(props: ScorecardViewProps) {
     return (
       <>
         {hero}
-        <Container maxWidth="md" sx={{ py: { xs: 5, md: 8 } }}>
+        <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
           {back}
           <Card>
             <EmptyState
@@ -136,7 +136,7 @@ function ScorecardView(props: ScorecardViewProps) {
     <>
       <PageViewEvent event="scorecard_view" />
       {hero}
-      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
         {back}
         <Grid container spacing={2.5}>
           {complaints ? (
