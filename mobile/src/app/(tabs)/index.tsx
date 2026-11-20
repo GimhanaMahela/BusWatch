@@ -1,17 +1,31 @@
 import { router } from "expo-router";
 import { View } from "react-native";
 
+import { OutboxNotice } from "@/components/OutboxNotice";
 import { AppText, Button, Card, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useOutbox } from "@/lib/OutboxProvider";
 import { spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
 export default function HomeScreen() {
   const { t } = useI18n();
   const theme = useTheme();
+  const { queued } = useOutbox();
 
   return (
     <Screen>
+      <OutboxNotice />
+      {queued.length > 0 && (
+        <Card style={{ borderColor: theme.warning }}>
+          <AppText>{t("offline.waiting", { count: queued.length })}</AppText>
+          <Button
+            variant="outline"
+            label={t("app.outboxTitle")}
+            onPress={() => router.push("/outbox")}
+          />
+        </Card>
+      )}
       <View style={{ gap: spacing.sm, paddingVertical: spacing.md }}>
         <AppText variant="label" style={{ color: theme.secondary }}>
           {t("home.badge")}
