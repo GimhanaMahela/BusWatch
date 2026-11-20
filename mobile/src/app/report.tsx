@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -17,13 +17,17 @@ import { submitReport, type SubmitResult } from "@/api/reports";
 import { ChoiceChips, TextField } from "@/components/form";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { Turnstile } from "@/components/Turnstile";
-import { AppText, Button, Card } from "@/components/ui";
+import { AppText, Button, Card, SectionTitle, type IconName } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useOutbox } from "@/lib/OutboxProvider";
+import { parseBusNumber, parseRoute } from "@/lib/qr";
 import {
-  APP_COMPLAINT_CATEGORIES,
   BUS_SERVICES,
+  CATEGORIES_FOR,
+  COMMENDEES,
   emptyDraft,
+  isAppReportType,
+  type AppReportType,
   MAX_DESCRIPTION,
   toFormData,
   validateDraft,
@@ -31,10 +35,62 @@ import {
   type ReportDraft,
 } from "@/lib/reportDraft";
 import { useCurrentLocation } from "@/lib/useCurrentLocation";
-import { spacing } from "@/theme/colors";
+import { accents, categoryStyle, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
 const plain = (chunks: string[]) => chunks.join("");
+
+/** The website's text for each form: complaint (submit.*), commendation (commend.*), lost (lost.*) */
+const TEXT: Record<
+  AppReportType,
+  {
+    title: string;
+    subtitle: string;
+    category: string;
+    where: string;
+    wherePlaceholder: string;
+    description: string;
+    descriptionPlaceholder: string;
+    send: string;
+  }
+> = {
+  complaint: {
+    title: "submit.title",
+    subtitle: "submit.subtitle",
+    category: "submit.categoryQuestion",
+    where: "submit.where",
+    wherePlaceholder: "submit.wherePlaceholder",
+    description: "submit.description",
+    descriptionPlaceholder: "submit.descriptionPlaceholder",
+    send: "submit.send",
+  },
+  commendation: {
+    title: "commend.title",
+    subtitle: "commend.subtitle",
+    category: "commend.whatWasGood",
+    where: "commend.where",
+    wherePlaceholder: "commend.wherePlaceholder",
+    description: "commend.description",
+    descriptionPlaceholder: "commend.descriptionPlaceholder",
+    send: "commend.send",
+  },
+  lost_item: {
+    title: "lost.title",
+    subtitle: "lost.subtitle",
+    category: "lost.whatLost",
+    where: "lost.where",
+    wherePlaceholder: "lost.wherePlaceholder",
+    description: "lost.description",
+    descriptionPlaceholder: "lost.descriptionPlaceholder",
+    send: "lost.send",
+  },
+};
+
+const TYPE_LOOK: Record<AppReportType, { color: string; icon: IconName; sendIcon: IconName }> = {
+  complaint: { color: accents.orange, icon: "location", sendIcon: "paper-plane" },
+  commendation: { color: accents.green, icon: "heart", sendIcon: "heart" },
+  lost_item: { color: accents.amber, icon: "briefcase", sendIcon: "paper-plane" },
+};
 
 export default function ReportScreen() {
   const { t, locale } = useI18n();
@@ -42,7 +98,21 @@ export default function ReportScreen() {
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const scroll = useRef<ScrollViewInstance>(null);
 
-  const [draft, setDraft] = useState<ReportDraft>(emptyDraft);
+  // ?type=commendation|lost_item picks the form; ?bus=…&route=…&src=qr comes from a sticker scan
+  const params = useLocalSearchParams<{
+    type?: string;
+    bus?: string;
+    route?: string;
+    src?: string;
+  }>();
+  const [draft, setDraft] = useState<ReportDraft>(() => ({
+    ...emptyDraft(isAppReportType(params.type) ? params.type : "complaint"),
+    busNumber: parseBusNumber(params.bus),
+    routeNumber: parseRoute(params.route),
+    source: params.src === "qr" ? "qr" : "app",
+  }));
+  const text = TEXT[draft.type];
+  const look = TYPE_LOOK[draft.type];
   const [errors, setErrors] = useState<DraftErrors>({});
   const [captcha, setCaptcha] = useState<string | null>(null);
   // A Turnstile token works once: a failed send needs a fresh widget
@@ -82,6 +152,7 @@ export default function ReportScreen() {
           result === "queued"
             ? { queued: "1" }
             : {
+                type: draft.type,
                 receiptId: result.receiptId,
                 emailed: result.emailSent ? "1" : "",
                 texted: result.smsSent ? "1" : "",
@@ -135,7 +206,13 @@ export default function ReportScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
       >
-        <AppText variant="secondary">{t("submit.subtitle")}</AppText>
+        <Stack.Screen options={{ title: t(text.title) }} />
+        <AppText variant="secondary">{t(text.subtitle)}</AppText>
+        {draft.source === "qr" && draft.busNumber ? (
+          <Card accent={accents.violet}>
+            <AppText>{t("submit.qrBanner", { bus: draft.busNumber })}</AppText>
+          </Card>
+        ) : null}
         {!outbox.online && (
           <AppText style={{ color: theme.warning, fontWeight: "600" }}>
             {t("submit.offlineBanner")}
@@ -146,7 +223,9 @@ export default function ReportScreen() {
         )}
 
         <Card>
-          <AppText variant="heading">{t("submit.stepBus")}</AppText>
+          <SectionTitle icon="bus" color={accents.blue}>
+            {t("submit.stepBus")}
+          </SectionTitle>
           <TextField
             label={t("submit.busNumber")}
             value={draft.busNumber}
@@ -165,18 +244,35 @@ export default function ReportScreen() {
             maxLength={60}
             error={error("routeNumber")}
           />
+          {draft.type === "complaint" && (
+            <ChoiceChips
+              label={t("submit.busServiceQuestion")}
+              options={BUS_SERVICES.map((value) => ({ value, label: t(`busServices.${value}`) }))}
+              value={draft.busService}
+              onChange={(value) => update("busService", value)}
+              error={error("busService")}
+            />
+          )}
+          {draft.type === "commendation" && (
+            <ChoiceChips
+              label={t("commend.whoQuestion")}
+              options={COMMENDEES.map((value) => ({
+                value,
+                label: t(`commendees.${value}`),
+                color: accents.green,
+              }))}
+              value={draft.commendee}
+              onChange={(value) => update("commendee", value)}
+              error={error("commendee")}
+            />
+          )}
           <ChoiceChips
-            label={t("submit.busServiceQuestion")}
-            options={BUS_SERVICES.map((value) => ({ value, label: t(`busServices.${value}`) }))}
-            value={draft.busService}
-            onChange={(value) => update("busService", value)}
-            error={error("busService")}
-          />
-          <ChoiceChips
-            label={t("submit.categoryQuestion")}
-            options={APP_COMPLAINT_CATEGORIES.map((value) => ({
+            label={t(text.category)}
+            options={CATEGORIES_FOR[draft.type].map((value) => ({
               value,
               label: t(`categories.${value}`),
+              icon: categoryStyle[value]?.icon as IconName | undefined,
+              color: categoryStyle[value]?.color ?? look.color,
             }))}
             value={draft.category}
             onChange={(value) => update("category", value)}
@@ -185,12 +281,14 @@ export default function ReportScreen() {
         </Card>
 
         <Card>
-          <AppText variant="heading">{t("submit.stepIncident")}</AppText>
+          <SectionTitle icon={look.icon} color={look.color}>
+            {t("submit.stepIncident")}
+          </SectionTitle>
           <TextField
-            label={t("submit.where")}
+            label={t(text.where)}
             value={draft.location}
             onChangeText={(value) => update("location", value)}
-            placeholder={t("submit.wherePlaceholder")}
+            placeholder={t(text.wherePlaceholder)}
             error={error("location")}
           />
           {draft.latitude !== undefined && draft.longitude !== undefined ? (
@@ -201,11 +299,17 @@ export default function ReportScreen() {
                   lng: draft.longitude.toFixed(5),
                 })}
               </AppText>
-              <Button variant="outline" label={t("location.removePin")} onPress={removePin} />
+              <Button
+                variant="outline"
+                icon="close-circle-outline"
+                label={t("location.removePin")}
+                onPress={removePin}
+              />
             </View>
           ) : (
             <Button
               variant="outline"
+              icon="navigate"
               label={locating ? t("app.locating") : t("location.useMine")}
               loading={locating}
               onPress={() => void fillMyLocation()}
@@ -217,10 +321,10 @@ export default function ReportScreen() {
             </AppText>
           )}
           <TextField
-            label={t("submit.description")}
+            label={t(text.description)}
             value={draft.description}
             onChangeText={(value) => update("description", value)}
-            placeholder={t("submit.descriptionPlaceholder")}
+            placeholder={t(text.descriptionPlaceholder)}
             multiline
             maxLength={MAX_DESCRIPTION}
             helper={`${draft.description.length} / ${MAX_DESCRIPTION}`}
@@ -229,7 +333,9 @@ export default function ReportScreen() {
         </Card>
 
         <Card>
-          <AppText variant="heading">{t("submit.stepEvidence")}</AppText>
+          <SectionTitle icon="camera" color={accents.violet}>
+            {t("submit.stepEvidence")}
+          </SectionTitle>
           <PhotoPicker photos={draft.photos} onChange={(photos) => update("photos", photos)} />
           <TextField
             label={t("submit.email")}
@@ -274,7 +380,9 @@ export default function ReportScreen() {
           {t("submit.consent", { terms: plain, privacy: plain })}
         </AppText>
         <Button
-          label={t("submit.send")}
+          variant="accent"
+          icon={look.sendIcon}
+          label={t(text.send)}
           onPress={submit}
           loading={send.isPending}
           disabled={needsCaptcha}

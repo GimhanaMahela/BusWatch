@@ -51,7 +51,22 @@
           "imageWidth": 96
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "color": "#0068C2",
+          "defaultChannel": "report-updates"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TransitX uses the camera to scan the QR sticker inside the bus and to take photos for your report.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
