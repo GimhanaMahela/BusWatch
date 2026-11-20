@@ -1,0 +1,14 @@
+# Switching to Tamil changes the app's text at once and is remembered after a restart.
+appId: com.transitx.app
+name: Language switch
+---
+- launchApp:
+    clearState: true
+- tapOn: "Settings"
+- tapOn: "தமிழ்"
+- assertVisible: "அமைப்புகள்"
+- stopApp
+- launchApp
+- assertVisible: "அமைப்புகள்"
+- tapOn: "அமைப்புகள்"
+- tapOn: "English"

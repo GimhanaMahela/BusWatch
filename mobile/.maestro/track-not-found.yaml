@@ -1,0 +1,13 @@
+# Tracking an unknown receipt ID explains what a receipt ID looks like (needs the API running).
+appId: com.transitx.app
+name: Track an unknown receipt
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    text: "Track a report"
+    index: 0
+- tapOn: "BW-2026-XXXXXX"
+- inputText: "BW-2026-NOPE00"
+- tapOn: "Track"
+- assertVisible: "We couldn't find a report with that Receipt ID."

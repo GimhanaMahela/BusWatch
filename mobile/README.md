@@ -88,6 +88,37 @@ opens the report form for that bus. Opening `https://` website links in the app 
 iOS Universal Links) needs the production domain and signing certificates, so it comes with the
 store release.
 
+## End-to-end tests (Maestro)
+
+`.maestro/` holds flows for the main journeys: the report form's checks, the commendation form,
+tracking an unknown receipt and the language switch. Maestro drives a real build, so install a
+development or preview build on an emulator or phone, start the API, then run `npm run e2e`
+(install Maestro first: https://maestro.dev). They are not in CI yet: that needs an Android
+emulator on the runner or Maestro Cloud.
+
+## Releasing
+
+| When                                      | What happens                                                      | Workflow             |
+| ----------------------------------------- | ----------------------------------------------------------------- | -------------------- |
+| A change to the app lands on `dev`        | Over-the-air update to the `preview` channel (testers)            | `mobile-preview.yml` |
+| Run `mobile-preview` by hand with "build" | New preview APK for testers                                       | `mobile-preview.yml` |
+| Tag a commit on `main` as `mobile-v1.0.0` | Production builds, sent to Play internal testing / TestFlight     | `mobile-release.yml` |
+| Run `mobile-release` by hand, "update"    | Over-the-air update to the `production` channel (JavaScript only) | `mobile-release.yml` |
+
+One-time setup, in `mobile/`:
+
+1. `npx eas-cli@latest init`, then `npx eas-cli@latest update:configure`: creates the EAS project
+   and writes its ID and update URL into `app.json` (commit that).
+2. Add an Expo access token as the `EXPO_TOKEN` repository secret (expo.dev, Account settings,
+   Access tokens). Until then the preview workflow skips itself.
+3. Store credentials, kept in EAS, never in the repo: `npx eas-cli@latest credentials` for the
+   Android keystore and a Google Play service account key (for `--auto-submit`), and, for iOS,
+   an App Store Connect API key (Apple Developer Program, USD 99 a year).
+4. Create the app once in the Play Console (USD 25 once) with package `com.transitx.app`.
+
+Bump `version` in `app.json` for every store release; `runtimeVersion` follows it, so an update is
+only offered to builds of the same version.
+
 ## Builds
 
 `eas.json` has three profiles: `development` (dev client), `preview` (internal APK, `preview`

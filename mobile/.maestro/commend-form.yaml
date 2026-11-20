@@ -1,0 +1,12 @@
+# Commend good service opens the commendation form with its own questions.
+appId: com.transitx.app
+name: Commendation form
+---
+- launchApp:
+    clearState: true
+- tapOn: "Commend"
+- assertVisible: "Commend good service"
+- assertVisible: "Who would you like to thank?"
+- tapOn: "The conductor"
+- scrollUntilVisible:
+    element: "Send commendation"
