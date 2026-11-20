@@ -16,7 +16,7 @@ export function OutboxNotice() {
 
   if (notice.kind === "failed") {
     return (
-      <Card style={{ borderColor: theme.error }}>
+      <Card accent={theme.error}>
         <AppText style={{ color: theme.error }}>
           {t("offline.sendFailed", { message: notice.message })}
         </AppText>
@@ -26,7 +26,7 @@ export function OutboxNotice() {
   }
 
   return (
-    <Card style={{ borderColor: theme.success }}>
+    <Card accent={theme.success}>
       <AppText>{t("offline.sent", { receiptId: notice.receiptId })}</AppText>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <View style={{ flex: 1 }}>

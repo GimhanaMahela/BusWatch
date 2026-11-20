@@ -67,3 +67,12 @@ export const pushSubscriptionSchema = z.object({
 export type PushSubscriptionBody = z.infer<typeof pushSubscriptionSchema>;
 
 export const pushUnsubscribeSchema = z.object({ endpoint: z.string().min(1).max(2048) });
+
+/** A phone running the TransitX app: its Expo push token, e.g. ExponentPushToken[xxxxxxxx] */
+export const expoPushSchema = z.object({
+  token: z
+    .string()
+    .max(256)
+    .regex(/^Expo(nent)?PushToken\[[A-Za-z0-9_-]+\]$/, { error: "Invalid push token." }),
+});
+export type ExpoPushBody = z.infer<typeof expoPushSchema>;

@@ -8,7 +8,7 @@ import { AppText, Button, Card, Field, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
 import { useOutbox } from "@/lib/OutboxProvider";
-import { spacing } from "@/theme/colors";
+import { accents, spacing } from "@/theme/colors";
 
 /**
  * Reports saved on this phone. Without a security check they go out on their own; with one, each
@@ -37,7 +37,7 @@ export default function OutboxScreen() {
         <>
           <AppText>{t("offline.waiting", { count: queued.length })}</AppText>
           {queued.map((report) => (
-            <Card key={report.id}>
+            <Card key={report.id} accent={accents.amber}>
               <Field
                 label={t("track.category")}
                 value={report.draft.category ? t(`categories.${report.draft.category}`) : "–"}
@@ -61,6 +61,7 @@ export default function OutboxScreen() {
           )}
           {online ? (
             <Button
+              icon="cloud-upload"
               label={t("app.sendNow")}
               loading={sending}
               disabled={needsToken && !token}
