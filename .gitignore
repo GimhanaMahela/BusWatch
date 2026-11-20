@@ -1,4 +1,5 @@
-# Applies to the whole repo (api and ui apps)
+# Applies to the whole repo (api, ui and mobile apps).
+# mobile/.gitignore adds Expo's own rules (.expo/, generated android/ and ios/ folders).
 
 # Dependencies
 node_modules/
@@ -38,6 +39,18 @@ Thumbs.db
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Mobile app (Expo / EAS): build outputs and signing secrets
+*.apk
+*.aab
+*.ipa
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+google-service-account*.json
 
 # Private notes with credentials; never commit
 docs/Creds.odt
