@@ -1,9 +1,12 @@
 name: CI
 
+# Branch flow: feature branches are cut from dev and merged into dev by PR;
+# dev is merged into main (production) by a release PR.
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
   pull_request:
+    branches: [dev, main]
 
 concurrency:
   group: ci-${{ github.ref }}
