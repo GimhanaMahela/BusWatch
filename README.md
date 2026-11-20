@@ -151,10 +151,11 @@ tracking, average outcome rating, reports from QR codes and time to first respon
 counts, no personal data), plus messages, passenger replies, My reports sign-ins, push sign-ups, "me too" confirmations,
 fare checks, safety-mode reports, shared trips and how often the emergency shortcut appeared.
 
-| App           | What it is                                  |
-| ------------- | ------------------------------------------- |
-| [`api/`](api) | REST API: TypeScript, Express 5, PostgreSQL |
-| [`ui/`](ui)   | Web app: TypeScript, Next.js 16, MUI 9      |
+| App                 | What it is                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| [`api/`](api)       | REST API: TypeScript, Express 5, PostgreSQL                                                        |
+| [`ui/`](ui)         | Web app: TypeScript, Next.js 16, MUI 9                                                             |
+| [`mobile/`](mobile) | Passenger app for Android and iOS: Expo SDK 58, React Native (its own npm project; see its README) |
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the structure, naming conventions and tech stack.
 
