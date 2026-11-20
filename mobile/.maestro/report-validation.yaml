@@ -1,0 +1,12 @@
+# The report form won't send until the required fields are filled in.
+appId: com.transitx.app
+name: Report form checks required fields
+---
+- launchApp:
+    clearState: true
+- tapOn: "Report an incident"
+- scrollUntilVisible:
+    element: "Send report"
+- tapOn: "Send report"
+- assertVisible: "Check the highlighted fields."
+- inputText: "NB-1234"

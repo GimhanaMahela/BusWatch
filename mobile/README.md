@@ -47,8 +47,10 @@ from the lockfile, and `npm ci` on CI then fails with "Missing: fsevents from lo
 
 ```
 src/
-├── app/            # Screens (Expo Router): (tabs)/ Home, Track, Settings; track/[receiptId];
-│                   #   report (the complaint form), report-sent (the receipt), outbox
+├── app/            # Screens (Expo Router): (tabs)/ Home, Track, My reports, Settings;
+│                   #   track/[receiptId]; report (?type=commendation|lost_item, ?bus=&src=qr),
+│                   #   report-sent, outbox, scan (bus QR sticker), fare, impact,
+│                   #   bus/[busNumber], route/[routeNumber], safety, chat (helper)
 ├── api/            # HTTP calls: client.ts (axios + ApiError), reports.ts
 ├── components/     # Themed building blocks (ui, form), PhotoPicker, Turnstile (CAPTCHA WebView)
 ├── i18n/           # Language provider and translator
@@ -65,6 +67,57 @@ when the connection returns or the app is opened again, using the same rules as 
 outbox: invalid reports are dropped with the server's reason, anything else stays queued. With
 Turnstile on, every send needs a fresh token, so saved reports are sent from the "Waiting to send"
 screen instead. Receipt IDs of reports sent from the phone are listed on the Track tab.
+
+## Push notifications
+
+Passengers turn on "Get notified on this device" on a report (receipt and tracking screens). The
+API stores the phone's Expo push token and sends status changes, team messages and operator
+replies through Expo's push service, beside the website's browser push.
+
+Setup, once: run `npx eas-cli@latest init` in `mobile/`. It creates the EAS project and writes its
+`projectId` into `app.json`; without it the app says notifications aren't available. Android also
+needs Firebase credentials uploaded to EAS (`npx eas-cli@latest credentials`). Expo Go can't
+receive push on Android, so test with a development build
+(`npx eas-cli@latest build --profile development --platform android`).
+
+## Deep links
+
+The app's scheme is `transitx://`, and every screen is reachable by its path, e.g.
+`transitx://track/BW-2026-XXXXXX`. Scanning a bus sticker (`https://<site>/r/NB-1234`) in the app
+opens the report form for that bus. Opening `https://` website links in the app (Android App Links,
+iOS Universal Links) needs the production domain and signing certificates, so it comes with the
+store release.
+
+## End-to-end tests (Maestro)
+
+`.maestro/` holds flows for the main journeys: the report form's checks, the commendation form,
+tracking an unknown receipt and the language switch. Maestro drives a real build, so install a
+development or preview build on an emulator or phone, start the API, then run `npm run e2e`
+(install Maestro first: https://maestro.dev). They are not in CI yet: that needs an Android
+emulator on the runner or Maestro Cloud.
+
+## Releasing
+
+| When                                      | What happens                                                      | Workflow             |
+| ----------------------------------------- | ----------------------------------------------------------------- | -------------------- |
+| A change to the app lands on `dev`        | Over-the-air update to the `preview` channel (testers)            | `mobile-preview.yml` |
+| Run `mobile-preview` by hand with "build" | New preview APK for testers                                       | `mobile-preview.yml` |
+| Tag a commit on `main` as `mobile-v1.0.0` | Production builds, sent to Play internal testing / TestFlight     | `mobile-release.yml` |
+| Run `mobile-release` by hand, "update"    | Over-the-air update to the `production` channel (JavaScript only) | `mobile-release.yml` |
+
+One-time setup, in `mobile/`:
+
+1. `npx eas-cli@latest init`, then `npx eas-cli@latest update:configure`: creates the EAS project
+   and writes its ID and update URL into `app.json` (commit that).
+2. Add an Expo access token as the `EXPO_TOKEN` repository secret (expo.dev, Account settings,
+   Access tokens). Until then the preview workflow skips itself.
+3. Store credentials, kept in EAS, never in the repo: `npx eas-cli@latest credentials` for the
+   Android keystore and a Google Play service account key (for `--auto-submit`), and, for iOS,
+   an App Store Connect API key (Apple Developer Program, USD 99 a year).
+4. Create the app once in the Play Console (USD 25 once) with package `com.transitx.app`.
+
+Bump `version` in `app.json` for every store release; `runtimeVersion` follows it, so an update is
+only offered to builds of the same version.
 
 ## Builds
 

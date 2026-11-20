@@ -73,6 +73,8 @@ const EnvSchema = z.object({
   VAPID_PRIVATE_KEY: optional(z.string()),
   // Contact for push services, e.g. mailto:info@buswatch.lk
   VAPID_SUBJECT: optional(z.string()),
+  // Optional: Expo's push "enhanced security" access token for TransitX app notifications
+  EXPO_ACCESS_TOKEN: optional(z.string()),
 
   // Free Telegram updates. Create a bot with @BotFather and paste its token here.
   TELEGRAM_BOT_TOKEN: optional(z.string()),

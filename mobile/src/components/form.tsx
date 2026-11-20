@@ -1,7 +1,8 @@
 // Form inputs in the TransitX style: labelled text fields and single-choice chips.
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 
-import { AppText } from "@/components/ui";
+import { AppText, type IconName } from "@/components/ui";
 import { radius, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
@@ -27,8 +28,8 @@ export function TextField({ label, helper, error, multiline, ...input }: FieldPr
           multiline && styles.multiline,
           {
             color: theme.text,
-            backgroundColor: theme.background,
-            borderColor: error ? theme.error : theme.divider,
+            backgroundColor: theme.surfaceAlt,
+            borderColor: error ? theme.error : theme.surfaceAlt,
           },
         ]}
       />
@@ -51,7 +52,8 @@ export function ChoiceChips<T extends string>({
   error,
 }: {
   label: string;
-  options: readonly { value: T; label: string }[];
+  /** An icon and colour make a chip stand out; the selected chip fills with its colour */
+  options: readonly { value: T; label: string; icon?: IconName; color?: string }[];
   value: T | "";
   onChange: (value: T) => void;
   error?: string;
@@ -63,6 +65,8 @@ export function ChoiceChips<T extends string>({
       <View accessibilityRole="radiogroup" accessibilityLabel={label} style={styles.chips}>
         {options.map((option) => {
           const selected = option.value === value;
+          const tint = option.color ?? theme.primary;
+          const foreground = selected ? "#FFFFFF" : option.color ? tint : theme.text;
           return (
             <Pressable
               key={option.value}
@@ -72,12 +76,15 @@ export function ChoiceChips<T extends string>({
               style={[
                 styles.chip,
                 {
-                  borderColor: selected ? theme.primary : error ? theme.error : theme.divider,
-                  backgroundColor: selected ? theme.primary : "transparent",
+                  borderColor: selected ? tint : error ? theme.error : `${tint}40`,
+                  backgroundColor: selected ? tint : option.color ? `${tint}14` : theme.surfaceAlt,
                 },
               ]}
             >
-              <AppText style={{ color: selected ? theme.onPrimary : theme.text, fontSize: 15 }}>
+              {option.icon && <Ionicons name={option.icon} size={16} color={foreground} />}
+              <AppText
+                style={{ color: foreground, fontSize: 15, fontWeight: selected ? "700" : "500" }}
+              >
                 {option.label}
               </AppText>
             </Pressable>
@@ -96,8 +103,8 @@ export function ChoiceChips<T extends string>({
 const styles = StyleSheet.create({
   field: { gap: spacing.xs },
   input: {
-    minHeight: 48,
-    borderWidth: 1,
+    minHeight: 50,
+    borderWidth: 1.5,
     borderRadius: radius,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -106,10 +113,71 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 120, textAlignVertical: "top" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: {
-    minHeight: 40,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: spacing.md,
-    justifyContent: "center",
+    minHeight: 42,
+    borderWidth: 1.5,
+    borderRadius: 21,
+    paddingHorizontal: spacing.md - 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 });
+
+/** Tick any number of options (chips that toggle) */
+export function MultiChips<T extends string>({
+  label,
+  options,
+  values,
+  onChange,
+  color,
+}: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  values: readonly T[];
+  onChange: (values: T[]) => void;
+  color: string;
+}) {
+  const theme = useTheme();
+  const toggle = (value: T) =>
+    onChange(values.includes(value) ? values.filter((v) => v !== value) : [...values, value]);
+  return (
+    <View style={styles.field}>
+      <AppText variant="label">{label}</AppText>
+      <View accessibilityLabel={label} style={styles.chips}>
+        {options.map((option) => {
+          const selected = values.includes(option.value);
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected }}
+              onPress={() => toggle(option.value)}
+              style={[
+                styles.chip,
+                {
+                  borderColor: selected ? color : `${color}40`,
+                  backgroundColor: selected ? color : `${color}14`,
+                },
+              ]}
+            >
+              <Ionicons
+                name={selected ? "checkbox" : "square-outline"}
+                size={16}
+                color={selected ? "#FFFFFF" : color}
+              />
+              <AppText
+                style={{
+                  color: selected ? "#FFFFFF" : theme.text,
+                  fontSize: 15,
+                  fontWeight: selected ? "700" : "500",
+                }}
+              >
+                {option.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
