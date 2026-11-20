@@ -4,6 +4,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 
 import { ApiError } from "@/api/client";
 import { STATUS_TEXT_GROUP, trackReport, type PublicReport } from "@/api/reports";
+import { FollowReport } from "@/components/FollowReport";
 import { AppText, Card, Field } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
@@ -95,6 +96,8 @@ export default function ReportStatusScreen() {
           </AppText>
         )}
       </Card>
+
+      <FollowReport receiptId={report.receiptId} />
 
       <Card>
         <AppText variant="heading">{t("track.details")}</AppText>

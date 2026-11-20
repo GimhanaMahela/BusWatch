@@ -1,16 +1,33 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from "expo-router";
+import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { OutboxProvider } from "@/lib/OutboxProvider";
+import { routeFromNotification } from "@/lib/push";
 import { palettes } from "@/theme/colors";
+
+/** A tapped notification opens the report it is about (also when it started the app). */
+function useNotificationTaps() {
+  const response = Notifications.useLastNotificationResponse();
+  const handled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!response) return;
+    const id = response.notification.request.identifier;
+    if (handled.current === id) return;
+    handled.current = id;
+    const route = routeFromNotification(response.notification.request.content.data);
+    if (route) router.push(route as `/track/${string}`);
+  }, [response]);
+}
 
 function RootStack() {
   const { t } = useI18n();
+  useNotificationTaps();
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   const palette = palettes[scheme];
   const base = scheme === "dark" ? DarkTheme : DefaultTheme;

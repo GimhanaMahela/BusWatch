@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 
+import { FollowReport } from "@/components/FollowReport";
 import { AppText, Button, Card, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { spacing } from "@/theme/colors";
@@ -64,6 +65,7 @@ export default function ReportSentScreen() {
         {emailed ? <AppText variant="secondary">{t("success.emailed")}</AppText> : null}
         {texted ? <AppText variant="secondary">{t("success.texted")}</AppText> : null}
       </Card>
+      <FollowReport receiptId={receiptId} />
       <View style={{ gap: spacing.sm }}>
         <Button
           label={t("success.track")}
