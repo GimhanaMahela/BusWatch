@@ -12,6 +12,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import {
+  ACCESSIBILITY_ISSUES,
   HEATMAP_CELL_DEGREES,
   MIN_HEATMAP_REPORTS,
   MIN_PUBLIC_REPORTS,
@@ -230,6 +231,30 @@ export const getPublicImpact = async () => {
 
 // ---------------------------------------------------------------- Scorecards
 
+/**
+ * Accessibility complaints for one bus or route, by what went wrong. Published only with
+ * MIN_PUBLIC_REPORTS checked accessibility complaints, like every other complaint number.
+ */
+const accessibilitySection = async (complaints: SQL | undefined) => {
+  const rows = await db
+    .select({ details: reports.details })
+    .from(reports)
+    .where(and(complaints, eq(reports.category, "accessibility")));
+  if (rows.length < MIN_PUBLIC_REPORTS) return null;
+  const counts = new Map<string, number>();
+  for (const { details } of rows) {
+    for (const issue of details?.accessibility ?? []) {
+      counts.set(issue, (counts.get(issue) ?? 0) + 1);
+    }
+  }
+  return {
+    checked: rows.length,
+    byIssue: ACCESSIBILITY_ISSUES.map((issue) => ({ issue, count: counts.get(issue) ?? 0 }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count),
+  };
+};
+
 const scorecard = async (scope: SQL, now = new Date()) => {
   const yearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
   const complaints = and(scope, checked());
@@ -244,6 +269,7 @@ const scorecard = async (scope: SQL, now = new Date()) => {
     [rating],
     [range],
     trend,
+    accessibility,
   ] = await Promise.all([
     db.$count(reports, complaints),
     db.$count(reports, praise),
@@ -269,6 +295,7 @@ const scorecard = async (scope: SQL, now = new Date()) => {
       .from(reports)
       .where(and(scope, inArray(reports.status, [...PUBLIC_STATUSES]), visible)),
     byMonth(complaints, reports.reportedAt, yearAgo),
+    accessibilitySection(complaints),
   ]);
 
   // Complaint numbers only once there are enough of them (the fairness rule); praise is harmless
@@ -290,6 +317,8 @@ const scorecard = async (scope: SQL, now = new Date()) => {
           byMonth: lastTwelveMonths(now).map((month) => ({ month, count: trend.get(month) ?? 0 })),
         }
       : null,
+    // Its own threshold: enough accessibility complaints, not just enough complaints overall
+    accessibility,
     commendations: { count: commendationCount, byCategory: praiseByCategory },
   };
 };
@@ -316,7 +345,9 @@ export const getBusScorecard = async (busNumber: string) => {
       .orderBy(desc(countInt))
       .limit(1),
   ]);
-  if (!card.published) return { busNumber: bus, ...card, complaints: null, commendations: null };
+  if (!card.published) {
+    return { busNumber: bus, ...card, complaints: null, commendations: null, accessibility: null };
+  }
   return {
     busNumber: bus,
     busName: name?.busName ?? null,
@@ -346,7 +377,13 @@ export const getRouteScorecard = async (routeNumber: string) => {
   ]);
   const routeLabel = label?.routeNumber ?? routeNumber.trim();
   if (!card.published) {
-    return { routeNumber: routeLabel, ...card, complaints: null, commendations: null };
+    return {
+      routeNumber: routeLabel,
+      ...card,
+      complaints: null,
+      commendations: null,
+      accessibility: null,
+    };
   }
   return { routeNumber: routeLabel, buses, ...card };
 };

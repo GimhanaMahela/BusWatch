@@ -5,10 +5,11 @@ import type {
   ReportListParams,
   ReportListResponse,
   ReportStats,
+  SimilarReport,
   SubmitReportFields,
   SubmitReportResponse,
 } from "@/types/report";
-import type { ReportStatus } from "@/constants/reportConstants";
+import type { ReportCategory, ReportStatus } from "@/constants/reportConstants";
 import apiClient, { call } from "@/api/apiClient";
 import { getTurnstileToken } from "@/lib/turnstile";
 
@@ -76,6 +77,27 @@ export const rateOutcome = (receiptId: string, rating: number, feedback = "") =>
 export const setReportVisibility = (id: string, hiddenFromPublic: boolean) =>
   call<Report>(apiClient.put(`/reports/${id}/visibility`, { hiddenFromPublic }));
 
+/** Admin: show or hide a bus operator's response on the passenger's tracking page */
+export const setOperatorResponseVisibility = (id: string, responseId: string, hidden: boolean) =>
+  call<Report>(apiClient.put(`/reports/${id}/operator-responses/${responseId}`, { hidden }));
+
+// ---------------------------------------------------------------- AI help for admins (Phase 4)
+
+export const getAiStatus = () => call<{ enabled: boolean }>(apiClient.get("/reports/ai/status"));
+
+/** Suggest a category, translate and summarise (takes a few seconds) */
+export const analyseReportWithAi = (id: string) =>
+  call<Report>(apiClient.post(`/reports/${id}/ai/analyse`, undefined, { timeout: 120_000 }));
+
+/** Blur faces and number plates in the report's photos */
+export const blurReportPhotos = (id: string) =>
+  call<Report & { blurredRegions: number }>(
+    apiClient.post(`/reports/${id}/ai/blur`, undefined, { timeout: 180_000 }),
+  );
+
+export const setReportCategory = (id: string, category: ReportCategory) =>
+  call<Report>(apiClient.put(`/reports/${id}/category`, { category }));
+
 // ---------------------------------------------------------------- Messages (Phase 3)
 
 /** Admin: message the passenger; they are notified by email, SMS and push when `notify` is on */
@@ -97,3 +119,23 @@ export const sendPassengerMessage = (receiptId: string, body: string) =>
 /** Public: the passenger has seen the team's messages */
 export const markMessagesReadByPassenger = (receiptId: string) =>
   call<{ msg: string }>(apiClient.post(`${trackPath(receiptId)}/messages/read`));
+
+// ---------------------------------------------------------------- "Me too" (Phase 4)
+
+/** Public: complaints about the same bus, category and day (`at` defaults to now on the server) */
+export const findSimilarReports = (params: { busNumber: string; category: string; at?: string }) =>
+  call<{ matches: SimilarReport[] }>(apiClient.get("/reports/similar", { params }));
+
+/** Public: confirm another passenger's report instead of filing a duplicate */
+export const confirmReport = async (
+  id: string,
+  fields: { comment?: string; language?: string; source?: "web" | "qr"; website?: string },
+) => {
+  const captcha = await getTurnstileToken();
+  return call<{ confirmations: number }>(
+    apiClient.post(`/reports/${id}/confirmations`, {
+      ...fields,
+      ...(captcha ? { "cf-turnstile-response": captcha } : {}),
+    }),
+  );
+};

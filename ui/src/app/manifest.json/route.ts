@@ -1,0 +1,50 @@
+import { activeTheme } from "@/theme/themes";
+
+// The installable app's manifest, with the colours of the chosen theme (NEXT_PUBLIC_THEME).
+// Served at /manifest.json, the address the service worker precaches.
+
+export const dynamic = "force-static";
+
+const manifest = {
+  id: "/",
+  short_name: "TransitX",
+  name: "TransitX: report and track bus and road incidents",
+  description:
+    "Report bus and road incidents in Sri Lanka, commend good service and track what happens next. Works with a weak signal.",
+  lang: "en",
+  icons: [
+    { src: "/favicon.ico", sizes: "64x64 32x32 24x24 16x16", type: "image/x-icon" },
+    { src: "/logo192.png", type: "image/png", sizes: "192x192", purpose: "any" },
+    { src: "/logo512.png", type: "image/png", sizes: "512x512", purpose: "any" },
+  ],
+  start_url: "/?source=pwa",
+  scope: "/",
+  display: "standalone",
+  orientation: "portrait",
+  theme_color: activeTheme.light.primary.main,
+  background_color: activeTheme.light.background.default,
+  categories: ["travel", "utilities"],
+  shortcuts: [
+    {
+      name: "Report an incident",
+      short_name: "Report",
+      url: "/submit-report",
+      icons: [{ src: "/logo192.png", sizes: "192x192" }],
+    },
+    {
+      name: "Commend good service",
+      short_name: "Commend",
+      url: "/commend",
+      icons: [{ src: "/logo192.png", sizes: "192x192" }],
+    },
+    {
+      name: "Track a report",
+      short_name: "Track",
+      url: "/track",
+      icons: [{ src: "/logo192.png", sizes: "192x192" }],
+    },
+  ],
+};
+
+export const GET = () =>
+  Response.json(manifest, { headers: { "Content-Type": "application/manifest+json" } });

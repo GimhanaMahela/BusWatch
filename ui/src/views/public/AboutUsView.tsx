@@ -37,7 +37,7 @@ function AboutUsView() {
     <>
       <HeroBand eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
-      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 6, md: 10 } }}>
         <Grid container spacing={{ xs: 4, md: 8 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="overline" color="primary" component="p">
@@ -91,7 +91,8 @@ function AboutUsView() {
                 gap: 2,
                 border: 0,
                 color: "common.white",
-                background: "linear-gradient(135deg, #2457F5 0%, #7A4DF0 100%)",
+                background: "var(--bw-gradient-deep)",
+                boxShadow: "var(--bw-shadow-raised)",
               }}
             >
               <Typography variant="h6" component="p">

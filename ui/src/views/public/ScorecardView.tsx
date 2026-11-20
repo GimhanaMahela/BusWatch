@@ -1,5 +1,6 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import BalanceRoundedIcon from "@mui/icons-material/BalanceRounded";
+import AccessibleRoundedIcon from "@mui/icons-material/AccessibleRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import DirectionsBusRoundedIcon from "@mui/icons-material/DirectionsBusRounded";
@@ -46,6 +47,7 @@ function ScorecardView(props: ScorecardViewProps) {
   const t = useTranslations("scorecard");
   const tImpact = useTranslations("impact");
   const tCategory = useTranslations("categories");
+  const tIssue = useTranslations("accessibilityIssues");
   const format = useFormatter();
   const { card } = props;
 
@@ -74,7 +76,7 @@ function ScorecardView(props: ScorecardViewProps) {
 
   if (!card) {
     return (
-      <Container maxWidth="md" sx={{ py: 6 }}>
+      <Container maxWidth="xl" sx={{ py: 6 }}>
         {back}
         <Alert severity="warning">{tImpact("unavailable")}</Alert>
       </Container>
@@ -91,7 +93,7 @@ function ScorecardView(props: ScorecardViewProps) {
           {t("reportCta")}
         </GradientButton>
         <Button
-          href={`/commend-a-driver${busQuery(props.card?.busNumber ?? "")}`}
+          href={`/commend${busQuery(props.card?.busNumber ?? "")}`}
           variant="outlined"
           color="success"
           startIcon={<ThumbUpAltRoundedIcon />}
@@ -115,7 +117,7 @@ function ScorecardView(props: ScorecardViewProps) {
     return (
       <>
         {hero}
-        <Container maxWidth="md" sx={{ py: { xs: 5, md: 8 } }}>
+        <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
           {back}
           <Card>
             <EmptyState
@@ -129,12 +131,12 @@ function ScorecardView(props: ScorecardViewProps) {
     );
   }
 
-  const { complaints, commendations } = card;
+  const { complaints, commendations, accessibility } = card;
   return (
     <>
       <PageViewEvent event="scorecard_view" />
       {hero}
-      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
         {back}
         <Grid container spacing={2.5}>
           {complaints ? (
@@ -218,6 +220,25 @@ function ScorecardView(props: ScorecardViewProps) {
                 </SectionPanel>
               </Grid>
             </>
+          )}
+
+          {accessibility && (
+            <Grid size={12}>
+              <SectionPanel
+                title={t("accessibilityTitle")}
+                subtitle={t("accessibilitySubtitle", { count: accessibility.checked })}
+                icon={<AccessibleRoundedIcon fontSize="small" />}
+              >
+                <HorizontalBarList
+                  unit=""
+                  rows={accessibility.byIssue.map((row) => ({
+                    key: row.issue,
+                    label: tIssue(row.issue),
+                    value: row.count,
+                  }))}
+                />
+              </SectionPanel>
+            </Grid>
           )}
 
           <Grid size={{ xs: 12, md: props.kind === "route" ? 6 : 12 }}>

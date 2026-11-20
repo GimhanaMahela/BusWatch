@@ -12,7 +12,7 @@ function ResultCard({
   children: ReactNode;
 }) {
   return (
-    <Container maxWidth="sm" sx={{ py: { xs: 6, md: 10 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 6, md: 10 } }}>
       <Card sx={{ p: { xs: 3, sm: 5 }, textAlign: "center" }}>
         <Box
           sx={{

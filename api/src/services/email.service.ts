@@ -14,7 +14,8 @@ export const isEmailConfigured = (): boolean =>
 const transporter = nodemailer.createTransport({
   host: env.EMAIL_SERVICE_HOST,
   port: env.EMAIL_SERVICE_PORT,
-  secure: false, // STARTTLS on port 587
+  // Implicit TLS on port 465; STARTTLS (upgraded after connecting) on 587 and others
+  secure: env.EMAIL_SERVICE_SECURE ?? env.EMAIL_SERVICE_PORT === 465,
   auth: {
     user: env.EMAIL_SERVICE_USER,
     pass: env.EMAIL_SERVICE_PASS,
@@ -24,6 +25,26 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: !env.EMAIL_ALLOW_SELF_SIGNED,
   },
 });
+
+/**
+ * Who emails come from. Providers whose SMTP user name isn't an address (Brevo, Resend, Amazon SES)
+ * need EMAIL_FROM, with an address on a domain verified with them.
+ */
+const FROM_ADDRESS = env.EMAIL_FROM ?? `TransitX <${env.EMAIL_SERVICE_USER ?? ""}>`;
+
+/** Logs in to the SMTP server without sending anything; throws with the server's reason. */
+export const verifyEmailConnection = async (): Promise<void> => {
+  await transporter.verify();
+};
+
+/** A plain test message (`npm run email:test -- you@example.com`). */
+export const sendTestEmail = async (to: string) =>
+  transporter.sendMail({
+    from: FROM_ADDRESS,
+    to,
+    subject: "TransitX test email",
+    text: "Your TransitX email settings work. Receipts, updates and sign-in codes will be sent like this.",
+  });
 
 const escapeHtml = (value = ""): string =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -40,12 +61,12 @@ const layout = (lang: Language, content: string) => {
   const t = messagesFor(lang);
   return `
     <div lang="${lang}" style="font-family: ${FONT_STACK}; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-      <h1 style="color: #0056b3; margin: 0 0 4px; font-size: 26px; text-align: center;">BusWatch</h1>
+      <h1 style="color: #00295C; margin: 0 0 4px; font-size: 26px; text-align: center;">TransitX</h1>
       <p style="color: #555; font-size: 14px; margin: 0 0 20px; text-align: center;">${escapeHtml(t.tagline)}</p>
       ${content}
       <div style="font-size: 14px; color: #777; border-top: 1px solid #eee; padding-top: 16px; margin-top: 20px; text-align: center;">
         <p style="margin: 0;">${escapeHtml(t.receiptEmail.signOff)}<br/><strong>${escapeHtml(t.receiptEmail.team)}</strong></p>
-        <p style="font-size: 12px; color: #999; margin-top: 15px;">&copy; ${new Date().getFullYear()} BusWatch.</p>
+        <p style="font-size: 12px; color: #999; margin-top: 15px;">&copy; ${new Date().getFullYear()} TransitX.</p>
         ${FRONTEND_URL ? `<p style="font-size: 12px; color: #999;">${escapeHtml(t.receiptEmail.visit)} <a href="${FRONTEND_URL}">${FRONTEND_URL}</a></p>` : ""}
       </div>
     </div>
@@ -77,7 +98,7 @@ export const sendReportReceiptEmail = async ({
 
   try {
     await transporter.sendMail({
-      from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
+      from: FROM_ADDRESS,
       to: toEmail,
       subject: t.subject(receiptId, type),
       html: layout(
@@ -87,18 +108,18 @@ export const sendReportReceiptEmail = async ({
         <p style="font-size: 16px;">${escapeHtml(t.thanks[type])}</p>
         <p style="font-size: 16px;">${t.received}</p>
         <div style="text-align: center; margin: 20px 0;">
-          <div style="background-color: #e0f2f7; padding: 15px; border-radius: 5px; display: inline-block;">
-            <p style="font-size: 18px; font-weight: bold; color: #0056b3; margin: 0;">${escapeHtml(t.idLabel)}</p>
-            <p style="font-size: 24px; font-weight: bold; color: #0056b3; margin: 5px 0 0;">${escapeHtml(receiptId)}</p>
+          <div style="background-color: #E6F1FB; padding: 15px; border-radius: 5px; display: inline-block;">
+            <p style="font-size: 18px; font-weight: bold; color: #0068C2; margin: 0;">${escapeHtml(t.idLabel)}</p>
+            <p style="font-size: 24px; font-weight: bold; color: #0068C2; margin: 5px 0 0;">${escapeHtml(receiptId)}</p>
           </div>
         </div>
         <p style="font-size: 15px; color: #555;">${escapeHtml(t.idHelp)}</p>
-        ${trackUrl ? `<p style="font-size: 15px;"><a href="${trackUrl}" style="color: #0056b3;">${escapeHtml(t.trackLink)}</a></p>` : ""}
+        ${trackUrl ? `<p style="font-size: 15px;"><a href="${trackUrl}" style="color: #0068C2;">${escapeHtml(t.trackLink)}</a></p>` : ""}
       `,
       ),
       attachments: [
         {
-          filename: `BusWatch_Report_Receipt_${receiptId}.pdf`,
+          filename: `TransitX_Report_Receipt_${receiptId}.pdf`,
           content: receiptPdfBuffer,
           contentType: "application/pdf",
         },
@@ -147,25 +168,25 @@ export const sendStatusUpdateEmail = async ({
       : null;
 
   await transporter.sendMail({
-    from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
+    from: FROM_ADDRESS,
     to: toEmail,
     subject: t.subject(receiptId, label),
     html: layout(
       language,
       `
       <p style="font-size: 16px;">${t.changedTo(escapeHtml(receiptId))}</p>
-      <p style="font-size: 22px; font-weight: bold; color: #0056b3; text-align: center; background-color: #e0f2f7; padding: 12px; border-radius: 5px;">${escapeHtml(label)}</p>
+      <p style="font-size: 22px; font-weight: bold; color: #0068C2; text-align: center; background-color: #E6F1FB; padding: 12px; border-radius: 5px;">${escapeHtml(label)}</p>
       ${note ? `<p style="font-size: 15px;"><strong>${escapeHtml(t.teamMessage)}</strong><br/>${escapeHtml(note).replace(/\n/g, "<br/>")}</p>` : ""}
       ${
         rateUrl
           ? `<div style="text-align: center; margin: 24px 0; padding: 16px; border-radius: 8px; background-color: #fff7e0;">
                <p style="font-size: 16px; font-weight: bold; margin: 0 0 8px;">${escapeHtml(t.ratePrompt)}</p>
                <p style="font-size: 26px; letter-spacing: 4px; margin: 0 0 8px; color: #E8A10C;">&#9733;&#9733;&#9733;&#9733;&#9733;</p>
-               <a href="${rateUrl}" style="display: inline-block; background-color: #0056b3; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">${escapeHtml(t.rateLink)}</a>
+               <a href="${rateUrl}" style="display: inline-block; background-color: #0068C2; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">${escapeHtml(t.rateLink)}</a>
              </div>`
           : ""
       }
-      ${trackUrl ? `<p style="font-size: 15px; text-align: center;"><a href="${trackUrl}" style="color: #0056b3;">${escapeHtml(t.timelineLink)}</a></p>` : ""}
+      ${trackUrl ? `<p style="font-size: 15px; text-align: center;"><a href="${trackUrl}" style="color: #0068C2;">${escapeHtml(t.timelineLink)}</a></p>` : ""}
       <p style="font-size: 14px; color: #777; text-align: center;">${escapeHtml(t.thanks)}</p>
     `,
     ),
@@ -188,14 +209,14 @@ export const sendSignInCodeEmail = async ({
   if (!isEmailConfigured()) return false;
   const t = messagesFor(language).codeEmail;
   await transporter.sendMail({
-    from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
+    from: FROM_ADDRESS,
     to: toEmail,
     subject: t.subject(code),
     html: layout(
       language,
       `
       <p style="font-size: 16px;">${escapeHtml(t.intro)}</p>
-      <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0056b3; text-align: center; background-color: #e0f2f7; padding: 14px; border-radius: 5px;">${escapeHtml(code)}</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0068C2; text-align: center; background-color: #E6F1FB; padding: 14px; border-radius: 5px;">${escapeHtml(code)}</p>
       <p style="font-size: 15px;">${escapeHtml(t.expires(minutes))}</p>
       <p style="font-size: 14px; color: #777;">${escapeHtml(t.ignore)}</p>
     `,
@@ -210,25 +231,34 @@ export const sendMessageEmail = async ({
   receiptId,
   body,
   language = "en",
+  operator,
 }: {
   toEmail: string;
   receiptId: string;
   body: string;
   language?: Language;
+  /** Set when the bus operator wrote it (operator portal), not the TransitX team */
+  operator?: { organisation: string | null };
 }): Promise<boolean> => {
   if (!isEmailConfigured()) return false;
   const t = messagesFor(language).messageEmail;
-  const replyUrl = trackingUrl(receiptId, "#messages");
+  const replyUrl = trackingUrl(receiptId, operator ? "" : "#messages");
+  const intro = operator
+    ? t.operatorIntro(
+        escapeHtml(receiptId),
+        operator.organisation ? escapeHtml(operator.organisation) : null,
+      )
+    : t.intro(escapeHtml(receiptId));
   await transporter.sendMail({
-    from: `BusWatch <${env.EMAIL_SERVICE_USER}>`,
+    from: FROM_ADDRESS,
     to: toEmail,
-    subject: t.subject(receiptId),
+    subject: operator ? t.operatorSubject(receiptId) : t.subject(receiptId),
     html: layout(
       language,
       `
-      <p style="font-size: 16px;">${t.intro(escapeHtml(receiptId))}</p>
-      <p style="font-size: 16px; background-color: #ffffff; border-left: 4px solid #0056b3; padding: 12px 16px; border-radius: 4px;">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>
-      ${replyUrl ? `<div style="text-align: center; margin: 24px 0;"><a href="${replyUrl}" style="display: inline-block; background-color: #0056b3; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">${escapeHtml(t.replyLink)}</a></div>` : ""}
+      <p style="font-size: 16px;">${intro}</p>
+      <p style="font-size: 16px; background-color: #ffffff; border-left: 4px solid #0068C2; padding: 12px 16px; border-radius: 4px;">${escapeHtml(body).replace(/\n/g, "<br/>")}</p>
+      ${replyUrl ? `<div style="text-align: center; margin: 24px 0;"><a href="${replyUrl}" style="display: inline-block; background-color: #0068C2; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold;">${escapeHtml(t.replyLink)}</a></div>` : ""}
     `,
     ),
   });

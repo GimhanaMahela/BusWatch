@@ -16,6 +16,7 @@ describe("ScorecardView", () => {
       published: false,
       complaints: null,
       commendations: null,
+      accessibility: null,
     };
     renderWithProviders(<ScorecardView kind="bus" card={card} />);
 
@@ -45,6 +46,7 @@ describe("ScorecardView", () => {
         byMonth: [{ month: "2026-11", count: 2 }],
       },
       commendations: { count: 2, byCategory: [{ category: "safe_driving", count: 2 }] },
+      accessibility: null,
     };
     renderWithProviders(<ScorecardView kind="bus" card={card} />);
 
@@ -61,6 +63,7 @@ describe("ScorecardView", () => {
       published: true,
       complaints: null,
       commendations: { count: 4, byCategory: [{ category: "helpful_staff", count: 4 }] },
+      accessibility: null,
       buses: [{ busNumber: "NB-1", count: 3 }],
     };
     renderWithProviders(<ScorecardView kind="route" card={card} />);

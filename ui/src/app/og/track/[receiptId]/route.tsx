@@ -1,12 +1,13 @@
 import type { NextRequest } from "next/server";
 import { categoryLabel, statusLabel } from "@/constants/reportConstants";
 import { renderOgCard } from "@/lib/ogImage";
+import { activeTheme } from "@/theme/themes";
 import type { PublicReport } from "@/types/report";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#B7791F",
   reviewed: "#0284C7",
-  escalated: "#7A4DF0",
+  escalated: activeTheme.light.secondary.main,
   resolved: "#12A150",
   rejected: "#5B6478",
 };
@@ -42,13 +43,17 @@ export async function GET(
     return renderOgCard({ eyebrow: "Track a report", title: "Where does my report stand?" });
   }
   const commendation = report.type === "commendation";
+  const road = report.type === "road_incident";
   const response = renderOgCard({
-    eyebrow: commendation ? "Driver commendation" : "Passenger report",
+    eyebrow: commendation ? "Driver commendation" : road ? "Road incident" : "Passenger report",
     title: report.receiptId,
-    subtitle: `${categoryLabel(report.category)} · Route ${report.routeNumber}`,
+    // Road incidents have no route (and the vehicle's plate is never shared)
+    subtitle: road
+      ? categoryLabel(report.category)
+      : `${categoryLabel(report.category)} · Route ${report.routeNumber}`,
     badge: {
       text: statusLabel(report.status),
-      color: STATUS_COLORS[report.status] ?? "#2457F5",
+      color: STATUS_COLORS[report.status] ?? activeTheme.light.primary.main,
     },
   });
   response.headers.set("Cache-Control", "public, max-age=300, s-maxage=300");

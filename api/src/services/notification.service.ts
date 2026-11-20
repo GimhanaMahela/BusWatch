@@ -5,13 +5,17 @@ import { sendMessageEmail, sendStatusUpdateEmail, trackingUrl } from "./email.se
 import { sendPushToReport } from "./push.service.js";
 import { sendSms } from "./sms.service.js";
 import { sendTelegramToReport } from "./telegram.service.js";
+import { sendWhatsAppToReport } from "./whatsapp.service.js";
 
 // Tells a passenger something happened on their report, on every channel they gave us:
-// email, SMS (or WhatsApp), browser push and Telegram. Each channel is best-effort: the change is already
+// email, SMS, WhatsApp, browser push and Telegram. Each channel is best-effort: the change is already
 // saved, so a failed delivery is logged and reported back to the admin, never thrown.
 
 export type PassengerEvent =
-  { kind: "status"; status: ReportStatus; note?: string } | { kind: "message"; body: string };
+  | { kind: "status"; status: ReportStatus; note?: string }
+  | { kind: "message"; body: string }
+  // The bus operator answered (lost items: "We found it at the depot")
+  | { kind: "operator"; body: string; organisation: string | null };
 
 export interface Delivery {
   email: boolean;
@@ -20,6 +24,8 @@ export interface Delivery {
   push: number;
   /** Telegram chats reached */
   telegram: number;
+  /** WhatsApp numbers reached */
+  whatsapp: number;
 }
 
 type Recipient = Pick<
@@ -69,6 +75,9 @@ export const notifyPassenger = async (
                 receiptId: report.receiptId,
                 body: event.body,
                 language: report.language,
+                ...(event.kind === "operator" && {
+                  operator: { organisation: event.organisation },
+                }),
               }),
         false,
       )
@@ -78,20 +87,33 @@ export const notifyPassenger = async (
   const smsText =
     (event.kind === "status"
       ? t.sms.status(report.receiptId, statusLabel)
-      : t.sms.message(report.receiptId)) + (link ? t.sms.link(link) : "");
-  const sms = report.passengerPhone
-    ? attempt("SMS", () => sendSms(report.passengerPhone ?? "", smsText), false)
-    : Promise.resolve(false);
+      : event.kind === "operator"
+        ? t.sms.operator(report.receiptId)
+        : t.sms.message(report.receiptId)) + (link ? t.sms.link(link) : "");
+  // WhatsApp first: a passenger it reaches doesn't also need an SMS to the same number
+  const whatsapp = attempt("WhatsApp", () => sendWhatsAppToReport(report, smsText), []);
+  const sms = whatsapp.then((reached) =>
+    report.passengerPhone && !reached.includes(report.passengerPhone)
+      ? attempt("SMS", () => sendSms(report.passengerPhone ?? "", smsText), false)
+      : false,
+  );
 
   const push = attempt(
     "push",
     () =>
       sendPushToReport(report.id, {
-        title: event.kind === "status" ? t.push.statusTitle : t.push.messageTitle,
+        title:
+          event.kind === "status"
+            ? t.push.statusTitle
+            : event.kind === "operator"
+              ? t.push.operatorTitle
+              : t.push.messageTitle,
         body:
           event.kind === "status"
             ? t.push.statusBody(report.receiptId, statusLabel)
-            : t.push.messageBody(report.receiptId),
+            : event.kind === "operator"
+              ? t.push.operatorBody(report.receiptId)
+              : t.push.messageBody(report.receiptId),
         url: relativeTrackingPath(report.receiptId, hash),
         tag: `report-${report.receiptId}`,
       }),
@@ -101,11 +123,18 @@ export const notifyPassenger = async (
   // Telegram gets the same short text as SMS: chats can be read by anyone holding the phone
   const telegram = attempt("Telegram", () => sendTelegramToReport(report.id, smsText), 0);
 
-  const [emailSent, smsSent, pushSent, telegramSent] = await Promise.all([
+  const [emailSent, smsSent, pushSent, telegramSent, whatsappReached] = await Promise.all([
     email,
     sms,
     push,
     telegram,
+    whatsapp,
   ]);
-  return { email: emailSent, sms: smsSent, push: pushSent, telegram: telegramSent };
+  return {
+    email: emailSent,
+    sms: smsSent,
+    push: pushSent,
+    telegram: telegramSent,
+    whatsapp: whatsappReached.length,
+  };
 };

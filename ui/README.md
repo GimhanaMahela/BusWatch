@@ -1,4 +1,4 @@
-# BusWatch UI
+# TransitX UI
 
 Next.js 16 (App Router) + TypeScript web app with MUI 9, MUI X (Data Grid, Charts) and TanStack Query.
 Components follow Atomic Design. Setup and scripts are in the [root README](../README.md); structure

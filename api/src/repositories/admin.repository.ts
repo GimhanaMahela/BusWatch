@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { asc, count, eq } from "drizzle-orm";
+import { asc, count, eq, ne } from "drizzle-orm";
 import type { AdminRole } from "../config/constants.js";
 import { db } from "../db/client.js";
 import { admins, type AdminRow } from "../db/schema.js";
@@ -22,11 +22,17 @@ export const createAdmin = async (input: {
   email: string;
   password: string;
   role: AdminRole;
+  organisation?: string;
 }): Promise<AdminRow> => {
   const passwordHash = await bcrypt.hash(input.password, 10);
   const [admin] = await db
     .insert(admins)
-    .values({ email: input.email.toLowerCase(), passwordHash, role: input.role })
+    .values({
+      email: input.email.toLowerCase(),
+      passwordHash,
+      role: input.role,
+      organisation: input.organisation ?? null,
+    })
     .returning();
   if (!admin) throw new Error("Admin insert returned no row");
   return admin;
@@ -40,11 +46,14 @@ export const countAdmins = async (): Promise<number> => {
   return row?.value ?? 0;
 };
 
-/** Makes the oldest admin a superadmin when none exists; returns their email. */
+/** Makes the oldest team member a superadmin when none exists (never an operator). */
 export const ensureSuperadmin = async (): Promise<string | null> => {
   const existing = await db.query.admins.findFirst({ where: eq(admins.role, "superadmin") });
   if (existing) return null;
-  const oldest = await db.query.admins.findFirst({ orderBy: asc(admins.createdAt) });
+  const oldest = await db.query.admins.findFirst({
+    where: ne(admins.role, "operator"),
+    orderBy: asc(admins.createdAt),
+  });
   if (!oldest) return null;
   await db.update(admins).set({ role: "superadmin" }).where(eq(admins.id, oldest.id));
   return oldest.email;

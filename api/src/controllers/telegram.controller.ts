@@ -34,7 +34,7 @@ export const followLink = async (req: Request<{ receiptId: string }>, res: Respo
   }
 };
 
-// @desc    Messages to the BusWatch bot, delivered by Telegram (hosted setups only)
+// @desc    Messages to the TransitX bot, delivered by Telegram (hosted setups only)
 // @route   POST /api/telegram/webhook
 // @access  Telegram (checked with the secret header)
 export const webhook = async (req: Request<object, object, TelegramUpdate>, res: Response) => {

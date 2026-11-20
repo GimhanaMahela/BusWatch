@@ -28,6 +28,8 @@ const report: PublicReport = {
   feedback: null,
   ratedAt: null,
   canReply: true,
+  confirmations: 0,
+  operatorResponses: [],
   messages: [
     {
       id: "m1",
@@ -45,10 +47,10 @@ describe("ReportConversation", () => {
     mockedMarkRead.mockClear();
   });
 
-  it("shows the team's question as the BusWatch team and marks it read", async () => {
+  it("shows the team's question as the TransitX team and marks it read", async () => {
     renderWithProviders(<ReportConversation report={report} />);
     expect(screen.getByText("Which seat were you in?")).toBeInTheDocument();
-    expect(screen.getByText(/^BusWatch team ·/)).toBeInTheDocument();
+    expect(screen.getByText(/^TransitX team ·/)).toBeInTheDocument();
     await vi.waitFor(() => expect(mockedMarkRead).toHaveBeenCalledWith("BW-2026-ABCDEF"));
   });
 

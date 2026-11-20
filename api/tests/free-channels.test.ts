@@ -32,7 +32,7 @@ const fakeFetch = (input: string | URL | Request, init?: RequestInit) => {
     body: JSON.parse(typeof init?.body === "string" ? init.body : "{}") as Record<string, unknown>,
   });
   const reply = url.endsWith("/getMe")
-    ? { ok: true, result: { username: "BusWatchTestBot" } }
+    ? { ok: true, result: { username: "TransitXTestBot" } }
     : url.endsWith("/sendMessage")
       ? telegramSendReply
       : { ok: true, result: {} };
@@ -86,14 +86,14 @@ describe("SMS from an Android phone", () => {
       ANDROID_SMS_PASSWORD: "secret",
     });
 
-    expect(await sendSms("+94771234567", "BusWatch: hello")).toBe(true);
+    expect(await sendSms("+94771234567", "TransitX: hello")).toBe(true);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe("http://192.168.1.20:8080/message");
     expect(calls[0]?.headers.Authorization).toBe(
       `Basic ${Buffer.from("sms:secret").toString("base64")}`,
     );
     expect(calls[0]?.body).toEqual({
-      textMessage: { text: "BusWatch: hello" },
+      textMessage: { text: "TransitX: hello" },
       phoneNumbers: ["+94771234567"],
     });
   });
@@ -139,7 +139,7 @@ describe("Telegram follow links", () => {
     const res = await request(app).get(`/api/reports/track/${report.receiptId}/telegram`);
     expect(res.status).toBe(200);
     const url = new URL(res.body.url as string);
-    expect(url.origin + url.pathname).toBe("https://t.me/BusWatchTestBot");
+    expect(url.origin + url.pathname).toBe("https://t.me/TransitXTestBot");
     expect(readFollowToken(url.searchParams.get("start") ?? "")).toBe(report.receiptId);
 
     expect((await request(app).get("/api/reports/track/BW-2026-NOPE00/telegram")).status).toBe(404);

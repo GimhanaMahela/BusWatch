@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: { default: "Admin", template: "%s · BusWatch Admin" },
+  title: { default: "Admin", template: "%s · TransitX Admin" },
   robots: { index: false, follow: false },
 };
 

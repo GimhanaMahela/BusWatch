@@ -26,7 +26,8 @@ const NAV_ITEMS = [
   { key: "home", href: "/" },
   { key: "track", href: "/track" },
   { key: "myReports", href: "/my-reports" },
-  { key: "commend", href: "/commend-a-driver" },
+  { key: "commend", href: "/commend" },
+  { key: "safety", href: "/safety" },
   { key: "impact", href: "/impact" },
   { key: "about", href: "/about-us" },
 ] as const;
@@ -47,17 +48,24 @@ function SiteHeader() {
   return (
     <AppBar
       position="sticky"
-      sx={{
-        top: 0,
-        borderBottom: 1,
-        borderColor: "divider",
-        bgcolor: "rgba(var(--mui-palette-background-defaultChannel) / 0.72)",
-        backdropFilter: "saturate(180%) blur(14px)",
-        color: "text.primary",
-      }}
+      sx={{ top: 0, pt: { xs: 1, md: 1.5 }, color: "text.primary", bgcolor: "transparent" }}
     >
-      <Container maxWidth="lg">
-        <Toolbar disableGutters sx={{ gap: 2, minHeight: { xs: 64, md: 72 } }}>
+      {/* A floating, rounded bar that matches the bento tiles below it. Wider than the page
+          content so the links have room to breathe */}
+      <Container maxWidth="xl">
+        <Toolbar
+          sx={{
+            gap: { xs: 2, xl: 3 },
+            minHeight: { xs: 60, md: 68 },
+            px: { xs: 1.5, md: 2.5 },
+            borderRadius: { xs: 4, md: 99 },
+            border: 1,
+            borderColor: "divider",
+            bgcolor: "rgba(var(--mui-palette-background-paperChannel) / 0.82)",
+            backdropFilter: "saturate(180%) blur(16px)",
+            boxShadow: "var(--bw-shadow-card)",
+          }}
+        >
           <Box
             component={Link}
             href="/"
@@ -70,7 +78,11 @@ function SiteHeader() {
           <Box
             component="nav"
             aria-label={t("mainNav")}
-            sx={{ display: { xs: "none", lg: navShown }, gap: 0.5, ml: 4 }}
+            sx={{
+              display: { xs: "none", lg: navShown },
+              gap: { lg: 0.25, xl: 1 },
+              ml: { lg: 2, xl: 4 },
+            }}
           >
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.href);
@@ -80,11 +92,29 @@ function SiteHeader() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   sx={{
+                    position: "relative",
                     whiteSpace: "nowrap",
-                    color: active ? "text.primary" : "text.secondary",
-                    fontWeight: active ? 700 : 600,
-                    bgcolor: active ? "action.selected" : "transparent",
+                    borderRadius: 999,
+                    px: { xl: 2 },
+                    color: active ? "primary.main" : "text.secondary",
+                    fontWeight: active ? 750 : 600,
+                    bgcolor: active
+                      ? "rgba(var(--mui-palette-primary-mainChannel) / 0.08)"
+                      : "transparent",
                     "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+                    "&::after": active
+                      ? {
+                          content: '""',
+                          position: "absolute",
+                          left: "50%",
+                          bottom: 3,
+                          width: 16,
+                          height: 3,
+                          borderRadius: 3,
+                          transform: "translateX(-50%)",
+                          background: "var(--bw-gradient-brand)",
+                        }
+                      : undefined,
                   }}
                 >
                   {t(item.key)}
@@ -95,7 +125,7 @@ function SiteHeader() {
 
           <Box sx={{ flex: 1 }} />
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 1, xl: 1.5 } }}>
             <LanguageSwitcher />
             <ColorModeToggle />
             <Button
@@ -123,7 +153,8 @@ function SiteHeader() {
                 display: { lg: fullNav ? "none" : "inline-flex" },
                 border: 1,
                 borderColor: "divider",
-                borderRadius: 2.5,
+                borderRadius: 999,
+                bgcolor: "background.paper",
               }}
             >
               <MenuRoundedIcon fontSize="small" />
@@ -151,7 +182,14 @@ function SiteHeader() {
               component={Link}
               href={item.href}
               selected={isActive(pathname, item.href)}
-              sx={{ borderRadius: 2, mb: 0.5 }}
+              sx={{
+                borderRadius: 3,
+                mb: 0.5,
+                "&.Mui-selected": {
+                  color: "primary.main",
+                  bgcolor: "rgba(var(--mui-palette-primary-mainChannel) / 0.1)",
+                },
+              }}
             >
               <ListItemText
                 primary={t(item.key)}

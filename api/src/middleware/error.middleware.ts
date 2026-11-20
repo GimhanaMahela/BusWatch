@@ -6,7 +6,7 @@ export const notFound: RequestHandler = (_req, res) => {
 };
 
 const MULTER_MESSAGES: Partial<Record<multer.ErrorCode, string>> = {
-  LIMIT_FILE_SIZE: "Each file must be 10MB or smaller.",
+  LIMIT_FILE_SIZE: "Each photo must be 10MB or smaller, and each video 30MB or smaller.",
   LIMIT_FILE_COUNT: "Too many files. Upload at most 5 images and 2 videos.",
 };
 

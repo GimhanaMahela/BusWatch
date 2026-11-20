@@ -43,6 +43,11 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // "Commend a driver" became "Commend good service" (drivers, conductors or the whole service).
+  // Printed QR stickers, emails and shared links still use the old address; the query is kept.
+  async redirects() {
+    return [{ source: "/commend-a-driver", destination: "/commend", permanent: true }];
+  },
   // The UI calls /api on its own origin; Next forwards it to the API
   async rewrites() {
     return [

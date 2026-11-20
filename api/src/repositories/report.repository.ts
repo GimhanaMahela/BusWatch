@@ -22,13 +22,17 @@ import {
   type ReportCategory,
   type ReportStatus,
   type ReportType,
+  type VehicleKind,
 } from "../config/constants.js";
 import { db } from "../db/client.js";
 import {
+  operatorResponses,
+  reportConfirmations,
   reportMessages,
   reportNotes,
   reports,
   reportStatusChanges,
+  type AiInsights,
   type NewReportRow,
   type ReportRow,
 } from "../db/schema.js";
@@ -64,6 +68,16 @@ const findOneWithRelations = (where: SQL) =>
           readAt: true,
         },
         orderBy: [asc(reportMessages.createdAt)],
+      },
+      // "Me too" confirmations from other passengers (never the device hash)
+      confirmations: {
+        columns: { id: true, comment: true, language: true, source: true, createdAt: true },
+        orderBy: [asc(reportConfirmations.createdAt)],
+      },
+      // What the bus operator said they did (operator portal)
+      operatorResponses: {
+        columns: { id: true, body: true, organisation: true, hidden: true, createdAt: true },
+        orderBy: [asc(operatorResponses.createdAt)],
       },
     },
   });
@@ -144,6 +158,8 @@ export const listReports = async ({
         ilike(reports.routeNumber, pattern),
         ilike(reports.busName, pattern),
         ilike(reports.location, pattern),
+        // A road incident's plate (admins only)
+        sql`${reports.details}->'road'->'vehicle'->>'plate' ILIKE ${pattern}`,
       ),
     );
   }
@@ -156,9 +172,15 @@ export const listReports = async ({
       AND ${reportMessages.sender} = 'passenger' AND ${reportMessages.readAt} IS NULL
   )`;
 
+  // Other passengers who confirmed the incident ("Me too")
+  const confirmationCount = sql<number>`(
+    SELECT count(*)::int FROM ${reportConfirmations}
+    WHERE ${reportConfirmations.reportId} = ${outerReportId}
+  )`;
+
   const [rows, total] = await Promise.all([
     db
-      .select({ ...getTableColumns(reports), unreadMessages })
+      .select({ ...getTableColumns(reports), unreadMessages, confirmationCount })
       .from(reports)
       .where(where)
       .orderBy(desc(reports.reportedAt))
@@ -203,6 +225,21 @@ export const setReportHiddenFromPublic = async (id: string, hiddenFromPublic: bo
     .where(eq(reports.id, id))
     .returning({ id: reports.id });
   return updated.length > 0;
+};
+
+/** AI help: stores the latest analysis (admins only). */
+export const setAiInsights = async (id: string, aiInsights: AiInsights) => {
+  await db.update(reports).set({ aiInsights }).where(eq(reports.id, id));
+};
+
+/** AI help: the photos with faces and number plates blurred (what operators see). */
+export const setBlurredImages = async (id: string, blurredImages: string[]) => {
+  await db.update(reports).set({ blurredImages }).where(eq(reports.id, id));
+};
+
+/** An admin corrects the category (e.g. after an AI suggestion). */
+export const setReportCategory = async (id: string, category: ReportCategory) => {
+  await db.update(reports).set({ category }).where(eq(reports.id, id));
 };
 
 /** Returns false when the report does not exist. */
@@ -337,7 +374,7 @@ const getComplaintStats = async (now: Date) => {
   };
 };
 
-/** "Commend a driver" analytics, shown in their own section. */
+/** "Commend good service" analytics, shown in their own section. */
 const getCommendationStats = async (now: Date) => {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
   const isCommendation = eq(reports.type, "commendation");
@@ -498,15 +535,99 @@ const getEngagementStats = async (now: Date) => {
     myReportsSignins: metrics.my_reports_signin,
     pushSubscriptions: metrics.push_subscribed,
     telegramLinks: metrics.telegram_linked,
+    whatsappMessages: metrics.whatsapp_message,
+    whatsappLinks: metrics.whatsapp_linked,
+    // Wider ecosystem (Phase 4)
+    confirmationsOffered: metrics.confirmation_offered,
+    reportConfirmations: metrics.report_confirmed,
+    // Passenger safety (Phase 5)
+    faresChecked: metrics.fare_checked,
+    safetyReports: metrics.safety_report_submitted,
+    tripsShared: metrics.trip_share_started,
+    emergencyShown: metrics.emergency_shown,
+    roadIncidents: metrics.road_incident_submitted,
+  };
+};
+
+/** "Lost something?" reports: how many, and how many were found. */
+const getLostItemStats = async (now: Date) => {
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+  const isLost = eq(reports.type, "lost_item");
+  const [total, last30Days, byStatusRows] = await Promise.all([
+    db.$count(reports, isLost),
+    db.$count(reports, and(isLost, gte(reports.reportedAt, thirtyDaysAgo))),
+    db
+      .select({ status: reports.status, count: countInt })
+      .from(reports)
+      .where(isLost)
+      .groupBy(reports.status),
+  ]);
+  const byStatus = statusCounts(byStatusRows);
+  return {
+    total,
+    last30Days,
+    open: OPEN_STATUSES.reduce((sum, s) => sum + byStatus[s], 0),
+    found: byStatus.resolved,
+    byStatus,
+  };
+};
+
+/**
+ * Road incidents (any vehicle, or the road itself): kept apart from the bus complaint figures. By
+ * what happened, by kind of vehicle, and accidents with serious injuries.
+ */
+const getRoadIncidentStats = async (now: Date) => {
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY_MS);
+  const isRoad = eq(reports.type, "road_incident");
+  const vehicleKind = sql<string | null>`${reports.details}->'road'->'vehicle'->>'kind'`;
+  const [total, last30Days, byStatusRows, byCategory, byVehicleRows, seriousInjuries] =
+    await Promise.all([
+      db.$count(reports, isRoad),
+      db.$count(reports, and(isRoad, gte(reports.reportedAt, thirtyDaysAgo))),
+      db
+        .select({ status: reports.status, count: countInt })
+        .from(reports)
+        .where(isRoad)
+        .groupBy(reports.status),
+      db
+        .select({ category: reports.category, count: countInt })
+        .from(reports)
+        .where(isRoad)
+        .groupBy(reports.category)
+        .orderBy(desc(countInt), asc(reports.category)),
+      db
+        .select({ kind: vehicleKind, count: countInt })
+        .from(reports)
+        .where(and(isRoad, isNotNull(vehicleKind)))
+        .groupBy(vehicleKind)
+        .orderBy(desc(countInt)),
+      db.$count(
+        reports,
+        and(isRoad, sql`${reports.details}->'road'->'accident'->>'injuries' = 'serious'`),
+      ),
+    ]);
+  const byStatus = statusCounts(byStatusRows);
+  return {
+    total,
+    last30Days,
+    open: OPEN_STATUSES.reduce((sum, s) => sum + byStatus[s], 0),
+    seriousInjuries,
+    byStatus,
+    byCategory,
+    byVehicle: byVehicleRows.flatMap((row) =>
+      row.kind ? [{ kind: row.kind as VehicleKind, count: row.count }] : [],
+    ),
   };
 };
 
 export const getReportStats = async () => {
   const now = new Date();
-  const [complaints, commendations, engagement] = await Promise.all([
+  const [complaints, commendations, lostItems, roadIncidents, engagement] = await Promise.all([
     getComplaintStats(now),
     getCommendationStats(now),
+    getLostItemStats(now),
+    getRoadIncidentStats(now),
     getEngagementStats(now),
   ]);
-  return { ...complaints, commendations, engagement };
+  return { ...complaints, commendations, lostItems, roadIncidents, engagement };
 };

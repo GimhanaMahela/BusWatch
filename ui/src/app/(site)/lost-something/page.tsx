@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import CommendDriverView from "@/views/public/CommendDriverView";
+import LostItemView from "@/views/public/LostItemView";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
-  return { title: t("commendTitle"), description: t("commendDescription") };
+  return { title: t("lostTitle"), description: t("lostDescription") };
 }
 
-export default function CommendDriverPage() {
-  // The form reads ?bus=&route=&src=qr from the QR sticker link
+export default function LostSomethingPage() {
+  // ?bus=&route= pre-fill the bus
   return (
     <Suspense>
-      <CommendDriverView />
+      <LostItemView />
     </Suspense>
   );
 }

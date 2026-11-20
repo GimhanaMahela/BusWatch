@@ -1,10 +1,14 @@
 import { Router } from "express";
+import * as aiController from "../controllers/ai.controller.js";
+import * as confirmationController from "../controllers/confirmation.controller.js";
 import * as messageController from "../controllers/message.controller.js";
 import * as pushController from "../controllers/push.controller.js";
 import * as reportController from "../controllers/report.controller.js";
 import * as telegramController from "../controllers/telegram.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import {
+  aiLimiter,
+  confirmLimiter,
   messageLimiter,
   pushLimiter,
   rateLimiter,
@@ -18,8 +22,10 @@ import {
   addNoteSchema,
   rateOutcomeSchema,
   submitReportSchema,
+  updateCategorySchema,
   updateStatusSchema,
 } from "../validators/report.validator.js";
+import { confirmReportSchema } from "../validators/confirmation.validator.js";
 import {
   adminMessageSchema,
   passengerMessageSchema,
@@ -27,6 +33,7 @@ import {
   pushUnsubscribeSchema,
 } from "../validators/passenger.validator.js";
 import { visibilitySchema } from "../validators/story.validator.js";
+import { responseVisibilitySchema } from "../validators/operator.validator.js";
 
 const router = Router();
 const validId = validateUuidParam("id");
@@ -74,10 +81,21 @@ router.post(
   pushController.status,
 );
 router.get("/track/:receiptId/telegram", pushLimiter, telegramController.followLink);
+// "Me too": find a report about the same bus, category and day, and confirm it
+router.get("/similar", trackLimiter, confirmationController.findSimilar);
+router.post(
+  "/:id/confirmations",
+  confirmLimiter,
+  validId,
+  verifyTurnstile,
+  validateBody(confirmReportSchema),
+  confirmationController.confirmReport,
+);
 
 // --- Admin --- (specific paths stay above "/:id" so they are not treated as an ID)
 router.get("/", requireAuth, reportController.getAllReports);
 router.get("/stats", requireAuth, reportController.getStats);
+router.get("/ai/status", requireAuth, aiController.status);
 router.get("/receipt/:receiptId", requireAuth, reportController.getReportByReceiptId);
 router.get("/:id", requireAuth, validId, reportController.getReportById);
 router.put(
@@ -109,6 +127,24 @@ router.post(
   messageController.sendAdminMessage,
 );
 router.post("/:id/messages/read", requireAuth, validId, messageController.markReadByAdmin);
+router.put(
+  "/:id/operator-responses/:responseId",
+  requireAuth,
+  validId,
+  validateUuidParam("responseId"),
+  validateBody(responseVisibilitySchema),
+  reportController.setOperatorResponseVisibility,
+);
+// AI help for admins
+router.post("/:id/ai/analyse", requireAuth, validId, aiLimiter, aiController.analyse);
+router.post("/:id/ai/blur", requireAuth, validId, aiLimiter, aiController.blur);
+router.put(
+  "/:id/category",
+  requireAuth,
+  validId,
+  validateBody(updateCategorySchema),
+  aiController.updateCategory,
+);
 router.delete("/:id", requireAuth, validId, reportController.deleteReport);
 
 export default router;

@@ -6,6 +6,8 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DescriptionRoundedIcon from "@mui/icons-material/DescriptionRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import PhotoLibraryRoundedIcon from "@mui/icons-material/PhotoLibraryRounded";
@@ -15,8 +17,12 @@ import AutoStoriesRoundedIcon from "@mui/icons-material/AutoStoriesRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TrafficRoundedIcon from "@mui/icons-material/TrafficRounded";
+import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import StickyNote2RoundedIcon from "@mui/icons-material/StickyNote2Rounded";
 import {
@@ -41,13 +47,22 @@ import { useState, type FormEvent } from "react";
 import { errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
-import { AdminMessagesPanel } from "@/components/organisms";
+import { AdminMessagesPanel, AiAssistantPanel } from "@/components/organisms";
 import { describeDelivery } from "@/components/organisms/AdminMessagesPanel";
 import {
   MIN_PUBLIC_REPORTS,
   PUBLIC_STATUSES,
   STATUSES,
+  accessibilityLabel,
+  busServiceLabel,
+  commendeeLabel,
+  injuryLabel,
+  involvementLabel,
+  roadHazardLabel,
+  vehicleKindLabel,
   categoryLabel,
+  safetyKindLabel,
+  serviceClassLabel,
   languageLabel,
   type ReportStatus,
 } from "@/constants/reportConstants";
@@ -56,6 +71,7 @@ import useAuth from "@/hooks/useAuth";
 import {
   useAddReportNote,
   useReport,
+  useSetOperatorResponseVisibility,
   useSetReportVisibility,
   useUpdateReportStatus,
 } from "@/hooks/useReportQueries";
@@ -219,6 +235,7 @@ function ReportDetailsView({ id }: { id: string }) {
   const updateStatus = useUpdateReportStatus(id);
   const addNote = useAddReportNote(id);
   const visibility = useSetReportVisibility(id);
+  const responseVisibility = useSetOperatorResponseVisibility(id);
 
   // null = "keep the current status" until the admin picks another one
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | null>(null);
@@ -286,6 +303,12 @@ function ReportDetailsView({ id }: { id: string }) {
   ];
   const hasPin = report.latitude != null && report.longitude != null;
   const commendation = report.type === "commendation";
+  const lost = report.type === "lost_item";
+  // Any vehicle or the road itself: no bus, operator, QR sticker or public figures
+  const road = report.type === "road_incident";
+  const details = report.details;
+  const vehicle = details?.road?.vehicle;
+  const accident = details?.road?.accident;
   const checked = (PUBLIC_STATUSES as readonly string[]).includes(report.status);
   const countsPublicly = checked && !report.hiddenFromPublic;
 
@@ -332,6 +355,35 @@ function ReportDetailsView({ id }: { id: string }) {
             size="small"
           />
         )}
+        {lost && (
+          <Chip
+            icon={<TravelExploreRoundedIcon />}
+            label="Lost item"
+            color="info"
+            variant="outlined"
+            size="small"
+          />
+        )}
+        {road && (
+          <Chip
+            icon={<TrafficRoundedIcon />}
+            label="Road incident"
+            color="warning"
+            variant="outlined"
+            size="small"
+          />
+        )}
+        {details?.safety && (
+          <Chip
+            icon={<ShieldRoundedIcon />}
+            label="Safety mode (quick report)"
+            color="secondary"
+            size="small"
+          />
+        )}
+        {report.source === "whatsapp" && (
+          <Chip icon={<WhatsAppIcon />} label="From WhatsApp" variant="outlined" size="small" />
+        )}
         {report.source === "qr" && (
           <Chip
             icon={<QrCode2RoundedIcon />}
@@ -374,7 +426,15 @@ function ReportDetailsView({ id }: { id: string }) {
           )}
 
           <SectionPanel
-            title={commendation ? "Commendation" : "Incident"}
+            title={
+              commendation
+                ? "Commendation"
+                : lost
+                  ? "Lost item"
+                  : road
+                    ? "Road incident"
+                    : "Incident"
+            }
             icon={
               commendation ? (
                 <ThumbUpAltRoundedIcon fontSize="small" />
@@ -383,13 +443,15 @@ function ReportDetailsView({ id }: { id: string }) {
               )
             }
             action={
-              <Button
-                size="small"
-                startIcon={<QrCode2RoundedIcon />}
-                href={`/admin/qr-codes${busQuery(report.busNumber, report.routeNumber)}`}
-              >
-                Print QR sticker
-              </Button>
+              road ? undefined : (
+                <Button
+                  size="small"
+                  startIcon={<QrCode2RoundedIcon />}
+                  href={`/admin/qr-codes${busQuery(report.busNumber, report.routeNumber)}`}
+                >
+                  Print QR sticker
+                </Button>
+              )
             }
           >
             <Typography sx={{ whiteSpace: "pre-line", lineHeight: 1.75 }}>
@@ -406,10 +468,83 @@ function ReportDetailsView({ id }: { id: string }) {
                 columnGap: 4,
               }}
             >
-              <DetailRow label="Bus number">{report.busNumber}</DetailRow>
-              <DetailRow label="Route">{report.routeNumber}</DetailRow>
-              {report.busName && <DetailRow label="Bus name">{report.busName}</DetailRow>}
+              {road ? (
+                <>
+                  {vehicle && (
+                    <>
+                      <DetailRow label="Vehicle">{vehicleKindLabel(vehicle.kind)}</DetailRow>
+                      <DetailRow label="Number plate (admins only)">
+                        {vehicle.plate || "Not seen"}
+                      </DetailRow>
+                      {(vehicle.colour || vehicle.make) && (
+                        <DetailRow label="Colour / make">
+                          {[vehicle.colour, vehicle.make].filter(Boolean).join(", ")}
+                        </DetailRow>
+                      )}
+                    </>
+                  )}
+                  {accident && (
+                    <>
+                      <DetailRow label="Accident">
+                        {involvementLabel(accident.involvement)}
+                      </DetailRow>
+                      <DetailRow label="Injuries">{injuryLabel(accident.injuries)}</DetailRow>
+                      {accident.vehiclesInvolved != null && (
+                        <DetailRow label="Vehicles involved">{accident.vehiclesInvolved}</DetailRow>
+                      )}
+                    </>
+                  )}
+                  {details?.road?.hazard && (
+                    <DetailRow label="Road problem">
+                      {roadHazardLabel(details.road.hazard)}
+                    </DetailRow>
+                  )}
+                </>
+              ) : (
+                <>
+                  {report.busService && (
+                    <DetailRow label="Bus service">{busServiceLabel(report.busService)}</DetailRow>
+                  )}
+                  <DetailRow label="Bus number">{report.busNumber}</DetailRow>
+                  <DetailRow label="Route">{report.routeNumber}</DetailRow>
+                  {report.busName && <DetailRow label="Bus name">{report.busName}</DetailRow>}
+                </>
+              )}
+              {details?.commendee && (
+                <DetailRow label="Thanking">{commendeeLabel(details.commendee)}</DetailRow>
+              )}
               <DetailRow label="Category">{categoryLabel(report.category)}</DetailRow>
+              {details?.accessibility && (
+                <DetailRow label="Accessibility issues">
+                  {details.accessibility.map(accessibilityLabel).join(", ")}
+                </DetailRow>
+              )}
+              {details?.safety && (
+                <DetailRow label="What happened (ticked)">
+                  {details.safety.kinds.length
+                    ? details.safety.kinds.map(safetyKindLabel).join(", ")
+                    : "Nothing ticked"}
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Official fare">
+                  Rs. {details.fare.officialFare} · {details.fare.from} → {details.fare.to} (
+                  {details.fare.stages} stage{details.fare.stages === 1 ? "" : "s"},{" "}
+                  {serviceClassLabel(details.fare.serviceClass)}, route {details.fare.routeNumber}
+                  {details.fare.effectiveFrom && `, fares from ${details.fare.effectiveFrom}`})
+                </DetailRow>
+              )}
+              {details?.fare && (
+                <DetailRow label="Passenger paid">
+                  {details.fare.chargedFare === null
+                    ? "Not given"
+                    : `Rs. ${details.fare.chargedFare}${
+                        details.fare.chargedFare > details.fare.officialFare
+                          ? ` (Rs. ${details.fare.chargedFare - details.fare.officialFare} over)`
+                          : ""
+                      }`}
+                </DetailRow>
+              )}
               <DetailRow label="Location">{report.location || "Not given"}</DetailRow>
               {report.incidentAt && (
                 <DetailRow label="Incident time">{formatDateTime(report.incidentAt)}</DetailRow>
@@ -423,7 +558,11 @@ function ReportDetailsView({ id }: { id: string }) {
               </DetailRow>
               <DetailRow label="Language">{languageLabel(report.language)}</DetailRow>
               <DetailRow label="Sent from">
-                {report.source === "qr" ? "QR sticker in the bus" : "Website"}
+                {
+                  { qr: "QR sticker in the bus", whatsapp: "WhatsApp bot", web: "Website" }[
+                    report.source
+                  ]
+                }
               </DetailRow>
             </Box>
             {hasPin && (
@@ -439,6 +578,37 @@ function ReportDetailsView({ id }: { id: string }) {
               </Button>
             )}
           </SectionPanel>
+
+          {report.confirmations && report.confirmations.length > 0 && (
+            <SectionPanel
+              title={`Confirmed by ${report.confirmations.length} other passenger${report.confirmations.length === 1 ? "" : "s"}`}
+              subtitle="They saw the same incident and said “me too” instead of filing a duplicate. Anonymous."
+              icon={<GroupsRoundedIcon fontSize="small" />}
+            >
+              <Box sx={{ display: "grid", gap: 1.5 }}>
+                {report.confirmations.map((confirmation) => (
+                  <Box
+                    key={confirmation.id}
+                    sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDateTime(confirmation.createdAt)} ·{" "}
+                      {languageLabel(confirmation.language)}
+                      {confirmation.source === "qr" ? " · QR sticker" : ""}
+                    </Typography>
+                    <Typography
+                      sx={{ whiteSpace: "pre-line", mt: 0.5 }}
+                      color={confirmation.comment ? "text.primary" : "text.secondary"}
+                    >
+                      {confirmation.comment || "No comment."}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </SectionPanel>
+          )}
+
+          <AiAssistantPanel report={report} />
 
           <AdminMessagesPanel report={report} />
 
@@ -606,57 +776,124 @@ function ReportDetailsView({ id }: { id: string }) {
               </Box>
             </SectionPanel>
 
-            <SectionPanel
-              title="Public results"
-              subtitle="Impact page, map and scorecards"
-              icon={<PublicRoundedIcon fontSize="small" />}
-            >
-              <Alert severity={countsPublicly ? "success" : "info"} sx={{ mb: 2 }}>
-                {countsPublicly
-                  ? "Counted in public figures (totals only, never its details)."
-                  : report.hiddenFromPublic
-                    ? "Hidden from public figures by an admin."
-                    : "Not counted publicly until an admin marks it reviewed, escalated or resolved."}
-              </Alert>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={Boolean(report.hiddenFromPublic)}
-                    onChange={(e) => visibility.mutate(e.target.checked)}
-                    disabled={visibility.isPending}
-                  />
-                }
-                label="Exclude from public figures"
-                slotProps={{ typography: { variant: "body2" } }}
-              />
-              <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 2 }}>
-                Use for disputed or duplicate reports. Scorecards appear once a bus or route has{" "}
-                {MIN_PUBLIC_REPORTS} counted reports.
-              </Typography>
-              {visibility.error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {errorMessage(visibility.error, "Failed to change visibility")}
+            {!road && (
+              <SectionPanel
+                title="Public results"
+                subtitle="Impact page, map and scorecards"
+                icon={<PublicRoundedIcon fontSize="small" />}
+              >
+                <Alert severity={countsPublicly ? "success" : "info"} sx={{ mb: 2 }}>
+                  {countsPublicly
+                    ? "Counted in public figures (totals only, never its details)."
+                    : report.hiddenFromPublic
+                      ? "Hidden from public figures by an admin."
+                      : "Not counted publicly until an admin marks it reviewed, escalated or resolved."}
                 </Alert>
-              )}
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<AutoStoriesRoundedIcon />}
-                  href={`/admin/stories?report=${report.id}`}
-                >
-                  Write a story
-                </Button>
-                <Button
-                  size="small"
-                  startIcon={<OpenInNewRoundedIcon />}
-                  href={`/bus/${encodeURIComponent(report.busNumber)}`}
-                  target="_blank"
-                >
-                  Bus scorecard
-                </Button>
-              </Box>
-            </SectionPanel>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={Boolean(report.hiddenFromPublic)}
+                      onChange={(e) => visibility.mutate(e.target.checked)}
+                      disabled={visibility.isPending}
+                    />
+                  }
+                  label="Exclude from public figures"
+                  slotProps={{ typography: { variant: "body2" } }}
+                />
+                <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 2 }}>
+                  Use for disputed or duplicate reports. Scorecards appear once a bus or route has{" "}
+                  {MIN_PUBLIC_REPORTS} counted reports.
+                </Typography>
+                {visibility.error && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {errorMessage(visibility.error, "Failed to change visibility")}
+                  </Alert>
+                )}
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AutoStoriesRoundedIcon />}
+                    href={`/admin/stories?report=${report.id}`}
+                  >
+                    Write a story
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<OpenInNewRoundedIcon />}
+                    href={`/bus/${encodeURIComponent(report.busNumber)}`}
+                    target="_blank"
+                  >
+                    Bus scorecard
+                  </Button>
+                </Box>
+              </SectionPanel>
+            )}
+
+            {(Boolean(report.operators?.length) || Boolean(report.operatorResponses?.length)) && (
+              <SectionPanel
+                title="Bus operator"
+                subtitle={
+                  report.operators?.length
+                    ? `Run by ${report.operators.map((o) => o.organisation ?? o.email).join(", ")}. They see this report once it's reviewed, escalated or resolved, without passenger details.`
+                    : undefined
+                }
+                icon={<StorefrontRoundedIcon fontSize="small" />}
+              >
+                {report.operatorResponses?.length ? (
+                  <Box sx={{ display: "grid", gap: 1.5 }}>
+                    {report.operatorResponses.map((response) => (
+                      <Box
+                        key={response.id}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: "action.hover",
+                          opacity: response.hidden ? 0.65 : 1,
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {response.organisation ?? "Operator"} ·{" "}
+                          {formatDateTime(response.createdAt)}
+                        </Typography>
+                        <Typography sx={{ whiteSpace: "pre-line", mt: 0.5 }}>
+                          {response.body}
+                        </Typography>
+                        <FormControlLabel
+                          sx={{ mt: 0.5 }}
+                          control={
+                            <Switch
+                              size="small"
+                              checked={!response.hidden}
+                              disabled={responseVisibility.isPending}
+                              onChange={(e) =>
+                                responseVisibility.mutate({
+                                  responseId: response.id,
+                                  hidden: !e.target.checked,
+                                })
+                              }
+                            />
+                          }
+                          label={
+                            response.hidden ? "Hidden from the passenger" : "Shown to the passenger"
+                          }
+                          slotProps={{ typography: { variant: "caption" } }}
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    The operator hasn&apos;t responded yet.
+                  </Typography>
+                )}
+                {responseVisibility.error && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {errorMessage(responseVisibility.error, "Failed to change the response")}
+                  </Alert>
+                )}
+              </SectionPanel>
+            )}
 
             <SectionPanel title="Activity" icon={<HistoryRoundedIcon fontSize="small" />}>
               {report.statusHistory && report.statusHistory.length > 0 ? (

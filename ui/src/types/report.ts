@@ -1,9 +1,84 @@
 import type {
+  AccessibilityIssue,
+  AccidentInvolvement,
+  BusService,
+  Commendee,
+  InjuryLevel,
   Language,
   ReportCategory,
   ReportStatus,
   ReportType,
+  SafetyKind,
+  RoadHazard,
+  ServiceClass,
+  VehicleKind,
 } from "@/constants/reportConstants";
+
+/**
+ * A road incident: the vehicle (not for road hazards), and the accident or road problem. `plate`
+ * only comes to admins; the tracking page never gets it.
+ */
+export interface RoadIncidentDetails {
+  vehicle?: {
+    kind: VehicleKind;
+    plate?: string | null;
+    colour: string | null;
+    make: string | null;
+  };
+  accident?: {
+    involvement: AccidentInvolvement;
+    injuries: InjuryLevel;
+    vehiclesInvolved: number | null;
+  };
+  hazard?: RoadHazard;
+}
+
+/** The official fare, worked out by the server from the admins' fare tables */
+export interface FareEvidence {
+  routeNumber: string;
+  routeName: string;
+  from: string;
+  to: string;
+  stages: number;
+  serviceClass: ServiceClass;
+  officialFare: number;
+  chargedFare: number | null;
+  effectiveFrom: string | null;
+}
+
+/** Structured extras for some categories */
+export interface ReportDetails {
+  accessibility?: AccessibilityIssue[];
+  fare?: FareEvidence;
+  /** Filed from the quick safety-mode form */
+  safety?: { kinds: SafetyKind[] };
+  road?: RoadIncidentDetails;
+  /** Commendations: who the passenger is thanking */
+  commendee?: Commendee;
+}
+
+/** What the browser sends: the fare is only the passenger's choice; the server looks it up */
+export interface ReportDetailsInput {
+  accessibility?: AccessibilityIssue[];
+  fare?: {
+    routeId: string;
+    from: number;
+    to: number;
+    serviceClass: ServiceClass;
+    charged?: number;
+  };
+  safety?: { kinds: SafetyKind[] };
+  road?: {
+    vehicle?: { kind: VehicleKind; plate: string; colour: string; make: string };
+    accident?: {
+      involvement: AccidentInvolvement;
+      injuries: InjuryLevel;
+      vehiclesInvolved: number | null;
+    };
+    hazard?: RoadHazard;
+  };
+  commendee?: Commendee;
+}
 
 export interface StatusChange {
   status: ReportStatus;
@@ -42,6 +117,9 @@ export interface PublicMessage {
   read: boolean;
 }
 
+/** How a report reached TransitX: the website, its QR sticker link, or the WhatsApp bot */
+export type ReportSource = "web" | "qr" | "whatsapp";
+
 /** Which channels reached the passenger after an update */
 export interface Delivery {
   email: boolean;
@@ -50,6 +128,51 @@ export interface Delivery {
   push: number;
   /** Telegram chats reached */
   telegram: number;
+  /** WhatsApp numbers reached */
+  whatsapp: number;
+}
+
+/** A "me too" confirmation from another passenger, as admins see it */
+export interface ReportConfirmation {
+  id: string;
+  comment: string | null;
+  language: Language;
+  source: ReportSource;
+  createdAt: string;
+}
+
+export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
+
+/** A complaint about the same bus, category and day, offered to confirm instead of re-reporting */
+export interface SimilarReport {
+  id: string;
+  routeNumber: string;
+  /** Only when the original passenger gave an incident time */
+  partOfDay: PartOfDay | null;
+  confirmations: number;
+}
+
+/** What a bus operator said they did about a report (operator portal) */
+export interface AdminOperatorResponse {
+  id: string;
+  body: string;
+  organisation: string | null;
+  /** Kept off the passenger's tracking page by an admin */
+  hidden: boolean;
+  createdAt: string;
+}
+
+/** AI help for admins: advice only, never shown to passengers */
+export interface AiInsights {
+  detectedLanguage: "en" | "si" | "ta" | "other";
+  englishTranslation: string | null;
+  summary: string | null;
+  suggestedCategory: ReportCategory;
+  categoryConfidence: "low" | "medium" | "high";
+  categoryReason: string;
+  flags: ("personal_details" | "abusive_language" | "possible_emergency" | "not_a_bus_issue")[];
+  model: string;
+  generatedAt: string;
 }
 
 /** Full report as admins see it */
@@ -60,6 +183,7 @@ export interface Report {
   busNumber: string;
   routeNumber: string;
   busName?: string | null;
+  busService?: BusService | null;
   category: ReportCategory;
   location: string | null;
   latitude?: number | null;
@@ -72,7 +196,7 @@ export interface Report {
   passengerEmail?: string;
   passengerPhone?: string | null;
   language: Language;
-  source: "web" | "qr";
+  source: ReportSource;
   status: ReportStatus;
   statusHistory?: StatusChange[];
   notes?: InternalNote[];
@@ -85,6 +209,18 @@ export interface Report {
   messages?: ReportMessage[];
   /** Report lists only: passenger messages no admin has read yet */
   unreadMessages?: number;
+  /** "Me too" confirmations from other passengers (details page) */
+  confirmations?: ReportConfirmation[];
+  /** Report lists only: how many other passengers confirmed it */
+  confirmationCount?: number;
+  /** Responses from the bus operator */
+  operatorResponses?: AdminOperatorResponse[];
+  aiInsights?: AiInsights | null;
+  /** Photos with faces and number plates blurred (what operators see) */
+  blurredImages?: string[] | null;
+  /** Details page: operator accounts that run this bus */
+  operators?: { id: string; email: string; organisation: string | null }[];
+  details?: ReportDetails | null;
 }
 
 /** What the public tracking endpoint returns */
@@ -95,6 +231,7 @@ export interface PublicReport {
   category: ReportCategory;
   busNumber: string;
   routeNumber: string;
+  busService?: BusService | null;
   location: string | null;
   incidentAt?: string;
   reportedAt: string;
@@ -108,13 +245,20 @@ export interface PublicReport {
   messages: PublicMessage[];
   /** False once the report has been closed for a while */
   canReply: boolean;
+  /** Other passengers who confirmed it ("me too") */
+  confirmations: number;
+  /** What the bus operator said they did */
+  operatorResponses: { body: string; organisation: string | null; createdAt: string }[];
+  details?: ReportDetails | null;
 }
 
 export interface SubmitReportFields {
   type?: ReportType;
+  /** Empty for a road incident */
   busNumber: string;
   routeNumber: string;
   busName?: string;
+  busService?: BusService | "";
   category: ReportCategory | "";
   incidentAt?: string;
   location?: string;
@@ -124,8 +268,10 @@ export interface SubmitReportFields {
   passengerEmail?: string;
   passengerPhone?: string;
   language?: Language;
-  source?: "web" | "qr";
+  source?: ReportSource;
   website?: string;
+  /** JSON of ReportDetailsInput (multipart forms send strings) */
+  details?: string;
 }
 
 export interface SubmitReportResponse {
@@ -168,6 +314,23 @@ export interface ReportStats {
   avgResolutionHours: number | null;
   resolvedWithTiming: number;
   commendations: CommendationStats;
+  lostItems: {
+    total: number;
+    last30Days: number;
+    open: number;
+    found: number;
+    byStatus: Record<ReportStatus, number>;
+  };
+  /** Any vehicle or the road itself: never part of the bus figures above */
+  roadIncidents: {
+    total: number;
+    last30Days: number;
+    open: number;
+    seriousInjuries: number;
+    byStatus: Record<ReportStatus, number>;
+    byCategory: { category: ReportCategory; count: number }[];
+    byVehicle: { kind: VehicleKind; count: number }[];
+  };
   engagement: EngagementStats;
 }
 
@@ -213,6 +376,17 @@ export interface EngagementStats {
   myReportsSignins: number;
   pushSubscriptions: number;
   telegramLinks: number;
+  whatsappMessages: number;
+  whatsappLinks: number;
+  // Wider ecosystem (Phase 4)
+  confirmationsOffered: number;
+  reportConfirmations: number;
+  // Passenger safety (Phase 5)
+  faresChecked: number;
+  safetyReports: number;
+  tripsShared: number;
+  emergencyShown: number;
+  roadIncidents: number;
 }
 
 /** A report in "My reports" */

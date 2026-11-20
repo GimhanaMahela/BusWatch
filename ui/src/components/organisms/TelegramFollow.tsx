@@ -9,7 +9,7 @@ import { getTelegramLink } from "@/api/pushApi";
 import useContactChannels from "@/hooks/useContactChannels";
 
 /**
- * "Get updates on Telegram": free updates through the BusWatch bot. The button opens Telegram,
+ * "Get updates on Telegram": free updates through the TransitX bot. The button opens Telegram,
  * the passenger presses Start, and that chat follows the report. Hidden when no bot is set up.
  */
 function TelegramFollow({ receiptId, compact = false }: { receiptId: string; compact?: boolean }) {

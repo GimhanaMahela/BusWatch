@@ -10,7 +10,14 @@ import {
   toPublicAdmin,
   verifyPassword,
 } from "../repositories/admin.repository.js";
+import {
+  getAllFleets,
+  getFleet,
+  setFleet,
+  setOrganisation,
+} from "../repositories/operator.repository.js";
 import type { LoginInput, RegisterAdminInput } from "../validators/auth.validator.js";
+import type { UpdateFleetInput } from "../validators/operator.validator.js";
 
 const signToken = (admin: AdminRow): string =>
   jwt.sign({ admin: { id: admin.id, email: admin.email, role: admin.role } }, env.JWT_SECRET, {
@@ -28,8 +35,10 @@ export const registerAdmin = async (
     res.status(400).json({ msg: "Admin already exists" });
     return;
   }
-  const admin = await createAdmin(req.body);
-  res.status(201).json({ admin: toPublicAdmin(admin) });
+  const { busNumbers, ...account } = req.body;
+  const admin = await createAdmin(account);
+  const fleet = admin.role === "operator" ? await setFleet(admin.id, busNumbers) : [];
+  res.status(201).json({ admin: { ...toPublicAdmin(admin), fleet } });
 };
 
 // @desc    Authenticate admin & get token
@@ -53,12 +62,36 @@ export const getAdmin = async (req: Request, res: Response) => {
     res.status(401).json({ msg: "Admin no longer exists" });
     return;
   }
-  res.json(toPublicAdmin(admin));
+  const fleet = admin.role === "operator" ? await getFleet(admin.id) : undefined;
+  res.json({ ...toPublicAdmin(admin), fleet });
 };
 
 // @desc    List admin accounts
 // @route   GET /api/auth/admins
 // @access  Private (superadmin only)
 export const listAdmins = async (_req: Request, res: Response) => {
-  res.json(await listAllAdmins());
+  const [accounts, fleets] = await Promise.all([listAllAdmins(), getAllFleets()]);
+  res.json(
+    accounts.map((admin) =>
+      admin.role === "operator" ? { ...admin, fleet: fleets.get(admin.id) ?? [] } : admin,
+    ),
+  );
+};
+
+// @desc    Change an operator's buses and name
+// @route   PUT /api/auth/admins/:id/fleet
+// @access  Private (superadmin only)
+export const updateFleet = async (
+  req: Request<{ id: string }, object, UpdateFleetInput>,
+  res: Response,
+) => {
+  const operator = await findAdminById(req.params.id);
+  if (operator?.role !== "operator") {
+    res.status(404).json({ msg: "Operator not found" });
+    return;
+  }
+  if (req.body.organisation) await setOrganisation(operator.id, req.body.organisation);
+  const fleet = await setFleet(operator.id, req.body.busNumbers);
+  const updated = await findAdminById(operator.id);
+  res.json({ ...toPublicAdmin(updated ?? operator), fleet });
 };

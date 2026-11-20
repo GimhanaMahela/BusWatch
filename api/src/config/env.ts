@@ -10,6 +10,19 @@ const EnvSchema = z.object({
   VERCEL: optional(z.string()),
 
   DATABASE_URL: z.string({ error: "DATABASE_URL is required" }).min(1, "DATABASE_URL is required"),
+  // Migrations (and drizzle-kit) use this when set: on Supabase the app goes through the
+  // connection pooler (DATABASE_URL, port 6543) and migrations use the direct or session
+  // connection (port 5432)
+  DATABASE_DIRECT_URL: optional(z.string()),
+  // "auto": encrypted for every host except localhost and the docker-compose "postgres" service
+  // (or as the URL's ?sslmode= says); "on" / "off" force it
+  DATABASE_SSL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["auto", "on", "off"]).default("auto"),
+  ),
+  // The database's CA certificate (PEM; "\n" for line breaks is fine), so the server's certificate
+  // is verified too. Supabase: Project Settings → Database → SSL Configuration → Download
+  DATABASE_CA_CERT: optional(z.string()),
   JWT_SECRET: z.string({ error: "JWT_SECRET is required" }).min(1, "JWT_SECRET is required"),
 
   ADMIN_EMAIL: optional(z.email()),
@@ -26,6 +39,11 @@ const EnvSchema = z.object({
   EMAIL_SERVICE_PORT: z.coerce.number().int().positive().default(587),
   EMAIL_SERVICE_USER: optional(z.string()),
   EMAIL_SERVICE_PASS: optional(z.string()),
+  // "TransitX <noreply@your-domain.lk>": needed when the SMTP user name isn't an email address
+  // (Brevo, Resend, Amazon SES...); defaults to the user name
+  EMAIL_FROM: optional(z.string()),
+  // Implicit TLS (port 465). Defaults to true on port 465 and STARTTLS otherwise (587)
+  EMAIL_SERVICE_SECURE: optional(z.enum(["true", "false"]).transform((value) => value === "true")),
   // Cloudflare Turnstile CAPTCHA on public submissions; skipped when unset (development, tests)
   TURNSTILE_SECRET_KEY: optional(z.string()),
 
@@ -63,6 +81,50 @@ const EnvSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: optional(
     z.string().regex(/^[\w-]{1,256}$/, "Use letters, digits, _ and -"),
   ),
+
+  // The TransitX WhatsApp bot, through Meta's WhatsApp Cloud API (see the README). Off unless the
+  // access token and phone number ID are set.
+  WHATSAPP_ACCESS_TOKEN: optional(z.string()),
+  WHATSAPP_PHONE_NUMBER_ID: optional(z.string()),
+  // App secret of the Meta app: every webhook call is signed with it
+  WHATSAPP_APP_SECRET: optional(z.string()),
+  // Any string you choose; Meta sends it back once when you register the webhook URL
+  WHATSAPP_VERIFY_TOKEN: optional(z.string()),
+  // The bot's number as passengers dial it, e.g. +94771234567 (for "Chat on WhatsApp" buttons)
+  WHATSAPP_DISPLAY_NUMBER: optional(
+    z.string().regex(/^\+[1-9]\d{7,14}$/, "Use the form +94771234567"),
+  ),
+  // Optional approved message template for updates sent more than 24 hours after the passenger's
+  // last message (WhatsApp only allows templates then). Body: {{1}} receipt ID, {{2}} the update.
+  WHATSAPP_UPDATE_TEMPLATE: optional(z.string()),
+  WHATSAPP_API_VERSION: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^v\d+\.\d+$/)
+      .default("v23.0"),
+  ),
+
+  // AI help for admins (Phase 4): category suggestions, translation, summaries, and blurring faces
+  // and number plates in photos, with Google Gemini's free tier. Off when unset.
+  GEMINI_API_KEY: optional(z.string()),
+  AI_MODEL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().default("gemini-flash-latest"),
+  ),
+  // Used when AI_MODEL is overloaded or out of free quota; "" turns the fallback off
+  AI_FALLBACK_MODEL: z.string().default("gemini-flash-lite-latest"),
+  // "false" hides the TransitX helper chat on the public site (it shares the free Gemini quota with
+  // the admin AI help, so switch it off if the quota runs out)
+  AI_CHAT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  // "true": analyse every new report straight after it is submitted (otherwise admins click Analyse)
+  AI_AUTO_ANALYSE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 
   EMAIL_ALLOW_SELF_SIGNED: z
     .enum(["true", "false"])

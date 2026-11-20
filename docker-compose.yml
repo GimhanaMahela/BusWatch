@@ -29,6 +29,7 @@ services:
         # Read from the root .env; /api is forwarded to the api service
         NEXT_PUBLIC_MAPS_API_KEY: ${NEXT_PUBLIC_MAPS_API_KEY:-}
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+        NEXT_PUBLIC_THEME: ${NEXT_PUBLIC_THEME:-sunset}
         API_UPSTREAM: http://api:5000
     ports:
       - "3000:3000"

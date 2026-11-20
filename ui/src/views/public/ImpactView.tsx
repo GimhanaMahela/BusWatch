@@ -57,7 +57,7 @@ function ImpactView({ impact }: { impact: PublicImpact | null }) {
     return (
       <>
         {hero}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="xl" sx={{ py: 6 }}>
           <Alert severity="warning">{t("unavailable")}</Alert>
         </Container>
       </>
@@ -80,7 +80,7 @@ function ImpactView({ impact }: { impact: PublicImpact | null }) {
     <>
       <PageViewEvent event="impact_view" />
       {hero}
-      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t("updated", {
             time: format.dateTime(new Date(impact.updatedAt), {

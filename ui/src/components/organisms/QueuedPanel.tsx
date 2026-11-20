@@ -22,7 +22,13 @@ function QueuedPanel({ onReset, type }: { onReset: () => void; type: ReportType 
         {t("queuedHint")}
       </Typography>
       <Button onClick={onReset} sx={{ mt: 3 }}>
-        {type === "commendation" ? ts("anotherCommendation") : ts("another")}
+        {type === "commendation"
+          ? ts("anotherCommendation")
+          : type === "lost_item"
+            ? ts("anotherLost")
+            : type === "road_incident"
+              ? ts("anotherRoad")
+              : ts("another")}
       </Button>
     </ResultCard>
   );

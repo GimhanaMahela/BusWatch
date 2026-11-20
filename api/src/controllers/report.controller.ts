@@ -9,28 +9,28 @@ import {
 import type { UploadedMedia } from "../middleware/upload.middleware.js";
 import {
   addReportNote,
-  createReport,
   deleteReport as deleteReportRow,
   findReportById,
   findReportByReceiptId,
   getReportStats,
   listReports,
-  receiptIdExists,
   setOutcomeRating,
   setReportHiddenFromPublic,
-  setReportPdfUrl,
   updateReportStatus as updateReportStatusRow,
   type ReportWithRelations,
 } from "../repositories/report.repository.js";
-import { countEvent } from "../repositories/metric.repository.js";
-import { messagesFor } from "../i18n/messages.js";
-import { sendReportReceiptEmail, trackingUrl } from "../services/email.service.js";
-import { sendSms } from "../services/sms.service.js";
 import { notifyPassenger as deliverToPassenger } from "../services/notification.service.js";
-import { generatePdfReceipt } from "../services/pdf-receipt.service.js";
-import { generateReceiptId } from "../utils/receipt-id.js";
+import { FareError, officialFare } from "../services/fare.service.js";
+import { fileReport } from "../services/report-submission.service.js";
+import type { ReportDetails } from "../db/schema.js";
+import type { ReportDetailsInput } from "../validators/report.validator.js";
 import { invalidateCache } from "../utils/ttl-cache.js";
 import type { VisibilityInput } from "../validators/story.validator.js";
+import type { ResponseVisibilityInput } from "../validators/operator.validator.js";
+import {
+  findOperatorsForBus,
+  setOperatorResponseHidden,
+} from "../repositories/operator.repository.js";
 import {
   listReportsQuerySchema,
   type AddNoteInput,
@@ -48,14 +48,6 @@ const uploadMedia = async (file: Express.Multer.File, resourceType: "image" | "v
     { resource_type: resourceType },
   );
   return result.secure_url;
-};
-
-const generateFreeReceiptId = async (): Promise<string> => {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const id = generateReceiptId();
-    if (!(await receiptIdExists(id))) return id;
-  }
-  throw new Error("Could not generate a unique receipt ID");
 };
 
 export interface PublicTimelineEntry {
@@ -76,9 +68,16 @@ export const canReply = (report: ReportWithRelations, now = Date.now()) => {
   return !closedAt || now - closedAt.getTime() < REPLY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 };
 
+/** A road incident's plate is for admins only; everything else in the details may be shown. */
+export const publicDetails = (details: ReportDetails | null) => {
+  if (!details?.road?.vehicle) return details;
+  const { plate: _plate, ...vehicle } = details.road.vehicle;
+  return { ...details, road: { ...details.road, vehicle } };
+};
+
 /**
  * What a passenger may see about their own report: no media, contact details, internal notes or
- * admin names (messages show "BusWatch team").
+ * admin names (messages show "TransitX team").
  */
 export const toPublicView = (report: ReportWithRelations) => {
   const timeline: PublicTimelineEntry[] = report.statusHistory.map(
@@ -100,6 +99,7 @@ export const toPublicView = (report: ReportWithRelations) => {
     category: report.category,
     busNumber: report.busNumber,
     routeNumber: report.routeNumber,
+    busService: report.busService,
     location: report.location,
     incidentAt: report.incidentAt,
     reportedAt: report.reportedAt,
@@ -111,95 +111,92 @@ export const toPublicView = (report: ReportWithRelations) => {
     ratedAt: report.ratedAt,
     messages,
     canReply: canReply(report),
+    // Accessibility issues ticked, the official fare, what was ticked on the safety form, or a
+    // road incident's vehicle (without its plate: tracking links get shared)
+    details: publicDetails(report.details),
+    // Other passengers who said "me too" (a count only)
+    confirmations: report.confirmations.length,
+    // The bus operator's responses, unless an admin hid them
+    operatorResponses: report.operatorResponses
+      .filter((response) => !response.hidden)
+      .map(({ body, organisation, createdAt }) => ({ body, organisation, createdAt })),
   };
 };
 
 // @desc    Submit a new report
 // @route   POST /api/reports
 // @access  Public
+/**
+ * Turns the passenger's choices into what is stored: the fare becomes the official fare worked out
+ * here (the browser only says which route, stops and class). Throws FareError when that fails.
+ */
+const storedDetails = async (input?: ReportDetailsInput): Promise<ReportDetails | null> => {
+  if (!input) return null;
+  const details: ReportDetails = {};
+  if (input.accessibility) details.accessibility = input.accessibility;
+  if (input.safety) details.safety = input.safety;
+  if (input.fare) details.fare = await officialFare(input.fare);
+  if (input.road) details.road = input.road;
+  if (input.commendee) details.commendee = input.commendee;
+  return Object.keys(details).length ? details : null;
+};
+
+/** The quick safety-mode form may leave the description empty: say what was ticked instead. */
+const safetyDescription = (details: ReportDetails | null) =>
+  `Quick safety report. What happened: ${
+    details?.safety?.kinds.length ? details.safety.kinds.join(", ") : "not given"
+  }.`;
+
 export const submitReport = async (
   req: Request<object, object, SubmitReportInput>,
   res: Response,
 ) => {
-  const { website: _honeypot, busNumber, ...fields } = req.body;
+  const {
+    website: _honeypot,
+    busNumber,
+    routeNumber,
+    busName,
+    busService,
+    details: detailsInput,
+    ...fields
+  } = req.body;
+  // Road incidents aren't about a route bus: no bus number, route or bus name is kept
+  const isRoad = fields.type === "road_incident";
   const files = (req.files ?? {}) as UploadedMedia;
 
-  const receiptId = await generateFreeReceiptId();
+  let details: ReportDetails | null;
+  try {
+    details = await storedDetails(detailsInput);
+  } catch (error) {
+    if (error instanceof FareError) {
+      res.status(400).json({ msg: error.message, message: error.message, errors: [error.message] });
+      return;
+    }
+    throw error;
+  }
 
   const [images, videos] = await Promise.all([
     Promise.all((files.images ?? []).map((f) => uploadMedia(f, "image"))),
     Promise.all((files.videos ?? []).map((f) => uploadMedia(f, "video"))),
   ]);
 
-  const saved = await createReport(
-    { ...fields, busNumber: busNumber.toUpperCase(), images, videos, receiptId },
-    fields.type === "commendation" ? "Commendation received." : "Report received.",
-  );
-  await countEvent(saved.type === "commendation" ? "commendation_submitted" : "report_submitted");
-
-  // Everything below is best-effort: the report is already saved, so a PDF or
-  // email failure must not turn into an error response (the passenger would resubmit).
-  let pdfBuffer: Buffer | null = null;
-  let pdfUrl: string | null = null;
-  try {
-    ({ pdfBuffer } = await generatePdfReceipt({
-      ...saved,
-      busName: saved.busName ?? undefined,
-      incidentAt: saved.incidentAt ?? undefined,
-    }));
-    const pdfUploadResult = await cloudinary.uploader.upload(
-      `data:application/pdf;base64,${pdfBuffer.toString("base64")}`,
-      { resource_type: "raw", folder: "buswatch_receipts", public_id: `receipt_${saved.id}` },
-    );
-    pdfUrl = pdfUploadResult.secure_url;
-    await setReportPdfUrl(saved.id, pdfUrl);
-  } catch (pdfError) {
-    console.error(
-      "Failed to generate or upload PDF receipt:",
-      pdfError instanceof Error ? pdfError.message : pdfError,
-    );
-  }
-
-  let emailSent = false;
-  if (saved.passengerEmail && pdfBuffer) {
-    try {
-      emailSent = await sendReportReceiptEmail({
-        toEmail: saved.passengerEmail,
-        receiptPdfBuffer: pdfBuffer,
-        receiptId,
-        type: saved.type,
-        language: saved.language,
-      });
-    } catch (emailError) {
-      console.error(
-        "Failed to send receipt email:",
-        emailError instanceof Error ? emailError.message : emailError,
-      );
-    }
-  }
-
-  let smsSent = false;
-  if (saved.passengerPhone) {
-    const link = trackingUrl(receiptId);
-    const t = messagesFor(saved.language).sms;
-    try {
-      smsSent = await sendSms(
-        saved.passengerPhone,
-        t.received(receiptId) + (link ? t.link(link) : ""),
-      );
-    } catch (smsError) {
-      console.error(
-        "Failed to send receipt SMS:",
-        smsError instanceof Error ? smsError.message : smsError,
-      );
-    }
-  }
+  const { saved, pdfUrl, emailSent, smsSent } = await fileReport({
+    ...fields,
+    description: fields.description ?? safetyDescription(details),
+    busNumber: isRoad ? "" : (busNumber ?? "").toUpperCase(),
+    routeNumber: isRoad ? "" : (routeNumber ?? ""),
+    busName: isRoad ? undefined : busName,
+    busService: isRoad ? null : (busService ?? null),
+    details,
+    images,
+    videos,
+  });
 
   const report = await findReportById(saved.id);
   res.status(201).json({
     msg: "Report submitted successfully!",
     report: report ? toPublicView(report) : null,
-    receiptId,
+    receiptId: saved.receiptId,
     pdfUrl,
     emailSent,
     smsSent,
@@ -279,6 +276,10 @@ export const getStats = async (_req: Request, res: Response) => {
   res.json(await getReportStats());
 };
 
+/** Road incidents aren't about a route bus, so no operator ever sees them. */
+const operatorsFor = async (report: ReportWithRelations) =>
+  report.type === "road_incident" ? [] : findOperatorsForBus(report.busNumber);
+
 // @desc    Get report by ID (Admin only)
 // @route   GET /api/reports/:id
 // @access  Private (Admin)
@@ -288,7 +289,8 @@ export const getReportById = async (req: Request<IdParams>, res: Response) => {
     res.status(404).json({ msg: "Report not found" });
     return;
   }
-  res.json(report);
+  // Which operator accounts run this bus (they see it once an admin has checked it)
+  res.json({ ...report, operators: await operatorsFor(report) });
 };
 
 // @desc    Get report by Receipt ID (Admin only)
@@ -387,4 +389,20 @@ export const deleteReport = async (req: Request<IdParams>, res: Response) => {
   ]);
 
   res.json({ msg: "Report removed" });
+};
+
+// @desc    Show or hide a bus operator's response on the passenger's tracking page (Admin only)
+// @route   PUT /api/reports/:id/operator-responses/:responseId
+// @access  Private (Admin)
+export const setOperatorResponseVisibility = async (
+  req: Request<IdParams & { responseId: string }, object, ResponseVisibilityInput>,
+  res: Response,
+) => {
+  const { id, responseId } = req.params;
+  if (!(await setOperatorResponseHidden(id, responseId, req.body.hidden))) {
+    res.status(404).json({ msg: "Response not found" });
+    return;
+  }
+  const report = await findReportById(id);
+  res.json(report ? { ...report, operators: await operatorsFor(report) } : null);
 };

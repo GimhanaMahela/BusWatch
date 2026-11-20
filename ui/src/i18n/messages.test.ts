@@ -56,7 +56,7 @@ describe.each([
     );
     // Brand names, the language list and the example email are the same in every language
     expect(copied.map(([key]) => key)).toEqual([
-      "footer.buswatch",
+      "footer.brand",
       "home.promiseLanguages",
       "myReports.contactPlaceholderEmail",
     ]);
