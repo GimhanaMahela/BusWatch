@@ -8,7 +8,7 @@ import useContactChannels from "@/hooks/useContactChannels";
 import { WHATSAPP_GREEN } from "@/lib/whatsapp";
 
 /**
- * "Get updates on WhatsApp": opens a chat with the BusWatch bot with "Track <receipt ID>" ready to
+ * "Get updates on WhatsApp": opens a chat with the TransitX bot with "Track <receipt ID>" ready to
  * send. The bot answers with the status and a button to follow the report. Hidden when the bot
  * isn't set up.
  */

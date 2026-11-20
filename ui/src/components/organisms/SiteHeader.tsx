@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { key: "home", href: "/" },
   { key: "track", href: "/track" },
   { key: "myReports", href: "/my-reports" },
-  { key: "commend", href: "/commend-a-driver" },
+  { key: "commend", href: "/commend" },
   { key: "safety", href: "/safety" },
   { key: "impact", href: "/impact" },
   { key: "about", href: "/about-us" },
@@ -50,13 +50,14 @@ function SiteHeader() {
       position="sticky"
       sx={{ top: 0, pt: { xs: 1, md: 1.5 }, color: "text.primary", bgcolor: "transparent" }}
     >
-      {/* A floating, rounded bar that matches the bento tiles below it */}
-      <Container maxWidth="lg">
+      {/* A floating, rounded bar that matches the bento tiles below it. Wider than the page
+          content so the links have room to breathe */}
+      <Container maxWidth="xl">
         <Toolbar
           sx={{
-            gap: 2,
-            minHeight: { xs: 60, md: 64 },
-            px: { xs: 1.5, md: 2 },
+            gap: { xs: 2, xl: 3 },
+            minHeight: { xs: 60, md: 68 },
+            px: { xs: 1.5, md: 2.5 },
             borderRadius: { xs: 4, md: 99 },
             border: 1,
             borderColor: "divider",
@@ -77,7 +78,11 @@ function SiteHeader() {
           <Box
             component="nav"
             aria-label={t("mainNav")}
-            sx={{ display: { xs: "none", lg: navShown }, gap: 0.25, ml: 2 }}
+            sx={{
+              display: { xs: "none", lg: navShown },
+              gap: { lg: 0.25, xl: 1 },
+              ml: { lg: 2, xl: 4 },
+            }}
           >
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.href);
@@ -90,6 +95,7 @@ function SiteHeader() {
                     position: "relative",
                     whiteSpace: "nowrap",
                     borderRadius: 999,
+                    px: { xl: 2 },
                     color: active ? "primary.main" : "text.secondary",
                     fontWeight: active ? 750 : 600,
                     bgcolor: active
@@ -119,7 +125,7 @@ function SiteHeader() {
 
           <Box sx={{ flex: 1 }} />
 
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 1, xl: 1.5 } }}>
             <LanguageSwitcher />
             <ColorModeToggle />
             <Button

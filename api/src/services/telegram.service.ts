@@ -10,7 +10,7 @@ import {
   saveTelegramSubscription,
 } from "../repositories/telegram.repository.js";
 
-// Free report updates on Telegram through a BusWatch bot (https://core.telegram.org/bots/api).
+// Free report updates on Telegram through a TransitX bot (https://core.telegram.org/bots/api).
 // The tracking page links to t.me/<bot>?start=<token>; pressing Start sends us "/start <token>"
 // and that chat then follows the report. "/stop" unfollows everything.
 //

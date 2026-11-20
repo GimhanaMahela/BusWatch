@@ -12,6 +12,7 @@ import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TrafficRoundedIcon from "@mui/icons-material/TrafficRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
@@ -48,6 +49,10 @@ import {
   CATEGORIES,
   COMMENDATION_CATEGORIES,
   LOST_ITEM_CATEGORIES,
+  ROAD_INCIDENT_CATEGORIES,
+  busServiceLabel,
+  roadHazardLabel,
+  vehicleKindLabel,
   STATUSES,
   categoryLabel,
   type ReportType,
@@ -80,9 +85,15 @@ function AdminDashboardView() {
   // Complaints and commendations are worked on separately; complaints are the default view
   const requestedType = searchParams.get("type");
   const type: ReportType =
-    requestedType === "commendation" || requestedType === "lost_item" ? requestedType : "complaint";
+    requestedType === "commendation" ||
+    requestedType === "lost_item" ||
+    requestedType === "road_incident"
+      ? requestedType
+      : "complaint";
   const commendations = type === "commendation";
   const lostItems = type === "lost_item";
+  // Any vehicle or the road itself: no bus, and the plate is shown here (admins only)
+  const roadIncidents = type === "road_incident";
   const page = Math.max(parseInt(searchParams.get("page") ?? "", 10) || 1, 1);
   const limit = parseInt(searchParams.get("limit") ?? "", 10) || 20;
 
@@ -136,12 +147,20 @@ function AdminDashboardView() {
 
   const typeStats =
     stats.data &&
-    (commendations ? stats.data.commendations : lostItems ? stats.data.lostItems : stats.data);
+    (commendations
+      ? stats.data.commendations
+      : lostItems
+        ? stats.data.lostItems
+        : roadIncidents
+          ? stats.data.roadIncidents
+          : stats.data);
   const categoryOptions = commendations
     ? COMMENDATION_CATEGORIES
     : lostItems
       ? LOST_ITEM_CATEGORIES
-      : CATEGORIES;
+      : roadIncidents
+        ? ROAD_INCIDENT_CATEGORIES
+        : CATEGORIES;
 
   const confirmDelete = () => {
     if (!reportToDelete) return;
@@ -202,33 +221,50 @@ function AdminDashboardView() {
     },
     {
       field: "busNumber",
-      headerName: "Bus",
+      headerName: roadIncidents ? "Vehicle" : "Bus",
       minWidth: 150,
       flex: 0.9,
-      renderCell: ({ row }) => (
-        <Box sx={{ lineHeight: 1.3, py: 1 }}>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 0.5 }}
-          >
-            {row.busNumber}
-            {row.source === "qr" && (
-              <Tooltip title="Sent from the QR sticker in the bus">
-                <QrCode2RoundedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-              </Tooltip>
+      renderCell: ({ row }) =>
+        row.type === "road_incident" ? (
+          <Box sx={{ lineHeight: 1.3, py: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {row.details?.road?.vehicle
+                ? row.details.road.vehicle.plate || "No plate"
+                : row.details?.road?.hazard
+                  ? roadHazardLabel(row.details.road.hazard)
+                  : "–"}
+            </Typography>
+            {row.details?.road?.vehicle && (
+              <Typography variant="caption" color="text.secondary">
+                {vehicleKindLabel(row.details.road.vehicle.kind)}
+              </Typography>
             )}
-            {row.source === "whatsapp" && (
-              <Tooltip title="Sent through the WhatsApp bot">
-                <WhatsAppIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-              </Tooltip>
-            )}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Route {row.routeNumber}
-            {row.busName ? ` · ${row.busName}` : ""}
-          </Typography>
-        </Box>
-      ),
+          </Box>
+        ) : (
+          <Box sx={{ lineHeight: 1.3, py: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 0.5 }}
+            >
+              {row.busNumber}
+              {row.source === "qr" && (
+                <Tooltip title="Sent from the QR sticker in the bus">
+                  <QrCode2RoundedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                </Tooltip>
+              )}
+              {row.source === "whatsapp" && (
+                <Tooltip title="Sent through the WhatsApp bot">
+                  <WhatsAppIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                </Tooltip>
+              )}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Route {row.routeNumber}
+              {row.busService ? ` · ${busServiceLabel(row.busService)}` : ""}
+              {row.busName ? ` · ${row.busName}` : ""}
+            </Typography>
+          </Box>
+        ),
     },
     {
       field: "category",
@@ -288,7 +324,15 @@ function AdminDashboardView() {
     <>
       <PageHeader
         eyebrow="Workspace"
-        title={commendations ? "Commendations" : lostItems ? "Lost items" : "Reports"}
+        title={
+          commendations
+            ? "Commendations"
+            : lostItems
+              ? "Lost items"
+              : roadIncidents
+                ? "Road incidents"
+                : "Reports"
+        }
         subtitle={admin ? `Welcome back, ${admin.email}` : undefined}
         actions={
           <>
@@ -332,6 +376,11 @@ function AdminDashboardView() {
           Lost items
           {stats.data && ` (${stats.data.lostItems.total})`}
         </ToggleButton>
+        <ToggleButton value="road_incident" sx={{ px: 2, gap: 1, fontWeight: 650 }}>
+          <TrafficRoundedIcon fontSize="small" />
+          Road incidents
+          {stats.data && ` (${stats.data.roadIncidents.total})`}
+        </ToggleButton>
       </ToggleButtonGroup>
 
       {/* Bento row: the total is the big tile, the rest fill in beside it */}
@@ -347,7 +396,13 @@ function AdminDashboardView() {
           <StatTile
             featured
             label={
-              commendations ? "Total commendations" : lostItems ? "Lost items" : "Total reports"
+              commendations
+                ? "Total commendations"
+                : lostItems
+                  ? "Lost items"
+                  : roadIncidents
+                    ? "Road incidents"
+                    : "Total reports"
             }
             value={typeStats?.total ?? "–"}
             icon={
@@ -355,11 +410,20 @@ function AdminDashboardView() {
                 <ThumbUpAltRoundedIcon />
               ) : lostItems ? (
                 <TravelExploreRoundedIcon />
+              ) : roadIncidents ? (
+                <TrafficRoundedIcon />
               ) : (
                 <InboxRoundedIcon />
               )
             }
-            tone={commendations ? "success" : lostItems ? "info" : "primary"}
+            hint={
+              roadIncidents && stats.data?.roadIncidents.seriousInjuries
+                ? `${stats.data.roadIncidents.seriousInjuries} with serious injuries`
+                : undefined
+            }
+            tone={
+              commendations ? "success" : lostItems ? "info" : roadIncidents ? "warning" : "primary"
+            }
           />
         </Box>
         <Box>
@@ -520,7 +584,9 @@ function AdminDashboardView() {
                       ? "No commendations yet"
                       : lostItems
                         ? "No lost items yet"
-                        : "No reports yet"
+                        : roadIncidents
+                          ? "No road incidents yet"
+                          : "No reports yet"
                 }
                 description={
                   hasFilters
@@ -529,7 +595,9 @@ function AdminDashboardView() {
                       ? "Praise for drivers and crews will appear here."
                       : lostItems
                         ? "Things passengers left on buses will appear here."
-                        : "New passenger reports will appear here."
+                        : roadIncidents
+                          ? "Reports about any vehicle or the road itself will appear here."
+                          : "New passenger reports will appear here."
                 }
               />
             ),
@@ -562,9 +630,15 @@ function AdminDashboardView() {
         <DialogTitle>Delete this report?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            The report for bus <strong>{reportToDelete?.busNumber}</strong> (
-            {reportToDelete?.receiptId}) and its history will be removed permanently. This cannot be
-            undone.
+            {reportToDelete?.type === "road_incident" ? (
+              "The road incident report"
+            ) : (
+              <>
+                The report for bus <strong>{reportToDelete?.busNumber}</strong>
+              </>
+            )}{" "}
+            ({reportToDelete?.receiptId}) and its history will be removed permanently. This cannot
+            be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>

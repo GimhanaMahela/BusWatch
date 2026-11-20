@@ -35,7 +35,7 @@ export const renderOgCard = ({ eyebrow, title, subtitle, badge }: OgCardProps) =
             width: 64,
             height: 64,
             borderRadius: 18,
-            background: "rgba(255,255,255,0.18)",
+            background: "#FE6E01",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -43,9 +43,9 @@ export const renderOgCard = ({ eyebrow, title, subtitle, badge }: OgCardProps) =
             fontWeight: 800,
           }}
         >
-          B
+          X
         </div>
-        <div style={{ fontSize: 40, fontWeight: 800 }}>BusWatch</div>
+        <div style={{ fontSize: 40, fontWeight: 800 }}>TransitX</div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={{ fontSize: 30, opacity: 0.8, textTransform: "uppercase", letterSpacing: 4 }}>
@@ -75,7 +75,7 @@ export const renderOgCard = ({ eyebrow, title, subtitle, badge }: OgCardProps) =
         ) : (
           <div />
         )}
-        <div style={{ fontSize: 28, opacity: 0.8 }}>Report · Track · Commend</div>
+        <div style={{ fontSize: 28, opacity: 0.8 }}>Report · Resolve · Improve</div>
       </div>
     </div>,
     OG_SIZE,

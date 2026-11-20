@@ -31,7 +31,7 @@ function ContentPageTemplate({ title, updated, intro, sections }: ContentPageTem
         title={title}
         subtitle={updated && t("updated", { date: updated })}
       />
-      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
         <Box
           sx={{ display: "grid", gridTemplateColumns: { md: "240px 1fr" }, gap: { xs: 4, md: 6 } }}
         >
@@ -76,8 +76,15 @@ function ContentPageTemplate({ title, updated, intro, sections }: ContentPageTem
             component="article"
             sx={{
               p: { xs: 3, md: 6 },
-              "& p": { mt: 0, mb: 2, lineHeight: 1.75, color: "text.secondary" },
-              "& ul": { pl: 3, mb: 2, color: "text.secondary", lineHeight: 1.75 },
+              // Comfortable line length on the wide page
+              "& p": { mt: 0, mb: 2, lineHeight: 1.75, color: "text.secondary", maxWidth: "80ch" },
+              "& ul": {
+                pl: 3,
+                mb: 2,
+                color: "text.secondary",
+                lineHeight: 1.75,
+                maxWidth: "80ch",
+              },
               "& h3": { fontSize: "1.05rem", fontWeight: 700, mt: 3, mb: 1 },
               "& strong": { color: "text.primary" },
             }}

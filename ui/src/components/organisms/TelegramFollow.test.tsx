@@ -11,7 +11,7 @@ const mockedChannels = vi.mocked(getContactChannels);
 const mockedLink = vi.mocked(getTelegramLink);
 
 const channels = { email: true, sms: false, push: false, telegram: true, whatsapp: null };
-const url = "https://t.me/BusWatchBot?start=BW-2026-ABCDEF_abc_0123456789abcdef";
+const url = "https://t.me/TransitXBot?start=BW-2026-ABCDEF_abc_0123456789abcdef";
 
 describe("TelegramFollow", () => {
   beforeEach(() => {

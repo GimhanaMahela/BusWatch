@@ -137,12 +137,12 @@ function OperatorDashboardView() {
       <PageHeader
         eyebrow={admin?.organisation ?? "Operator portal"}
         title="Reports about your buses"
-        subtitle="Only reports the BusWatch team has checked appear here. Passengers' names and contact details are never shared."
+        subtitle="Only reports the TransitX team has checked appear here. Passengers' names and contact details are never shared."
       />
 
       {s.fleet.length === 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No buses are linked to your account yet. Ask the BusWatch team to add your bus numbers.
+          No buses are linked to your account yet. Ask the TransitX team to add your bus numbers.
         </Alert>
       )}
 

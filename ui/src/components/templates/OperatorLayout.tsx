@@ -9,7 +9,7 @@ function OperatorLayout({ children }: { children: ReactNode }) {
       <OperatorTopBar />
       <Box
         component="main"
-        sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, md: 5 }, maxWidth: 1200, mx: "auto" }}
+        sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, md: 5 }, maxWidth: 1536, mx: "auto" }}
       >
         {children}
       </Box>

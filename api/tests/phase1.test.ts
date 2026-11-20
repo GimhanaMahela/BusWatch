@@ -18,7 +18,7 @@ const closeReport = async (receiptId: string, token: string, status = "resolved"
 
 useTestDatabase();
 
-describe("commend a driver", () => {
+describe("commend good service", () => {
   const commend = (fields: Record<string, string> = {}) =>
     submitReport({
       type: "commendation",
@@ -42,6 +42,26 @@ describe("commend a driver", () => {
 
     const complaintAsPraise = await commend({ category: "harassment" });
     expect(complaintAsPraise.status).toBe(400);
+  });
+
+  it("records who the passenger is thanking: a driver, a conductor, both or the service", async () => {
+    for (const commendee of ["driver", "conductor", "crew", "service"]) {
+      const res = await commend({
+        category: commendee === "service" ? "comfortable_service" : "helped_passenger",
+        details: JSON.stringify({ commendee }),
+      });
+      expect(res.status).toBe(201);
+      const saved = await reportByReceipt(res.body.receiptId);
+      expect(saved?.details).toEqual({ commendee });
+    }
+
+    const unknown = await commend({ details: JSON.stringify({ commendee: "passenger" }) });
+    expect(unknown.status).toBe(400);
+    expect(unknown.body.message).toBe("Choose who you are thanking.");
+
+    // Only commendations thank someone
+    const onComplaint = await submitReport({ details: JSON.stringify({ commendee: "driver" }) });
+    expect(onComplaint.status).toBe(400);
   });
 
   it("still requires a location for complaints", async () => {

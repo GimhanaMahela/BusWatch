@@ -1,10 +1,11 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { env } from "../config/env.js";
+import { appConnection } from "./connection.js";
 import * as schema from "./schema.js";
 
 export const pool = new Pool({
-  connectionString: env.DATABASE_URL,
+  ...appConnection(),
   // Serverless functions each hold their own pool; keep it small there
   max: env.VERCEL ? 1 : 10,
 });

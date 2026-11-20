@@ -17,7 +17,7 @@ export interface FleetReport {
   description: string;
   /** Other passengers who said "me too" */
   confirmations: number;
-  /** Photos with faces and number plates blurred by the BusWatch team (never the originals) */
+  /** Photos with faces and number plates blurred by the TransitX team (never the originals) */
   images: string[];
   /** English translation when the passenger wrote in Sinhala or Tamil */
   translation: string | null;
@@ -31,7 +31,7 @@ export interface OperatorResponse {
   id: string;
   body: string;
   organisation: string | null;
-  /** Hidden from the passenger by the BusWatch team */
+  /** Hidden from the passenger by the TransitX team */
   hidden: boolean;
   createdAt: string;
 }

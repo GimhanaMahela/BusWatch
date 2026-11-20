@@ -37,7 +37,7 @@ function AboutUsView() {
     <>
       <HeroBand eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
-      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 6, md: 10 } }}>
         <Grid container spacing={{ xs: 4, md: 8 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="overline" color="primary" component="p">

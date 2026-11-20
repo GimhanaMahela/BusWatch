@@ -90,7 +90,7 @@ function AdminLoginView() {
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
             <BrandMark iconOnly />
-            <Typography sx={{ fontWeight: 800, fontSize: "1.2rem" }}>BusWatch Console</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: "1.2rem" }}>TransitX Console</Typography>
           </Box>
           <Box sx={{ flex: 1 }} />
           <Typography variant="h3" component="p" sx={{ maxWidth: 480 }}>
@@ -131,7 +131,7 @@ function AdminLoginView() {
                 Welcome back
               </Typography>
               <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                Sign in to the BusWatch admin console.
+                Sign in to the TransitX admin console.
               </Typography>
             </Box>
 

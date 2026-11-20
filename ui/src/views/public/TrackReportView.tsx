@@ -7,6 +7,7 @@ import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
+import TrafficRoundedIcon from "@mui/icons-material/TrafficRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import {
   Alert,
@@ -48,6 +49,7 @@ const SYSTEM_NOTES = {
   "Commendation received.": "noteCommendationReceived",
   "Lost item report received. We've passed it on to the bus operator where we can.":
     "noteLostReceived",
+  "Road incident report received.": "noteRoadReceived",
 } as const;
 
 function StatusPipeline({ status }: { status: ReportStatus }) {
@@ -125,6 +127,12 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
   const tStatus = useTranslations("statuses");
   const tCategory = useTranslations("categories");
   const tIssue = useTranslations("accessibilityIssues");
+  const tVehicle = useTranslations("vehicleKinds");
+  const tService = useTranslations("busServices");
+  const tCommendee = useTranslations("commendees");
+  const tInvolvement = useTranslations("accidentInvolvement");
+  const tInjury = useTranslations("injuryLevels");
+  const tHazard = useTranslations("roadHazards");
   const tShare = useTranslations("share");
   const format = useFormatter();
   const router = useRouter();
@@ -173,7 +181,8 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
 
   const commendation = report?.type === "commendation";
   const lost = report?.type === "lost_item";
-  const descriptions = commendation ? "commend" : lost ? "lost" : "complaint";
+  const road = report?.type === "road_incident";
+  const descriptions = commendation ? "commend" : lost ? "lost" : road ? "road" : "complaint";
 
   return (
     <>
@@ -189,7 +198,7 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
         </Box>
       </HeroBand>
 
-      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 5, md: 8 } }}>
         {loading && (
           <Card sx={{ p: 4 }}>
             <Skeleton width="40%" height={40} />
@@ -256,6 +265,15 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                           icon={<TravelExploreRoundedIcon />}
                           label={t("lostItem")}
                           color="info"
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                      {road && (
+                        <Chip
+                          icon={<TrafficRoundedIcon />}
+                          label={t("roadIncident")}
+                          color="warning"
                           variant="outlined"
                           size="small"
                         />
@@ -381,6 +399,11 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                   <Typography variant="subtitle1" component="h2" sx={{ mb: 1 }}>
                     {t("details")}
                   </Typography>
+                  {report.details?.commendee && (
+                    <DetailRow label={t("commendee")}>
+                      {tCommendee(report.details.commendee)}
+                    </DetailRow>
+                  )}
                   <DetailRow label={t("category")}>{tCategory(report.category)}</DetailRow>
                   {report.details?.accessibility && (
                     <DetailRow label={t("accessibilityIssues")}>
@@ -398,8 +421,39 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                         ` · ${t("farePaid", { charged: report.details.fare.chargedFare })}`}
                     </DetailRow>
                   )}
-                  <DetailRow label={t("bus")}>{report.busNumber}</DetailRow>
-                  <DetailRow label={t("route")}>{report.routeNumber}</DetailRow>
+                  {report.details?.road?.vehicle && (
+                    <DetailRow label={t("vehicle")}>
+                      {[
+                        tVehicle(report.details.road.vehicle.kind),
+                        report.details.road.vehicle.colour,
+                        report.details.road.vehicle.make,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </DetailRow>
+                  )}
+                  {report.details?.road?.accident && (
+                    <>
+                      <DetailRow label={t("accident")}>
+                        {tInvolvement(report.details.road.accident.involvement)}
+                      </DetailRow>
+                      <DetailRow label={t("injuries")}>
+                        {tInjury(report.details.road.accident.injuries)}
+                      </DetailRow>
+                    </>
+                  )}
+                  {report.details?.road?.hazard && (
+                    <DetailRow label={t("hazard")}>{tHazard(report.details.road.hazard)}</DetailRow>
+                  )}
+                  {!road && (
+                    <>
+                      {report.busService && (
+                        <DetailRow label={t("busService")}>{tService(report.busService)}</DetailRow>
+                      )}
+                      <DetailRow label={t("bus")}>{report.busNumber}</DetailRow>
+                      <DetailRow label={t("route")}>{report.routeNumber}</DetailRow>
+                    </>
+                  )}
                   {report.location && (
                     <DetailRow label={t("location")}>{report.location}</DetailRow>
                   )}

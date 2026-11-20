@@ -26,7 +26,9 @@ function QueuedPanel({ onReset, type }: { onReset: () => void; type: ReportType 
           ? ts("anotherCommendation")
           : type === "lost_item"
             ? ts("anotherLost")
-            : ts("another")}
+            : type === "road_incident"
+              ? ts("anotherRoad")
+              : ts("another")}
       </Button>
     </ResultCard>
   );

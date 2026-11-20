@@ -22,12 +22,14 @@ const FIRST_NOTE: Record<ReportType, string> = {
   complaint: "Report received.",
   commendation: "Commendation received.",
   lost_item: "Lost item report received. We've passed it on to the bus operator where we can.",
+  road_incident: "Road incident report received.",
 };
 
 const SUBMITTED_EVENT: Record<ReportType, MetricEvent> = {
   complaint: "report_submitted",
   commendation: "commendation_submitted",
   lost_item: "lost_item_submitted",
+  road_incident: "road_incident_submitted",
 };
 
 export const generateFreeReceiptId = async (): Promise<string> => {
@@ -70,6 +72,7 @@ export const fileReport = async (
       ...saved,
       busName: saved.busName ?? undefined,
       incidentAt: saved.incidentAt ?? undefined,
+      details: saved.details,
     }));
     const pdfUploadResult = await cloudinary.uploader.upload(
       `data:application/pdf;base64,${pdfBuffer.toString("base64")}`,

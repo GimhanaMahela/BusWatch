@@ -38,7 +38,7 @@ const MAX_MESSAGE_LENGTH = 2000;
 
 const LINK_PATHS: Record<AssistantLink, string> = {
   submit_report: "/submit-report",
-  commend_driver: "/commend-a-driver",
+  commend_driver: "/commend",
   track: "/track",
   my_reports: "/my-reports",
   impact: "/impact",
@@ -147,7 +147,7 @@ function DraftCard({ draft, onOpen }: { draft: ReportDraft; onOpen: () => void }
 }
 
 /**
- * The BusWatch helper: a chat bubble on public pages that answers questions about the service and
+ * The TransitX helper: a chat bubble on public pages that answers questions about the service and
  * helps passengers put a report into words, then fills in the report form for them to check and
  * send. Hidden when the helper is switched off on the API.
  */

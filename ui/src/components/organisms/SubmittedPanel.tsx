@@ -4,6 +4,7 @@ import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+import TrafficRoundedIcon from "@mui/icons-material/TrafficRounded";
 import TravelExploreRoundedIcon from "@mui/icons-material/TravelExploreRounded";
 import ThumbUpAltRoundedIcon from "@mui/icons-material/ThumbUpAltRounded";
 import { Box, Button, IconButton, Tooltip, Typography } from "@mui/material";
@@ -41,6 +42,7 @@ function SubmittedPanel({
   const [copied, setCopied] = useState(false);
   const commendation = type === "commendation";
   const lost = type === "lost_item";
+  const road = type === "road_incident";
   const trackPath = `/track/${encodeURIComponent(receipt.receiptId)}`;
 
   const copy = async () => {
@@ -60,6 +62,8 @@ function SubmittedPanel({
           <ThumbUpAltRoundedIcon />
         ) : lost ? (
           <TravelExploreRoundedIcon />
+        ) : road ? (
+          <TrafficRoundedIcon />
         ) : (
           <TaskAltRoundedIcon />
         )
@@ -67,11 +71,18 @@ function SubmittedPanel({
       color="success"
     >
       <Typography variant="h4" component="h1" sx={{ mt: 3 }}>
-        {commendation ? t("commendTitle") : lost ? t("lostTitle") : t("title")}
+        {commendation
+          ? t("commendTitle")
+          : lost
+            ? t("lostTitle")
+            : road
+              ? t("roadTitle")
+              : t("title")}
       </Typography>
       <Typography color="text.secondary" sx={{ mt: 1 }}>
         {commendation && `${t("commendText")} `}
         {lost && `${t("lostText")} `}
+        {road && `${t("roadText")} `}
         {t("saveId")}
         {receipt.emailSent && ` ${t("emailed")}`}
         {receipt.smsSent && ` ${t("texted")}`}
@@ -117,7 +128,7 @@ function SubmittedPanel({
             size="large"
             startIcon={<DownloadRoundedIcon />}
             href={receipt.pdfUrl}
-            download={`BusWatch_Receipt_${receipt.receiptId}.pdf`}
+            download={`TransitX_Receipt_${receipt.receiptId}.pdf`}
             target="_blank"
             rel="noopener"
           >
@@ -136,7 +147,13 @@ function SubmittedPanel({
       <WhatsAppFollow receiptId={receipt.receiptId} compact />
       <TelegramFollow receiptId={receipt.receiptId} compact />
       <Button onClick={onReset} sx={{ mt: 2 }}>
-        {commendation ? t("anotherCommendation") : lost ? t("anotherLost") : t("another")}
+        {commendation
+          ? t("anotherCommendation")
+          : lost
+            ? t("anotherLost")
+            : road
+              ? t("anotherRoad")
+              : t("another")}
       </Button>
     </ResultCard>
   );

@@ -34,7 +34,7 @@ const SECTIONS: ContentSection[] = [
         </ul>
         <h3>Anonymous usage counts</h3>
         <p>
-          To learn whether BusWatch works for passengers, we count a few events per day, for example
+          To learn whether TransitX works for passengers, we count a few events per day, for example
           how many report forms were started, how many tracking pages were opened, and how many
           people arrived by scanning the QR sticker in a bus. These are daily totals only: they
           contain no identifiers, no IP address and nothing about who you are.
@@ -103,7 +103,7 @@ const SECTIONS: ContentSection[] = [
         <p>
           If you follow a report on Telegram, we keep your Telegram chat ID (not your phone number
           or name) to send you short updates with a link to your report, never what our team wrote.
-          Telegram delivers these messages under its own privacy policy. Send /stop to the BusWatch
+          Telegram delivers these messages under its own privacy policy. Send /stop to the TransitX
           bot and we delete your chat ID straight away.
         </p>
         <p>
@@ -122,13 +122,13 @@ const SECTIONS: ContentSection[] = [
           keep what is sent and use it to improve its products.
         </p>
         <p>
-          The BusWatch helper chat also uses Gemini. What you type in the chat is sent to Google to
-          write the answers and is kept only in your browser tab, not by BusWatch. Please don&apos;t
+          The TransitX helper chat also uses Gemini. What you type in the chat is sent to Google to
+          write the answers and is kept only in your browser tab, not by TransitX. Please don&apos;t
           share names, phone numbers or other personal details in the chat. The helper never sends a
           report for you: it fills in the form, and you decide whether to send it.
         </p>
         <p>
-          If you write to BusWatch on WhatsApp, we receive your WhatsApp number and your messages,
+          If you write to TransitX on WhatsApp, we receive your WhatsApp number and your messages,
           photos, videos, voice notes and any location you share. While you are writing a report the
           conversation is kept so the helper can follow it, and your messages and voice notes are
           sent to Gemini to understand them. The conversation is deleted when you send or cancel the
@@ -139,15 +139,23 @@ const SECTIONS: ContentSection[] = [
         </p>
         <h3>Bus operators</h3>
         <p>
-          Bus owners and companies that join BusWatch can see reports about their own buses once our
+          Bus owners and companies that join TransitX can see reports about their own buses once our
           team has checked them: the bus, route, category, location, time and description, and only
           photos with faces and number plates blurred. They never see your name, email address,
           mobile number, receipt ID or your messages with our team. If an operator responds, you see
           their response on your tracking page.
         </p>
+        <h3>Road incidents</h3>
+        <p>
+          When you report a road incident about another vehicle, the number plate, colour and make
+          you give are seen by our team only. Plates are never shown on public pages, on your
+          tracking page or in shared links, and road incidents are never shown to bus operators.
+          Your own PDF receipt includes the plate you gave, so you can use it with the police or an
+          insurer.
+        </p>
         <h3>Data kept on your device</h3>
         <p>
-          If you install BusWatch or lose your connection while writing a report, the unfinished
+          If you install TransitX or lose your connection while writing a report, the unfinished
           report (including any photos and videos you attached) is stored in your browser on your
           own device until it is sent or you start over. We cannot see it until you send it. You can
           remove it at any time by choosing &quot;Start over&quot; on the form or by clearing the
@@ -161,7 +169,7 @@ const SECTIONS: ContentSection[] = [
     title: "Use of data",
     body: (
       <>
-        <p>BusWatch uses the collected data:</p>
+        <p>TransitX uses the collected data:</p>
         <ul>
           <li>To provide and maintain the Service</li>
           <li>To notify you about changes to our Service</li>
@@ -195,7 +203,7 @@ const SECTIONS: ContentSection[] = [
           represents your agreement to that transfer.
         </p>
         <p>
-          BusWatch will take all steps reasonably necessary to ensure that your data is treated
+          TransitX will take all steps reasonably necessary to ensure that your data is treated
           securely and in accordance with this Privacy Policy, and no transfer of your Personal Data
           will take place to an organisation or a country unless there are adequate controls in
           place.
@@ -209,12 +217,12 @@ const SECTIONS: ContentSection[] = [
     body: (
       <>
         <p>
-          BusWatch may disclose your Personal Data in the good faith belief that such action is
+          TransitX may disclose your Personal Data in the good faith belief that such action is
           necessary:
         </p>
         <ul>
           <li>To comply with a legal obligation</li>
-          <li>To protect and defend the rights or property of BusWatch</li>
+          <li>To protect and defend the rights or property of TransitX</li>
           <li>To prevent or investigate possible wrongdoing in connection with the Service</li>
           <li>To protect the personal safety of users of the Service or the public</li>
           <li>To protect against legal liability</li>
@@ -301,7 +309,7 @@ function PrivacyPolicyView() {
       updated="November 5, 2026"
       intro={
         <p>
-          BusWatch (&quot;us&quot;, &quot;we&quot;, or &quot;our&quot;) operates the BusWatch
+          TransitX (&quot;us&quot;, &quot;we&quot;, or &quot;our&quot;) operates the TransitX
           website (the &quot;Service&quot;). This page explains how we collect, use and disclose
           personal data when you use the Service, and the choices you have. By using the Service,
           you agree to the collection and use of information in accordance with this policy.

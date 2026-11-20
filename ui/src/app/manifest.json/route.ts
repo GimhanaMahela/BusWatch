@@ -7,10 +7,10 @@ export const dynamic = "force-static";
 
 const manifest = {
   id: "/",
-  short_name: "BusWatch",
-  name: "BusWatch: report and track bus incidents",
+  short_name: "TransitX",
+  name: "TransitX: report and track bus and road incidents",
   description:
-    "Report bus incidents in Sri Lanka, commend good drivers and track what happens next. Works with a weak signal.",
+    "Report bus and road incidents in Sri Lanka, commend good service and track what happens next. Works with a weak signal.",
   lang: "en",
   icons: [
     { src: "/favicon.ico", sizes: "64x64 32x32 24x24 16x16", type: "image/x-icon" },
@@ -32,9 +32,9 @@ const manifest = {
       icons: [{ src: "/logo192.png", sizes: "192x192" }],
     },
     {
-      name: "Commend a driver",
+      name: "Commend good service",
       short_name: "Commend",
-      url: "/commend-a-driver",
+      url: "/commend",
       icons: [{ src: "/logo192.png", sizes: "192x192" }],
     },
     {

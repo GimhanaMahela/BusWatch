@@ -15,7 +15,12 @@ import { useState, type FormEvent } from "react";
 import { ApiError, errorMessage } from "@/api/apiClient";
 import { GradientButton, StatusChip } from "@/components/atoms";
 import { DetailRow, EmptyState, LoadingState, SectionPanel } from "@/components/molecules";
-import { accessibilityLabel, categoryLabel, statusLabel } from "@/constants/reportConstants";
+import {
+  accessibilityLabel,
+  categoryLabel,
+  commendeeLabel,
+  statusLabel,
+} from "@/constants/reportConstants";
 import { useFleetReport, useRespondToReport } from "@/hooks/useOperatorQueries";
 import { formatDateTime, timeAgo } from "@/lib/format";
 
@@ -38,7 +43,7 @@ function OperatorReportView({ id }: { id: string }) {
           title={notFound ? "Report not found" : "Could not load the report"}
           description={
             notFound
-              ? "It may not be about one of your buses, or the BusWatch team hasn't checked it yet."
+              ? "It may not be about one of your buses, or the TransitX team hasn't checked it yet."
               : errorMessage(report.error, "Please try again.")
           }
           action={<Button href="/operator">Back to your reports</Button>}
@@ -141,6 +146,9 @@ function OperatorReportView({ id }: { id: string }) {
               <DetailRow label="Bus number">{r.busNumber}</DetailRow>
               <DetailRow label="Route">{r.routeNumber}</DetailRow>
               {r.busName && <DetailRow label="Bus name">{r.busName}</DetailRow>}
+              {details?.commendee && (
+                <DetailRow label="Thanking">{commendeeLabel(details.commendee)}</DetailRow>
+              )}
               <DetailRow label="Category">{categoryLabel(r.category)}</DetailRow>
               {details?.accessibility && (
                 <DetailRow label="Accessibility issues">
@@ -246,7 +254,7 @@ function OperatorReportView({ id }: { id: string }) {
                         <Chip
                           size="small"
                           icon={<VisibilityOffRoundedIcon />}
-                          label="Hidden by the BusWatch team"
+                          label="Hidden by the TransitX team"
                         />
                       )}
                     </Box>

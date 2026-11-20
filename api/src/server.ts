@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { checkDatabaseConnection } from "./db/client.js";
 import { env } from "./config/env.js";
 import { createInitialAdmin } from "./services/admin-bootstrap.service.js";
+import { isEmailConfigured, verifyEmailConnection } from "./services/email.service.js";
 import { startTelegramBot } from "./services/telegram.service.js";
 
 const app = createApp();
@@ -17,6 +18,18 @@ checkDatabaseConnection()
     );
     process.exit(1);
   });
+
+// Email is best-effort too: say at startup when the SMTP settings don't work
+if (isEmailConfigured()) {
+  verifyEmailConnection()
+    .then(() => console.log("SMTP server ready."))
+    .catch((error: unknown) => {
+      console.error(
+        "SMTP server not reachable (emails won't be sent):",
+        error instanceof Error ? error.message : error,
+      );
+    });
+}
 
 // Telegram updates are best-effort: a wrong bot token must not stop the API
 startTelegramBot().catch((error: unknown) => {

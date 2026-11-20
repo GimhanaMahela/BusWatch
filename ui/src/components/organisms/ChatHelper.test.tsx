@@ -25,7 +25,7 @@ const draft: ReportDraft = {
 
 const openChat = async () => {
   renderWithProviders(<ChatHelper />);
-  await userEvent.click(await screen.findByRole("button", { name: /Chat with the BusWatch/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /Chat with the TransitX/ }));
 };
 
 describe("ChatHelper", () => {

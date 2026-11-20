@@ -9,7 +9,7 @@ import { messagesFor } from "../src/i18n/messages.js";
 import { handleWhatsAppMessage, type WhatsAppMessage } from "../src/services/whatsapp.service.js";
 import { app, createAdminAndLogin, db, submitReport, useTestDatabase } from "./helpers.js";
 
-// The BusWatch WhatsApp bot. Meta's Graph API and Gemini are stubbed at fetch, Cloudinary at its
+// The TransitX WhatsApp bot. Meta's Graph API and Gemini are stubbed at fetch, Cloudinary at its
 // uploader; everything else (database, AI prompt handling, report filing) runs for real.
 
 vi.mock("../src/config/cloudinary.js", () => ({

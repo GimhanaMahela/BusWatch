@@ -27,9 +27,9 @@ const SECTIONS: ContentSection[] = [
     body: (
       <p>
         The Service and its original content, features and functionality are and will remain the
-        exclusive property of BusWatch and its licensors. Our trademarks and trade dress may not be
+        exclusive property of TransitX and its licensors. Our trademarks and trade dress may not be
         used in connection with any product or service without the prior written consent of
-        BusWatch.
+        TransitX.
       </p>
     ),
   },
@@ -39,7 +39,7 @@ const SECTIONS: ContentSection[] = [
     body: (
       <p>
         Our Service may contain links to third-party websites or services that are not owned or
-        controlled by BusWatch. BusWatch has no control over, and assumes no responsibility for,
+        controlled by TransitX. TransitX has no control over, and assumes no responsibility for,
         their content, privacy policies or practices, and shall not be liable for any damage or loss
         caused by your use of them. We strongly advise you to read their terms and privacy policies.
       </p>
@@ -63,7 +63,7 @@ const SECTIONS: ContentSection[] = [
     title: "Indemnification",
     body: (
       <p>
-        You agree to defend, indemnify and hold harmless BusWatch and its licensees, licensors,
+        You agree to defend, indemnify and hold harmless TransitX and its licensees, licensors,
         employees, contractors, agents, officers and directors from any claims, damages,
         obligations, losses, liabilities, costs or expenses (including attorney&apos;s fees)
         resulting from your use of the Service or a breach of these Terms.
@@ -75,7 +75,7 @@ const SECTIONS: ContentSection[] = [
     title: "Limitation of liability",
     body: (
       <p>
-        In no event shall BusWatch, nor its directors, employees, partners, agents, suppliers or
+        In no event shall TransitX, nor its directors, employees, partners, agents, suppliers or
         affiliates, be liable for any indirect, incidental, special, consequential or punitive
         damages, including loss of profits, data, use, goodwill or other intangible losses,
         resulting from your access to or use of (or inability to use) the Service, any conduct or
@@ -90,7 +90,7 @@ const SECTIONS: ContentSection[] = [
     body: (
       <p>
         Your use of the Service is at your sole risk. The Service is provided on an &quot;as
-        is&quot; and &quot;as available&quot; basis, without warranties of any kind. BusWatch does
+        is&quot; and &quot;as available&quot; basis, without warranties of any kind. TransitX does
         not warrant that the Service will function uninterrupted or securely, that errors will be
         corrected, that it is free of harmful components, or that the results of using it will meet
         your requirements.
@@ -139,7 +139,7 @@ function TermsOfServiceView() {
       updated="May 29, 2025"
       intro={
         <p>
-          Please read these Terms of Service (&quot;Terms&quot;) carefully before using the BusWatch
+          Please read these Terms of Service (&quot;Terms&quot;) carefully before using the TransitX
           website (the &quot;Service&quot;). Your access to and use of the Service is conditioned on
           your acceptance of these Terms, which apply to all visitors, users and others who access
           the Service. If you disagree with any part of them, you may not access the Service.

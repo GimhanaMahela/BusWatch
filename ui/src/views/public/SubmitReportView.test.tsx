@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { submitReport } from "@/api/reportApi";
@@ -25,9 +25,9 @@ describe("SubmitReportView", () => {
     expect(screen.getByLabelText(/Bus number/)).toHaveValue("NB-1234");
     expect(screen.getByLabelText(/Route/)).toHaveValue("08");
     expect(screen.getByText(/You scanned the sticker in bus NB-1234/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Commend the driver" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Commend good service" })).toHaveAttribute(
       "href",
-      "/commend-a-driver?bus=NB-1234&route=08&src=qr",
+      "/commend?bus=NB-1234&route=08&src=qr",
     );
   });
 
@@ -44,7 +44,8 @@ describe("SubmitReportView", () => {
     renderWithProviders(<SubmitReportView />, { locale: "si" });
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("සිදුවීමක් වාර්තා කරන්න");
-    await user.type(screen.getByLabelText(/මාර්ගය/), "08");
+    await user.click(screen.getByRole("radio", { name: "පුද්ගලික බස් රථය" }));
+    await user.type(screen.getByRole("textbox", { name: /මාර්ගය/ }), "08");
     await user.click(screen.getByRole("radio", { name: "අධික ගාස්තු / වැරදි ගාස්තු" }));
     await user.click(screen.getByRole("button", { name: "ඉදිරියට" }));
 
@@ -60,6 +61,7 @@ describe("SubmitReportView", () => {
         type: "complaint",
         busNumber: "NB-1234",
         routeNumber: "08",
+        busService: "private",
         category: "overcharging",
         location: "Pettah",
         language: "si",
@@ -83,6 +85,7 @@ describe("SubmitReportView", () => {
     const user = userEvent.setup();
     renderWithProviders(<SubmitReportView />);
 
+    await user.click(screen.getByRole("radio", { name: "SLTB bus (government)" }));
     await user.click(screen.getByRole("radio", { name: /Accessibility/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.type(screen.getByLabelText(/Where/), "Kurunegala");
@@ -113,6 +116,7 @@ describe("SubmitReportView", () => {
     const user = userEvent.setup();
     renderWithProviders(<SubmitReportView />);
 
+    await user.click(screen.getByRole("radio", { name: "Metro Bus" }));
     await user.click(screen.getByRole("radio", { name: /Reckless/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.queryByText("Is someone in danger right now?")).not.toBeInTheDocument();
@@ -155,6 +159,125 @@ describe("SubmitReportView", () => {
     expect(screen.getByLabelText(/Describe what happened/)).toHaveValue("Shouted at passengers");
 
     await user.click(screen.getByRole("button", { name: "Start over" }));
-    await waitFor(() => expect(screen.getByLabelText(/Bus number/)).toHaveValue(""));
+    await waitFor(() =>
+      expect(screen.getByRole("radio", { name: "A bus" })).toHaveAttribute("aria-checked", "false"),
+    );
+    expect(screen.queryByLabelText(/Bus number/)).not.toBeInTheDocument();
+  });
+
+  it("first asks whether it was a bus, another vehicle or the road, then the kind of bus", async () => {
+    mockSearchParams.current = new URLSearchParams();
+    const user = userEvent.setup();
+    renderWithProviders(<SubmitReportView />);
+
+    expect(screen.queryByLabelText(/Bus number/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Choose what was involved.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "A bus" }));
+    await user.type(screen.getByLabelText(/Bus number/), "NB-1234");
+    await user.type(screen.getByLabelText(/Route/), "138");
+    await user.click(screen.getByRole("radio", { name: /Overcrowding/ }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Choose the bus service.")).toBeInTheDocument();
+    // Bus name is only asked for private buses
+    expect(screen.queryByLabelText(/Bus name/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Private bus" }));
+    expect(screen.getByLabelText(/Bus name/)).toBeInTheDocument();
+  });
+
+  it("files a road incident about another vehicle, with the accident and the call buttons", async () => {
+    mockSearchParams.current = new URLSearchParams();
+    mockedSubmit.mockResolvedValue({
+      msg: "ok",
+      receiptId: "BW-2026-ROAD01",
+      pdfUrl: null,
+      emailSent: false,
+      report: {} as never,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SubmitReportView />);
+
+    await user.click(screen.getByRole("radio", { name: "Another vehicle" }));
+    expect(screen.queryByLabelText(/Bus number/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Accident" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Choose the kind of vehicle.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "Van" }));
+    await user.type(screen.getByLabelText(/Number plate/), "WP CAB-1234");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await user.type(screen.getByLabelText(/Where/), "Kandy Road, Kadawatha");
+    await user.type(screen.getByLabelText(/Describe what happened/), "Van hit a motorcycle");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Say whether you were in it or saw it.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "I saw it happen" }));
+    expect(document.querySelector('a[href="tel:1990"]')).toBeNull();
+    await user.click(screen.getByRole("combobox", { name: /Was anyone hurt/ }));
+    await user.click(within(screen.getByRole("listbox")).getByText("Serious injuries"));
+    expect(document.querySelector('a[href="tel:1990"]')).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    expect(await screen.findByText("BW-2026-ROAD01")).toBeInTheDocument();
+    expect(mockedSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "road_incident",
+        busNumber: "",
+        routeNumber: "",
+        category: "accident",
+        details: JSON.stringify({
+          road: {
+            vehicle: { kind: "van", plate: "WP CAB-1234", colour: "", make: "" },
+            accident: { involvement: "witness", injuries: "serious", vehiclesInvolved: null },
+          },
+        }),
+      }),
+      [],
+      [],
+    );
+    expect(mockedSubmit.mock.calls[0]?.[0]).not.toHaveProperty("busService");
+  });
+
+  it("files a problem with the road itself, without any vehicle", async () => {
+    mockSearchParams.current = new URLSearchParams("subject=road");
+    mockedSubmit.mockResolvedValue({
+      msg: "ok",
+      receiptId: "BW-2026-ROAD02",
+      pdfUrl: null,
+      emailSent: false,
+      report: {} as never,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SubmitReportView />);
+
+    expect(screen.getByRole("radio", { name: "The road itself" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Choose what's wrong with the road.")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Pothole / broken road" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText(/Where/), "Galle Road, Wellawatte");
+    await user.type(screen.getByLabelText(/Describe what happened/), "Deep pothole, left lane");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Send report" }));
+
+    expect(await screen.findByText("BW-2026-ROAD02")).toBeInTheDocument();
+    expect(mockedSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "road_incident",
+        category: "road_hazard",
+        details: JSON.stringify({ road: { hazard: "pothole" } }),
+      }),
+      [],
+      [],
+    );
   });
 });

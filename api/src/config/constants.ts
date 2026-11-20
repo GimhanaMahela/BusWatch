@@ -18,13 +18,15 @@ export const OPEN_STATUSES = [
 ] as const satisfies readonly ReportStatus[];
 
 /**
- * A complaint about an incident, praise for a driver or crew ("Commend a driver"), or something a
- * passenger left on a bus ("Lost something?").
+ * A complaint about an incident, praise for a driver, conductor or bus service ("Commend good
+ * service"), something a passenger left on a bus ("Lost something?"), or a road incident involving
+ * any vehicle or the road itself ("Report a road incident"). Road incidents are not about route buses: they never count in
+ * bus figures, scorecards or operator views.
  */
-export const REPORT_TYPES = ["complaint", "commendation", "lost_item"] as const;
+export const REPORT_TYPES = ["complaint", "commendation", "lost_item", "road_incident"] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
-/** Types the BusWatch helper chat and WhatsApp bot can write (lost items use the web form). */
+/** Types the TransitX helper chat and WhatsApp bot can write (lost items use the web form). */
 export const ASSISTANT_REPORT_TYPES = [
   "complaint",
   "commendation",
@@ -47,11 +49,20 @@ export const COMPLAINT_CATEGORIES = [
 export const COMMENDATION_CATEGORIES = [
   "safe_driving",
   "helpful_staff",
+  "helped_passenger",
   "clean_vehicle",
   "on_time",
   "fair_fare",
+  "comfortable_service",
   "other",
 ] as const;
+
+/**
+ * Who a commendation thanks: the driver, the conductor, both of them, or the bus service as a whole
+ * (the operator or depot). Kept in the report's details; optional for older reports and the bots.
+ */
+export const COMMENDEES = ["driver", "conductor", "crew", "service"] as const;
+export type Commendee = (typeof COMMENDEES)[number];
 
 /** What was left on the bus ("Lost something?") */
 export const LOST_ITEM_CATEGORIES = [
@@ -64,11 +75,39 @@ export const LOST_ITEM_CATEGORIES = [
   "other",
 ] as const;
 
+/** What happened in a road incident ("reckless_driving" and "other" are shared with complaints). */
+export const ROAD_INCIDENT_CATEGORIES = [
+  "reckless_driving",
+  "speeding",
+  "drunk_driving",
+  "red_light",
+  "wrong_side",
+  "dangerous_overtaking",
+  "phone_while_driving",
+  "no_helmet",
+  "road_rage",
+  "unsafe_load",
+  "smoke_emission",
+  "noisy_exhaust",
+  "illegal_parking",
+  "hit_and_run",
+  "accident",
+  "road_hazard",
+  "other",
+] as const;
+export type RoadIncidentCategory = (typeof ROAD_INCIDENT_CATEGORIES)[number];
+
+/** Road incidents about the road itself, not a vehicle: no vehicle details are asked for. */
+export const ROAD_CATEGORIES_WITHOUT_VEHICLE = [
+  "road_hazard",
+] as const satisfies readonly RoadIncidentCategory[];
+
 /** Every category value stored in the database ("other" is shared by every type). */
 export const REPORT_CATEGORIES = [
   ...COMPLAINT_CATEGORIES,
   ...COMMENDATION_CATEGORIES.filter((c) => c !== "other"),
   ...LOST_ITEM_CATEGORIES.filter((c) => c !== "other"),
+  ...ROAD_INCIDENT_CATEGORIES.filter((c) => c !== "other" && c !== "reckless_driving"),
 ] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
 
@@ -76,7 +115,66 @@ export const CATEGORIES_BY_TYPE: Record<ReportType, readonly ReportCategory[]> =
   complaint: COMPLAINT_CATEGORIES,
   commendation: COMMENDATION_CATEGORIES,
   lost_item: LOST_ITEM_CATEGORIES,
+  road_incident: ROAD_INCIDENT_CATEGORIES,
 };
+
+/**
+ * Which kind of public transport bus: a private bus on a route, an SLTB (Sri Lanka Transport Board,
+ * government) bus, or a Metro Bus. Optional for older reports and the WhatsApp bot.
+ */
+export const BUS_SERVICES = ["private", "sltb", "metro"] as const;
+export type BusService = (typeof BUS_SERVICES)[number];
+
+/** The bus figures: complaints and commendations about route buses (not lost items or road incidents). */
+export const BUS_FEEDBACK_TYPES = [
+  "complaint",
+  "commendation",
+] as const satisfies readonly ReportType[];
+
+/** Road incidents: the vehicle involved, if any */
+export const VEHICLE_KINDS = [
+  "car",
+  "van",
+  "lorry",
+  "tipper",
+  "three_wheeler",
+  "motorcycle",
+  "private_bus",
+  "school_van",
+  "taxi",
+  "government",
+  "tractor",
+  "unknown",
+] as const;
+export type VehicleKind = (typeof VEHICLE_KINDS)[number];
+
+/** Road accidents: whether the passenger was in it or saw it, and how badly people were hurt. */
+export const ACCIDENT_INVOLVEMENT = ["involved", "witness"] as const;
+export type AccidentInvolvement = (typeof ACCIDENT_INVOLVEMENT)[number];
+export const INJURY_LEVELS = ["none", "minor", "serious", "unknown"] as const;
+export type InjuryLevel = (typeof INJURY_LEVELS)[number];
+
+/** Road hazards: what is wrong with the road */
+export const ROAD_HAZARDS = [
+  "pothole",
+  "broken_signal",
+  "streetlight_out",
+  "flooding",
+  "fallen_tree",
+  "landslide",
+  "missing_sign",
+  "debris",
+  "animals",
+  "other",
+] as const;
+export type RoadHazard = (typeof ROAD_HAZARDS)[number];
+
+export const ROAD_INCIDENT = {
+  /** "WP CAB-1234", "65-1234", "ශ්‍රී 1234", or part of one */
+  maxPlateLength: 15,
+  maxVehicleText: 40,
+  maxVehiclesInvolved: 20,
+} as const;
 
 /** Accessibility complaints: what went wrong, ticked by the passenger (at least one). */
 export const ACCESSIBILITY_ISSUES = [
@@ -106,7 +204,7 @@ export type Language = (typeof LANGUAGES)[number];
 
 /**
  * How the report reached us: the website, the website opened from the QR sticker inside a bus, or
- * a chat with the BusWatch WhatsApp bot.
+ * a chat with the TransitX WhatsApp bot.
  */
 export const REPORT_SOURCES = ["web", "qr", "whatsapp"] as const;
 export type ReportSource = (typeof REPORT_SOURCES)[number];
@@ -181,6 +279,7 @@ export const METRIC_EVENTS = [
   "safety_report_submitted",
   "trip_share_started",
   "emergency_shown",
+  "road_incident_submitted",
 ] as const;
 export type MetricEvent = (typeof METRIC_EVENTS)[number];
 
@@ -254,7 +353,7 @@ export type PartOfDay = (typeof PARTS_OF_DAY)[number];
 export const ADMIN_ROLES = ["superadmin", "admin", "operator"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
-/** The BusWatch team: everyone except operators. */
+/** The TransitX team: everyone except operators. */
 export const STAFF_ROLES = ["superadmin", "admin"] as const satisfies readonly AdminRole[];
 
 export const MAX_OPERATOR_RESPONSE_LENGTH = 2000;
@@ -262,13 +361,13 @@ export const MAX_OPERATOR_RESPONSE_LENGTH = 2000;
 /** AI help: descriptions longer than this get a summary */
 export const AI_SUMMARY_MIN_LENGTH = 400;
 
-/** BusWatch helper chat: how much of a conversation the browser may send each time */
+/** TransitX helper chat: how much of a conversation the browser may send each time */
 export const ASSISTANT = {
   maxMessages: 30,
   maxMessageLength: 2000,
 } as const;
 
-/** The BusWatch WhatsApp bot */
+/** The TransitX WhatsApp bot */
 export const WHATSAPP = {
   /** WhatsApp only allows free-form messages this long after the passenger's last message */
   replyWindowHours: 24,
@@ -327,4 +426,6 @@ export const UPLOAD_LIMITS = {
   maxImages: 5,
   maxVideos: 2,
   maxFileBytes: 10 * 1024 * 1024,
+  /** Videos may be bigger: a short dashcam or phone clip is rarely under 10 MB */
+  maxVideoBytes: 30 * 1024 * 1024,
 } as const;

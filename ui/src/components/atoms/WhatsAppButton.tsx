@@ -12,7 +12,7 @@ interface WhatsAppButtonProps extends Omit<ButtonProps<"a">, "href" | "children"
 }
 
 /**
- * Opens a chat with the BusWatch WhatsApp bot. Renders nothing when the bot isn't set up.
+ * Opens a chat with the TransitX WhatsApp bot. Renders nothing when the bot isn't set up.
  * "contained" uses WhatsApp green; "outlined" suits light panels.
  */
 function WhatsAppButton({

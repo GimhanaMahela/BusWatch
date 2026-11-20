@@ -2,7 +2,7 @@ import apiClient, { call } from "@/api/apiClient";
 import type { Language } from "@/constants/reportConstants";
 import type { AssistantReply } from "@/types/assistant";
 
-/** Whether the BusWatch helper chat is switched on */
+/** Whether the TransitX helper chat is switched on */
 export const getAssistantStatus = () =>
   call<{ enabled: boolean }>(apiClient.get("/assistant/status"));
 

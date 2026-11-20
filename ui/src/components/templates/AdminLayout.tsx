@@ -19,7 +19,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
             "@media print": { p: 0 },
           }}
         >
-          <Box sx={{ maxWidth: 1400, mx: "auto" }}>{children}</Box>
+          <Box sx={{ maxWidth: 1536, mx: "auto" }}>{children}</Box>
         </Box>
       </Box>
     </AdminGuard>

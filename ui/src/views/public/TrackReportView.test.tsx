@@ -113,6 +113,7 @@ describe("TrackReportView", () => {
       ...report,
       type: "commendation",
       category: "helpful_staff",
+      details: { commendee: "conductor" },
       status: "escalated",
       location: null,
       canRate: false,
@@ -124,7 +125,9 @@ describe("TrackReportView", () => {
 
     expect(await screen.findByText("ඔබේ කාරුණික වචන බස් හිමිකරු වෙත යොමු කර ඇත.")).toBeInTheDocument();
     expect(screen.getAllByText("ප්‍රශංසාව ලැබුණා.")).toHaveLength(1);
-    expect(screen.getByText("කාරුණික, උදව්කාරී කාර්ය මණ්ඩලය")).toBeInTheDocument();
+    expect(screen.getByText("කාරුණික, ආචාරශීලී සහ උදව්කාරී")).toBeInTheDocument();
+    expect(screen.getByText("ස්තුති කරන්නේ")).toBeInTheDocument();
+    expect(screen.getByText("කොන්දොස්තර")).toBeInTheDocument();
     expect(screen.queryByText("ස්ථානය")).not.toBeInTheDocument();
   });
 

@@ -19,7 +19,13 @@ import {
 } from "drizzle-orm/pg-core";
 import {
   type AccessibilityIssue,
+  type AccidentInvolvement,
   ADMIN_ROLES,
+  BUS_SERVICES,
+  type Commendee,
+  type InjuryLevel,
+  type RoadHazard,
+  type VehicleKind,
   CONTACT_CHANNELS,
   LANGUAGES,
   MESSAGE_SENDERS,
@@ -35,6 +41,10 @@ import {
 } from "../config/constants.js";
 import type { ReportDraft } from "../services/assistant.service.js";
 
+// Every table has row level security on, with no policies. On Supabase that keeps the tables out
+// of its public Data API (the anon key); the app connects as the tables' owner, which RLS doesn't
+// apply to, so it sees everything as before. New tables need `.enableRLS()` too (a test checks).
+
 // Column names are snake_case in the database; Drizzle maps them from the camelCase keys
 // (`casing: "snake_case"` in db/client.ts and drizzle.config.ts).
 
@@ -43,6 +53,7 @@ const timestamptz = () => timestamp({ withTimezone: true });
 export const adminRole = pgEnum("admin_role", ADMIN_ROLES);
 export const reportStatus = pgEnum("report_status", REPORT_STATUSES);
 export const reportCategory = pgEnum("report_category", REPORT_CATEGORIES);
+export const busService = pgEnum("bus_service", BUS_SERVICES);
 export const reportType = pgEnum("report_type", REPORT_TYPES);
 export const reportSource = pgEnum("report_source", REPORT_SOURCES);
 export const language = pgEnum("language", LANGUAGES);
@@ -59,7 +70,7 @@ export const admins = pgTable("admins", {
   // Operators: the company or owner name passengers see next to their responses
   organisation: text(),
   createdAt: timestamptz().notNull().defaultNow(),
-});
+}).enableRLS();
 
 /** Operator portal: the buses an operator account owns (bus numbers normalised, e.g. "NB1234"). */
 export const operatorBuses = pgTable(
@@ -71,7 +82,7 @@ export const operatorBuses = pgTable(
     busNumber: text().notNull(),
   },
   (t) => [primaryKey({ columns: [t.operatorId, t.busNumber] }), index().on(t.busNumber)],
-);
+).enableRLS();
 
 export const reports = pgTable(
   "reports",
@@ -79,9 +90,13 @@ export const reports = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     receiptId: text().notNull().unique(),
     type: reportType().notNull().default("complaint"),
-    busNumber: text().notNull(), // stored upper-case
-    routeNumber: text().notNull(),
+    // Stored upper-case. Empty for road incidents: they are not about a route bus, and the
+    // vehicle's plate (admins only) is kept in details.road instead
+    busNumber: text().notNull(),
+    routeNumber: text().notNull(), // empty for road incidents
     busName: text(),
+    // Private, SLTB (government) or Metro Bus; null for road incidents and older reports
+    busService: busService(),
     category: reportCategory().notNull().default("other"),
     location: text(), // human-readable location; required for complaints, optional for commendations
     latitude: doublePrecision(), // optional GPS pin
@@ -111,7 +126,7 @@ export const reports = pgTable(
     // Operators only ever see these.
     blurredImages: text().array(),
     // Structured extras for some categories: accessibility issues, the official fare for an
-    // overcharging complaint, or what happened on the safety-mode form
+    // overcharging complaint, what happened on the safety-mode form, or a road incident's vehicle
     details: jsonb().$type<ReportDetails>(),
   },
   (t) => [
@@ -124,7 +139,7 @@ export const reports = pgTable(
     index().on(t.passengerPhone),
     check("outcome_rating_range", sql`${t.outcomeRating} BETWEEN 1 AND 5`),
   ],
-);
+).enableRLS();
 
 /** The official fare, worked out by the server from the admins' fare tables (never the browser). */
 export interface FareEvidence {
@@ -141,11 +156,34 @@ export interface FareEvidence {
   effectiveFrom: string | null;
 }
 
+/**
+ * A road incident: the vehicle (not for road hazards), and what kind of accident or hazard. The
+ * plate is shown to admins only, never on the tracking page or anywhere public.
+ */
+export interface RoadIncidentDetails {
+  vehicle?: {
+    kind: VehicleKind;
+    /** Upper-case, may be partial ("WP CA?-12"), null when not seen */
+    plate: string | null;
+    colour: string | null;
+    make: string | null;
+  };
+  accident?: {
+    involvement: AccidentInvolvement;
+    injuries: InjuryLevel;
+    vehiclesInvolved: number | null;
+  };
+  hazard?: RoadHazard;
+}
+
 export interface ReportDetails {
   accessibility?: AccessibilityIssue[];
+  road?: RoadIncidentDetails;
   fare?: FareEvidence;
   /** Filed from the quick, quiet safety-mode form */
   safety?: { kinds: SafetyKind[] };
+  /** Commendations: who the passenger is thanking */
+  commendee?: Commendee;
 }
 
 export interface AiInsights {
@@ -176,7 +214,7 @@ export const reportStatusChanges = pgTable(
     changedAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.reportId, t.changedAt)],
-);
+).enableRLS();
 
 export const reportNotes = pgTable(
   "report_notes",
@@ -190,7 +228,7 @@ export const reportNotes = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.reportId, t.createdAt)],
-);
+).enableRLS();
 
 /**
  * "Messages between admin and passenger": a conversation on one report, e.g. an admin asking
@@ -211,7 +249,7 @@ export const reportMessages = pgTable(
     readAt: timestamptz(),
   },
   (t) => [index().on(t.reportId, t.createdAt)],
-);
+).enableRLS();
 
 /** One-time sign-in codes for "My reports". Only a hash of the code is stored. */
 export const passengerCodes = pgTable(
@@ -227,7 +265,7 @@ export const passengerCodes = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.destination, t.createdAt.desc())],
-);
+).enableRLS();
 
 /** Browser push subscriptions: a device asked to be notified about one report. */
 export const pushSubscriptions = pgTable(
@@ -243,9 +281,9 @@ export const pushSubscriptions = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [uniqueIndex().on(t.reportId, t.endpoint), index().on(t.endpoint)],
-);
+).enableRLS();
 
-/** Telegram chats following a report: the passenger pressed Start on the BusWatch bot. */
+/** Telegram chats following a report: the passenger pressed Start on the TransitX bot. */
 export const telegramSubscriptions = pgTable(
   "telegram_subscriptions",
   {
@@ -257,7 +295,7 @@ export const telegramSubscriptions = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [uniqueIndex().on(t.reportId, t.chatId), index().on(t.chatId)],
-);
+).enableRLS();
 
 /** WhatsApp numbers following a report: they filed it on WhatsApp or sent the bot its receipt ID. */
 export const whatsappSubscriptions = pgTable(
@@ -271,7 +309,7 @@ export const whatsappSubscriptions = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [uniqueIndex().on(t.reportId, t.phone), index().on(t.phone)],
-);
+).enableRLS();
 
 export interface WhatsAppTurn {
   role: "user" | "assistant";
@@ -307,7 +345,7 @@ export const whatsappChats = pgTable("whatsapp_chats", {
   windowStartedAt: timestamptz().notNull().defaultNow(),
   windowCount: integer().notNull().default(0),
   updatedAt: timestamptz().notNull().defaultNow(),
-});
+}).enableRLS();
 
 /**
  * IDs of incoming WhatsApp messages already handled. Meta re-sends a webhook call when it doesn't
@@ -320,7 +358,7 @@ export const whatsappInbound = pgTable(
     receivedAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.receivedAt)],
-);
+).enableRLS();
 
 /**
  * "Me too" confirmations: another passenger saw the same incident and backed up the report
@@ -342,7 +380,7 @@ export const reportConfirmations = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [uniqueIndex().on(t.reportId, t.deviceHash), index().on(t.reportId, t.createdAt)],
-);
+).enableRLS();
 
 /**
  * Operator portal: what the bus owner says they did about a report ("Driver suspended for a week").
@@ -362,7 +400,7 @@ export const operatorResponses = pgTable(
     createdAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.reportId, t.createdAt)],
-);
+).enableRLS();
 
 export interface StoryTranslation {
   title: string;
@@ -392,7 +430,7 @@ export const impactStories = pgTable(
     updatedAt: timestamptz().notNull().defaultNow(),
   },
   (t) => [index().on(t.published, t.publishedAt.desc())],
-);
+).enableRLS();
 
 /** Fare checker: the NTC fare for each number of fare stages travelled, per service class. */
 export const fareTables = pgTable("fare_tables", {
@@ -402,7 +440,7 @@ export const fareTables = pgTable("fare_tables", {
   effectiveFrom: date({ mode: "string" }),
   updatedBy: text(),
   updatedAt: timestamptz().notNull().defaultNow(),
-});
+}).enableRLS();
 
 export interface FareStop {
   name: string;
@@ -421,7 +459,7 @@ export const fareRoutes = pgTable("fare_routes", {
   stops: jsonb().$type<FareStop[]>().notNull(),
   updatedBy: text(),
   updatedAt: timestamptz().notNull().defaultNow(),
-});
+}).enableRLS();
 
 /**
  * "Share my trip" (safety mode): a passenger's live position for a trusted contact. Only the latest
@@ -445,7 +483,7 @@ export const tripShares = pgTable(
     endedAt: timestamptz(),
   },
   (t) => [index().on(t.startedAt)],
-);
+).enableRLS();
 
 /** Anonymous daily counters for the Phase 1 success metrics (no personal data). */
 export const dailyMetrics = pgTable(
@@ -456,7 +494,7 @@ export const dailyMetrics = pgTable(
     count: integer().notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.event] })],
-);
+).enableRLS();
 
 export const reportsRelations = relations(reports, ({ many }) => ({
   statusHistory: many(reportStatusChanges),

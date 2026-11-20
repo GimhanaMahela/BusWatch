@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   OPERATOR_LOST_ITEM_STATUSES,
+  BUS_FEEDBACK_TYPES,
   PUBLIC_STATUSES,
   REPORT_STATUSES,
   type ReportStatus,
@@ -63,7 +64,8 @@ export const setOrganisation = async (operatorId: string, organisation: string |
  * Reports about this operator's buses that an admin has checked (pending ones are unverified,
  * rejected ones didn't stand) and not hidden. Same fairness rule as the public scorecards.
  * Lost items are the exception: they can't wait for an admin, and accuse nobody, so operators see
- * them as soon as they arrive (unless an admin closed or hid them).
+ * them as soon as they arrive (unless an admin closed or hid them). Road incidents are never shown:
+ * they are not about route buses.
  */
 const fleetReports = (operatorId: string): SQL =>
   and(
@@ -72,7 +74,10 @@ const fleetReports = (operatorId: string): SQL =>
       WHERE ${operatorBuses.operatorId} = ${operatorId}
     )`,
     or(
-      and(ne(reports.type, "lost_item"), inArray(reports.status, [...PUBLIC_STATUSES])),
+      and(
+        inArray(reports.type, [...BUS_FEEDBACK_TYPES]),
+        inArray(reports.status, [...PUBLIC_STATUSES]),
+      ),
       and(eq(reports.type, "lost_item"), inArray(reports.status, [...OPERATOR_LOST_ITEM_STATUSES])),
     ),
     eq(reports.hiddenFromPublic, false),

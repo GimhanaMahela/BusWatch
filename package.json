@@ -1,8 +1,8 @@
 {
-  "name": "buswatch",
+  "name": "transitx",
   "version": "2.0.0",
   "private": true,
-  "description": "BusWatch: report and track public transport incidents (API + Next.js web UI)",
+  "description": "TransitX: report and track public transport incidents (API + Next.js web UI)",
   "type": "module",
   "engines": {
     "node": ">=22.22.0"
@@ -18,7 +18,9 @@
     "start:ui": "next start ui --port 3000",
     "db:generate": "drizzle-kit generate --config api/drizzle.config.ts",
     "db:migrate": "tsx --env-file-if-exists=.env api/src/db/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=.env api/src/scripts/seed.ts",
     "db:studio": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs studio --config api/drizzle.config.ts",
+    "email:test": "tsx --env-file-if-exists=.env api/src/scripts/email-test.ts",
     "typecheck": "next typegen ui && tsc -p tsconfig.json && tsc -p api --noEmit && tsc -p ui",
     "lint": "eslint .",
     "format": "prettier --write .",

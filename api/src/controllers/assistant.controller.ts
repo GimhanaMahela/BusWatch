@@ -5,7 +5,7 @@ import { chat as askAssistant, isAssistantEnabled } from "../services/assistant.
 import { checkEmergency } from "../services/emergency.service.js";
 import type { ChatInput, EmergencyCheckInput } from "../validators/assistant.validator.js";
 
-// @desc    Is the BusWatch helper chat switched on?
+// @desc    Is the TransitX helper chat switched on?
 // @route   GET /api/assistant/status
 // @access  Public
 export const status = (_req: Request, res: Response) => {
@@ -17,7 +17,7 @@ export const status = (_req: Request, res: Response) => {
 // @access  Public (rate limited)
 export const chat = async (req: Request<object, object, ChatInput>, res: Response) => {
   if (!isAssistantEnabled()) {
-    res.status(503).json({ msg: "The BusWatch helper is not available right now." });
+    res.status(503).json({ msg: "The TransitX helper is not available right now." });
     return;
   }
   try {

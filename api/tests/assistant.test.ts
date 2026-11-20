@@ -42,7 +42,7 @@ const draft = (overrides: Record<string, unknown> = {}) => ({
 const send = (messages: { role: string; text: string }[], language = "en") =>
   request(app).post("/api/assistant/chat").send({ messages, language });
 
-describe("BusWatch helper chat", () => {
+describe("TransitX helper chat", () => {
   it("is switched on when Gemini is set up", async () => {
     const res = await request(app).get("/api/assistant/status");
     expect(res.body).toEqual({ enabled: true });
@@ -67,7 +67,7 @@ describe("BusWatch helper chat", () => {
       draft: { ...draft(), busNumber: "NB-1234" },
     });
 
-    // The conversation goes to Gemini with its own roles, after the BusWatch instructions
+    // The conversation goes to Gemini with its own roles, after the TransitX instructions
     const body = gemini.reply.mock.calls[0]![0];
     expect(body.contents.map((turn: { role: string }) => turn.role)).toEqual([
       "user",

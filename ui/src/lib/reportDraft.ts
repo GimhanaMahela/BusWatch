@@ -2,16 +2,17 @@ import { busQuery } from "@/lib/busNumber";
 import { loadDraft, saveDraft } from "@/lib/offlineStore";
 import type { ReportDraft } from "@/types/assistant";
 
-// The report forms keep unfinished work as drafts on the device (see useFormDraft). The BusWatch
+// The report forms keep unfinished work as drafts on the device (see useFormDraft). The TransitX
 // helper hands its draft over the same way: it saves a draft the form then restores on load.
 
 /** Draft keys of the two forms; the views use these too. */
 export const REPORT_DRAFT_KEY = "submit-report";
+// The form moved to /commend; the key stays so drafts saved before the move are kept
 export const COMMEND_DRAFT_KEY = "commend-a-driver";
 export const LOST_DRAFT_KEY = "lost-something";
 
 export const REPORT_FORM_PATH = "/submit-report";
-export const COMMEND_FORM_PATH = "/commend-a-driver";
+export const COMMEND_FORM_PATH = "/commend";
 
 type StoredForm = Record<string, unknown> & { form?: Record<string, unknown> };
 

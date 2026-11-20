@@ -31,9 +31,9 @@ import {
 import { trackingUrl } from "./email.service.js";
 import { fileReport } from "./report-submission.service.js";
 
-// The BusWatch WhatsApp bot, on Meta's WhatsApp Cloud API
+// The TransitX WhatsApp bot, on Meta's WhatsApp Cloud API
 // (https://developers.facebook.com/docs/whatsapp/cloud-api). Passengers can:
-// - report a problem or praise a driver by chatting with the BusWatch helper (the same AI as the
+// - report a problem or praise good service by chatting with the TransitX helper (the same AI as the
 //   website's chat bubble), with photos, videos, voice notes and a shared location. The bot shows
 //   the finished report and only files it when the passenger presses "Send report".
 // - send a receipt ID to see a report's status, and follow it for updates here.
@@ -377,7 +377,7 @@ const askToConfirm = async (chat: WhatsAppChat, draft: ReportDraft) => {
 
 const ASSISTANT_PATHS = {
   submit_report: "/submit-report",
-  commend_driver: "/commend-a-driver",
+  commend_driver: "/commend",
   track: "/track",
   my_reports: "/my-reports",
   impact: "/impact",
@@ -396,7 +396,7 @@ const attachmentNote = (chat: WhatsAppChat) => {
   return parts.length ? `\n\n[The passenger has already sent ${parts.join(", ")}.]` : "";
 };
 
-/** One turn with the BusWatch helper: a typed message or a voice note. */
+/** One turn with the TransitX helper: a typed message or a voice note. */
 const converse = async (
   chat: WhatsAppChat,
   input: { text: string } | { audio: { mimeType: string; data: Buffer } },
@@ -554,7 +554,7 @@ const sendReport = async (phone: string) => {
     await sendDocument(
       phone,
       pdfUrl,
-      `BusWatch-${saved.receiptId}.pdf`,
+      `TransitX-${saved.receiptId}.pdf`,
       t.receiptCaption(saved.receiptId),
     ).catch((error: unknown) =>
       console.error("WhatsApp receipt PDF failed:", error instanceof Error ? error.message : error),

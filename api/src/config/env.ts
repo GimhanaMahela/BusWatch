@@ -10,6 +10,19 @@ const EnvSchema = z.object({
   VERCEL: optional(z.string()),
 
   DATABASE_URL: z.string({ error: "DATABASE_URL is required" }).min(1, "DATABASE_URL is required"),
+  // Migrations (and drizzle-kit) use this when set: on Supabase the app goes through the
+  // connection pooler (DATABASE_URL, port 6543) and migrations use the direct or session
+  // connection (port 5432)
+  DATABASE_DIRECT_URL: optional(z.string()),
+  // "auto": encrypted for every host except localhost and the docker-compose "postgres" service
+  // (or as the URL's ?sslmode= says); "on" / "off" force it
+  DATABASE_SSL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["auto", "on", "off"]).default("auto"),
+  ),
+  // The database's CA certificate (PEM; "\n" for line breaks is fine), so the server's certificate
+  // is verified too. Supabase: Project Settings → Database → SSL Configuration → Download
+  DATABASE_CA_CERT: optional(z.string()),
   JWT_SECRET: z.string({ error: "JWT_SECRET is required" }).min(1, "JWT_SECRET is required"),
 
   ADMIN_EMAIL: optional(z.email()),
@@ -26,6 +39,11 @@ const EnvSchema = z.object({
   EMAIL_SERVICE_PORT: z.coerce.number().int().positive().default(587),
   EMAIL_SERVICE_USER: optional(z.string()),
   EMAIL_SERVICE_PASS: optional(z.string()),
+  // "TransitX <noreply@your-domain.lk>": needed when the SMTP user name isn't an email address
+  // (Brevo, Resend, Amazon SES...); defaults to the user name
+  EMAIL_FROM: optional(z.string()),
+  // Implicit TLS (port 465). Defaults to true on port 465 and STARTTLS otherwise (587)
+  EMAIL_SERVICE_SECURE: optional(z.enum(["true", "false"]).transform((value) => value === "true")),
   // Cloudflare Turnstile CAPTCHA on public submissions; skipped when unset (development, tests)
   TURNSTILE_SECRET_KEY: optional(z.string()),
 
@@ -64,7 +82,7 @@ const EnvSchema = z.object({
     z.string().regex(/^[\w-]{1,256}$/, "Use letters, digits, _ and -"),
   ),
 
-  // The BusWatch WhatsApp bot, through Meta's WhatsApp Cloud API (see the README). Off unless the
+  // The TransitX WhatsApp bot, through Meta's WhatsApp Cloud API (see the README). Off unless the
   // access token and phone number ID are set.
   WHATSAPP_ACCESS_TOKEN: optional(z.string()),
   WHATSAPP_PHONE_NUMBER_ID: optional(z.string()),
@@ -96,7 +114,7 @@ const EnvSchema = z.object({
   ),
   // Used when AI_MODEL is overloaded or out of free quota; "" turns the fallback off
   AI_FALLBACK_MODEL: z.string().default("gemini-flash-lite-latest"),
-  // "false" hides the BusWatch helper chat on the public site (it shares the free Gemini quota with
+  // "false" hides the TransitX helper chat on the public site (it shares the free Gemini quota with
   // the admin AI help, so switch it off if the quota runs out)
   AI_CHAT_ENABLED: z
     .enum(["true", "false"])
