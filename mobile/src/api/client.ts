@@ -6,6 +6,9 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://10.0.2.2:5000/
 /** The public website, for links the app opens or shares */
 export const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? "http://localhost:3000";
 
+/** Cloudflare Turnstile site key; empty when the API runs without a CAPTCHA (development) */
+export const TURNSTILE_SITE_KEY = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+
 const apiClient = create({ baseURL: API_URL, timeout: 15000 });
 
 /** Normalised error thrown by every API helper (same shape as the website's) */

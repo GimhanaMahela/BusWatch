@@ -33,15 +33,22 @@ type TextVariant = "title" | "heading" | "body" | "secondary" | "label";
 export function AppText({
   variant = "body",
   style,
+  selectable,
   children,
 }: {
   variant?: TextVariant;
   style?: StyleProp<TextStyle>;
+  /** Lets people long-press to copy, e.g. a receipt ID */
+  selectable?: boolean;
   children: ReactNode;
 }) {
   const theme = useTheme();
   const color = variant === "secondary" || variant === "label" ? theme.textSecondary : theme.text;
-  return <Text style={[styles[variant], { color }, style]}>{children}</Text>;
+  return (
+    <Text selectable={selectable} style={[styles[variant], { color }, style]}>
+      {children}
+    </Text>
+  );
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {

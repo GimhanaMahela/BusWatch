@@ -34,7 +34,8 @@ const lookup = (messages: Messages, key: string): string | undefined => {
   return typeof node === "string" ? node : undefined;
 };
 
-export type Values = Record<string, string | number>;
+/** Arguments, or tag functions for rich text such as "agree to our <terms>terms</terms>" */
+export type Values = Record<string, string | number | ((chunks: string[]) => string)>;
 export type Translate = (key: string, values?: Values) => string;
 
 /**
@@ -51,6 +52,7 @@ export const createTranslator = (locale: Locale): Translate => {
       format = new IntlMessageFormat(source, locale);
       cache.set(key, format);
     }
-    return String(format.format(values));
+    const result = format.format<string>(values);
+    return Array.isArray(result) ? result.join("") : String(result);
   };
 };

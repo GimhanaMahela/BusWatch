@@ -203,14 +203,14 @@ export const LANGUAGES = ["en", "si", "ta"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /**
- * How the report reached us: the website, the website opened from the QR sticker inside a bus, or
- * a chat with the TransitX WhatsApp bot.
+ * How the report reached us: the website, the website opened from the QR sticker inside a bus, a
+ * chat with the TransitX WhatsApp bot, or the TransitX mobile app.
  */
-export const REPORT_SOURCES = ["web", "qr", "whatsapp"] as const;
+export const REPORT_SOURCES = ["web", "qr", "whatsapp", "app"] as const;
 export type ReportSource = (typeof REPORT_SOURCES)[number];
 
-/** Sources the website's forms may claim ("whatsapp" is only set by the bot itself). */
-export const WEB_REPORT_SOURCES = ["web", "qr"] as const satisfies readonly ReportSource[];
+/** Sources the website's and app's forms may claim ("whatsapp" is only set by the bot itself). */
+export const WEB_REPORT_SOURCES = ["web", "qr", "app"] as const satisfies readonly ReportSource[];
 
 /** Statuses after which the passenger may rate how their report was handled */
 export const RATEABLE_STATUSES = [

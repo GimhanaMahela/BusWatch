@@ -1,6 +1,12 @@
 {
   "settings": "Settings",
   "version": "Version {version}",
-  "reportOnWebsite": "The report form opens on the TransitX website for now. It moves into the app in the next release.",
-  "apiServer": "Server"
+  "apiServer": "Server",
+  "required": "Required.",
+  "emailInvalid": "Enter a valid email address.",
+  "takePhoto": "Take a photo",
+  "locating": "Finding your location…",
+  "securityCheck": "Security check",
+  "securityCheckNeeded": "Complete the security check first.",
+  "fixErrors": "Check the highlighted fields."
 }

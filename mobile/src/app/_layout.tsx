@@ -31,6 +31,11 @@ function RootStack() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="track/[receiptId]" options={{ title: t("header.track") }} />
+        <Stack.Screen name="report" options={{ title: t("submit.title") }} />
+        <Stack.Screen
+          name="report-sent"
+          options={{ title: t("submit.title"), headerBackVisible: false, gestureEnabled: false }}
+        />
       </Stack>
     </ThemeProvider>
   );
