@@ -48,14 +48,23 @@ from the lockfile, and `npm ci` on CI then fails with "Missing: fsevents from lo
 ```
 src/
 ├── app/            # Screens (Expo Router): (tabs)/ Home, Track, Settings; track/[receiptId];
-│                   #   report (the complaint form) and report-sent (the receipt)
+│                   #   report (the complaint form), report-sent (the receipt), outbox
 ├── api/            # HTTP calls: client.ts (axios + ApiError), reports.ts
 ├── components/     # Themed building blocks (ui, form), PhotoPicker, Turnstile (CAPTCHA WebView)
 ├── i18n/           # Language provider and translator
-├── lib/            # Report form model and checks, location, receipt IDs, dates
+├── lib/            # Report form model and checks, offline outbox (SQLite), location, dates
 ├── messages/       # App-only text in en / si / ta
 └── theme/          # TransitX palette, light and dark
 ```
+
+## Offline reports
+
+A report sent without a connection (or whose upload drops mid-way) is saved in the outbox: a
+SQLite database plus copies of its photos in the app's documents folder. It goes out on its own
+when the connection returns or the app is opened again, using the same rules as the website's
+outbox: invalid reports are dropped with the server's reason, anything else stays queued. With
+Turnstile on, every send needs a fresh token, so saved reports are sent from the "Waiting to send"
+screen instead. Receipt IDs of reports sent from the phone are listed on the Track tab.
 
 ## Builds
 

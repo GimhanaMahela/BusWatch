@@ -8,5 +8,9 @@
   "locating": "Finding your location…",
   "securityCheck": "Security check",
   "securityCheckNeeded": "Complete the security check first.",
-  "fixErrors": "Check the highlighted fields."
+  "fixErrors": "Check the highlighted fields.",
+  "outboxTitle": "Waiting to send",
+  "outboxEmpty": "Nothing is waiting to be sent.",
+  "sendNow": "Send now",
+  "sentFromPhone": "Sent from this phone"
 }

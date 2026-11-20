@@ -15,12 +15,30 @@ export default function ReportSentScreen() {
     receiptId = "",
     emailed,
     texted,
+    queued,
   } = useLocalSearchParams<{
-    receiptId: string;
+    receiptId?: string;
     emailed?: string;
     texted?: string;
+    queued?: string;
   }>();
   const [copied, setCopied] = useState(false);
+
+  // Saved offline: there is no receipt ID until the outbox sends it
+  if (queued) {
+    return (
+      <Screen>
+        <AppText variant="title" style={{ color: theme.warning }}>
+          {t("offline.queuedTitle")}
+        </AppText>
+        <Card>
+          <AppText>{t("offline.queuedText")}</AppText>
+          <AppText variant="secondary">{t("offline.queuedHint")}</AppText>
+        </Card>
+        <Button label={t("header.home")} onPress={() => router.replace("/")} />
+      </Screen>
+    );
+  }
 
   const copy = async () => {
     await Clipboard.setStringAsync(receiptId);

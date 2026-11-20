@@ -6,6 +6,7 @@ import { useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
+import { OutboxProvider } from "@/lib/OutboxProvider";
 import { palettes } from "@/theme/colors";
 
 function RootStack() {
@@ -32,6 +33,7 @@ function RootStack() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="track/[receiptId]" options={{ title: t("header.track") }} />
         <Stack.Screen name="report" options={{ title: t("submit.title") }} />
+        <Stack.Screen name="outbox" options={{ title: t("app.outboxTitle") }} />
         <Stack.Screen
           name="report-sent"
           options={{ title: t("submit.title"), headerBackVisible: false, gestureEnabled: false }}
@@ -49,7 +51,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
-          <RootStack />
+          <OutboxProvider>
+            <RootStack />
+          </OutboxProvider>
         </I18nProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
