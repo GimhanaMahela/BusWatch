@@ -56,6 +56,13 @@ export default function TabsLayout() {
         options={{ title: t("header.track"), tabBarIcon: icon("search-outline", "search") }}
       />
       <Tabs.Screen
+        name="my-reports"
+        options={{
+          title: t("header.myReports"),
+          tabBarIcon: icon("person-circle-outline", "person-circle"),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{ title: t("app.settings"), tabBarIcon: icon("settings-outline", "settings") }}
       />

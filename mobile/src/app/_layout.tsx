@@ -62,6 +62,7 @@ function RootStack() {
         <Stack.Screen name="track/[receiptId]" options={{ title: t("header.track") }} />
         <Stack.Screen name="report" options={{ title: t("submit.title") }} />
         <Stack.Screen name="outbox" options={{ title: t("app.outboxTitle") }} />
+        <Stack.Screen name="scan" options={{ title: t("app.scanTitle") }} />
         <Stack.Screen
           name="report-sent"
           options={{ title: t("submit.title"), headerBackVisible: false, gestureEnabled: false }}

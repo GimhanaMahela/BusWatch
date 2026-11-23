@@ -41,40 +41,48 @@ export default function HomeScreen() {
 
       <OutboxNotice />
 
+      {queued.length > 0 && (
+        <Card accent={accents.amber}>
+          <AppText>{t("offline.waiting", { count: queued.length })}</AppText>
+          <Button
+            variant="outline"
+            icon="cloud-upload-outline"
+            label={t("app.outboxTitle")}
+            onPress={() => router.push("/outbox")}
+          />
+        </Card>
+      )}
+
       <View style={styles.grid}>
         <ActionTile
-          icon="alert-circle"
-          color={accents.orange}
-          title={t("home.reportCta")}
-          subtitle={t("home.promiseAccount")}
-          onPress={() => router.push("/report")}
+          icon="heart"
+          color={accents.green}
+          title={t("header.commend")}
+          subtitle={t("commend.eyebrow")}
+          onPress={() => router.push({ pathname: "/report", params: { type: "commendation" } })}
         />
         <ActionTile
-          icon="pulse"
-          color={accents.sky}
-          title={t("home.trackCta")}
-          subtitle={sent.length > 0 ? t("app.sentFromPhone") : t("home.quickTrackText")}
-          onPress={() => router.navigate("/track")}
+          icon="briefcase"
+          color={accents.amber}
+          title={t("lost.eyebrow")}
+          subtitle={t("meta.lostTitle")}
+          onPress={() => router.push({ pathname: "/report", params: { type: "lost_item" } })}
         />
       </View>
       <View style={styles.grid}>
         <ActionTile
-          icon="cloud-upload"
-          color={queued.length > 0 ? accents.amber : accents.teal}
-          title={t("app.outboxTitle")}
-          subtitle={
-            queued.length > 0
-              ? t("offline.waiting", { count: queued.length })
-              : t("app.outboxEmpty")
-          }
-          onPress={() => router.push("/outbox")}
+          icon="qr-code"
+          color={accents.violet}
+          title={t("app.scanTitle")}
+          subtitle={t("app.scanTile")}
+          onPress={() => router.push("/scan")}
         />
         <ActionTile
-          icon="language"
-          color={accents.violet}
-          title={t("common.language")}
-          subtitle={t("home.promiseLanguages")}
-          onPress={() => router.navigate("/settings")}
+          icon="person-circle"
+          color={accents.sky}
+          title={t("header.myReports")}
+          subtitle={sent.length > 0 ? t("app.sentFromPhone") : t("myReports.title")}
+          onPress={() => router.navigate("/my-reports")}
         />
       </View>
 

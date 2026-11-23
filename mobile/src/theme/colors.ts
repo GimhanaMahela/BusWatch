@@ -100,6 +100,21 @@ export const categoryStyle: Partial<Record<ReportCategory, { icon: IconName; col
   vehicle_condition: { icon: "construct-outline", color: accents.slate },
   staff_behaviour: { icon: "person-outline", color: accents.blue },
   other: { icon: "ellipsis-horizontal-circle-outline", color: accents.slate },
+  // Commendations
+  safe_driving: { icon: "shield-checkmark-outline", color: accents.green },
+  helpful_staff: { icon: "happy-outline", color: accents.teal },
+  helped_passenger: { icon: "accessibility-outline", color: accents.sky },
+  clean_vehicle: { icon: "sparkles-outline", color: accents.violet },
+  on_time: { icon: "time-outline", color: accents.blue },
+  fair_fare: { icon: "pricetag-outline", color: accents.amber },
+  comfortable_service: { icon: "star-outline", color: accents.orange },
+  // Lost items
+  bag: { icon: "bag-handle-outline", color: accents.orange },
+  phone: { icon: "phone-portrait-outline", color: accents.blue },
+  wallet: { icon: "wallet-outline", color: accents.amber },
+  documents: { icon: "document-outline", color: accents.sky },
+  keys: { icon: "key-outline", color: accents.violet },
+  clothing: { icon: "shirt-outline", color: accents.pink },
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

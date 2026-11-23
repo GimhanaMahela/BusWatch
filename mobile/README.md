@@ -47,8 +47,9 @@ from the lockfile, and `npm ci` on CI then fails with "Missing: fsevents from lo
 
 ```
 src/
-├── app/            # Screens (Expo Router): (tabs)/ Home, Track, Settings; track/[receiptId];
-│                   #   report (the complaint form), report-sent (the receipt), outbox
+├── app/            # Screens (Expo Router): (tabs)/ Home, Track, My reports, Settings;
+│                   #   track/[receiptId]; report (?type=commendation|lost_item, ?bus=&src=qr),
+│                   #   report-sent, outbox, scan (bus QR sticker)
 ├── api/            # HTTP calls: client.ts (axios + ApiError), reports.ts
 ├── components/     # Themed building blocks (ui, form), PhotoPicker, Turnstile (CAPTCHA WebView)
 ├── i18n/           # Language provider and translator
@@ -77,6 +78,14 @@ Setup, once: run `npx eas-cli@latest init` in `mobile/`. It creates the EAS proj
 needs Firebase credentials uploaded to EAS (`npx eas-cli@latest credentials`). Expo Go can't
 receive push on Android, so test with a development build
 (`npx eas-cli@latest build --profile development --platform android`).
+
+## Deep links
+
+The app's scheme is `transitx://`, and every screen is reachable by its path, e.g.
+`transitx://track/BW-2026-XXXXXX`. Scanning a bus sticker (`https://<site>/r/NB-1234`) in the app
+opens the report form for that bus. Opening `https://` website links in the app (Android App Links,
+iOS Universal Links) needs the production domain and signing certificates, so it comes with the
+store release.
 
 ## Builds
 
