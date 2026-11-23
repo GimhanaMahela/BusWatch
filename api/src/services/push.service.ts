@@ -1,4 +1,5 @@
-import webpush, { WebPushError } from "web-push";
+import * as webpush from "web-push";
+import { WebPushError } from "web-push";
 import { env } from "../config/env.js";
 import { deletePushEndpoint, listPushSubscriptions } from "../repositories/push.repository.js";
 
