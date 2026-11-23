@@ -67,7 +67,7 @@ A request goes `routes → middleware (auth, rate limit, upload, validateBody) �
 
 ```
 ui/
-├── next.config.js            # Loads the root .env, /api rewrite, standalone output
+├── next.config.ts            # Loads the root .env, /api rewrite, standalone output
 ├── messages/                 # en.json, si.json, ta.json: all public UI text (next-intl)
 ├── public/                   # Static files (hero image, icons, manifest, sw.js service worker)
 └── src/

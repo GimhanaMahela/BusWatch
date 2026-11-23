@@ -1,10 +1,9 @@
-// Plain JS (not .ts): Vercel's @vercel/next builder only accepts next.config.js as its entry.
-import nextEnv from "@next/env";
+import { loadEnvConfig } from "@next/env";
+import type { NextConfig } from "next";
 import { fileURLToPath } from "node:url";
 
 // The monorepo has one .env at the repo root, shared with the API.
 // Next only exposes NEXT_PUBLIC_* variables to the browser, so API secrets stay server-side.
-const { loadEnvConfig } = nextEnv; // CommonJS module: no named ESM exports
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const { parsedEnv } = loadEnvConfig(repoRoot);
 
@@ -15,8 +14,7 @@ const apiUpstream = (
   process.env.API_UPSTREAM || `http://localhost:${parsedEnv?.PORT || 5000}`
 ).replace(/\/$/, "");
 
-/** @type {import("next").NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (ui/.next/standalone)
   output: "standalone",
   outputFileTracingRoot: repoRoot,

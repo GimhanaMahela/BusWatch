@@ -29,7 +29,7 @@
     "test:api": "vitest run --project api",
     "test:ui": "vitest run --project ui",
     "test:watch": "vitest",
-    "vercel-build": "npm run db:migrate && npm run build:ui"
+    "vercel-build": "if [ -n \"$NEXT_PRIVATE_TARGET\" ]; then npm run build:ui; else npm run db:migrate; fi"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
