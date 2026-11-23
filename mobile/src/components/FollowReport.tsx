@@ -2,9 +2,10 @@ import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 
 import { followReport, isFollowingReport, unfollowReport } from "@/api/reports";
-import { AppText, Button, Card } from "@/components/ui";
+import { AppText, Button, Card, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { getPushToken, type PushUnavailable } from "@/lib/push";
+import { accents } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
 
 const UNAVAILABLE_MESSAGE: Record<PushUnavailable, string> = {
@@ -65,12 +66,18 @@ export function FollowReport({ receiptId }: { receiptId: string }) {
   };
 
   return (
-    <Card>
-      <AppText variant="heading">{t("push.title")}</AppText>
+    <Card accent={following ? accents.green : accents.amber}>
+      <SectionTitle
+        icon={following ? "notifications" : "notifications-outline"}
+        color={following ? accents.green : accents.amber}
+      >
+        {t("push.title")}
+      </SectionTitle>
       <AppText variant="secondary">{following ? t("push.on") : t("push.text")}</AppText>
       {problem && <AppText style={{ color: theme.warning }}>{problem}</AppText>}
       <Button
         variant={following ? "outline" : "primary"}
+        icon={following ? "notifications-off-outline" : "notifications"}
         label={following ? t("push.disable") : t("push.enable")}
         loading={busy}
         onPress={() => void toggle()}

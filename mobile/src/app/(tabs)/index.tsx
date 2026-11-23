@@ -1,55 +1,117 @@
 import { router } from "expo-router";
-import { View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { OutboxNotice } from "@/components/OutboxNotice";
-import { AppText, Button, Card, Screen } from "@/components/ui";
+import { ActionTile, AppText, Button, Card, Hero, Screen, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useOutbox } from "@/lib/OutboxProvider";
-import { spacing } from "@/theme/colors";
-import { useTheme } from "@/theme/useTheme";
+import { accents, spacing } from "@/theme/colors";
+
+const STEPS = [
+  { title: "home.step1Title", text: "home.step1Text", color: accents.orange },
+  { title: "home.step2Title", text: "home.step2Text", color: accents.sky },
+  { title: "home.step3Title", text: "home.step3Text", color: accents.green },
+] as const;
 
 export default function HomeScreen() {
   const { t } = useI18n();
-  const theme = useTheme();
-  const { queued } = useOutbox();
+  const { queued, sent } = useOutbox();
 
   return (
     <Screen>
-      <OutboxNotice />
-      {queued.length > 0 && (
-        <Card style={{ borderColor: theme.warning }}>
-          <AppText>{t("offline.waiting", { count: queued.length })}</AppText>
-          <Button
-            variant="outline"
-            label={t("app.outboxTitle")}
-            onPress={() => router.push("/outbox")}
-          />
-        </Card>
-      )}
-      <View style={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-        <AppText variant="label" style={{ color: theme.secondary }}>
-          {t("home.badge")}
-        </AppText>
-        <AppText variant="title">
-          {t("home.titleStart")}{" "}
-          <AppText variant="title" style={{ color: theme.primary }}>
-            {t("home.titleHighlight")}
-          </AppText>
-        </AppText>
-        <AppText variant="secondary">{t("home.subtitle")}</AppText>
-      </View>
-
-      <Button label={t("home.reportCta")} onPress={() => router.push("/report")} />
-
-      <Card>
-        <AppText variant="heading">{t("home.quickTrackTitle")}</AppText>
-        <AppText variant="secondary">{t("home.quickTrackText")}</AppText>
+      <Hero
+        eyebrow={t("home.badge")}
+        title={t("home.titleStart")}
+        highlight={t("home.titleHighlight")}
+        subtitle={t("home.subtitle")}
+      >
         <Button
-          variant="outline"
+          variant="accent"
+          icon="megaphone"
+          label={t("home.reportCta")}
+          onPress={() => router.push("/report")}
+        />
+        <Button
+          variant="light"
+          icon="search"
           label={t("home.trackCta")}
           onPress={() => router.navigate("/track")}
         />
+      </Hero>
+
+      <OutboxNotice />
+
+      <View style={styles.grid}>
+        <ActionTile
+          icon="alert-circle"
+          color={accents.orange}
+          title={t("home.reportCta")}
+          subtitle={t("home.promiseAccount")}
+          onPress={() => router.push("/report")}
+        />
+        <ActionTile
+          icon="pulse"
+          color={accents.sky}
+          title={t("home.trackCta")}
+          subtitle={sent.length > 0 ? t("app.sentFromPhone") : t("home.quickTrackText")}
+          onPress={() => router.navigate("/track")}
+        />
+      </View>
+      <View style={styles.grid}>
+        <ActionTile
+          icon="cloud-upload"
+          color={queued.length > 0 ? accents.amber : accents.teal}
+          title={t("app.outboxTitle")}
+          subtitle={
+            queued.length > 0
+              ? t("offline.waiting", { count: queued.length })
+              : t("app.outboxEmpty")
+          }
+          onPress={() => router.push("/outbox")}
+        />
+        <ActionTile
+          icon="language"
+          color={accents.violet}
+          title={t("common.language")}
+          subtitle={t("home.promiseLanguages")}
+          onPress={() => router.navigate("/settings")}
+        />
+      </View>
+
+      <Card>
+        <SectionTitle icon="sparkles" color={accents.orange}>
+          {t("home.howTitle")}
+        </SectionTitle>
+        {STEPS.map((step, index) => (
+          <View key={step.title} style={styles.step}>
+            <View style={[styles.stepNumber, { backgroundColor: step.color }]}>
+              <Text style={styles.stepNumberText}>{index + 1}</Text>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText style={{ fontWeight: "700" }}>{t(step.title)}</AppText>
+              <AppText variant="secondary">{t(step.text)}</AppText>
+            </View>
+          </View>
+        ))}
       </Card>
+
+      <AppText variant="secondary" style={styles.footer}>
+        {t("home.promiseEmail")} · {t("home.promiseEvidence")}
+      </AppText>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  grid: { flexDirection: "row", gap: spacing.md },
+  step: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
+  stepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepNumberText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+  footer: { textAlign: "center", fontSize: 13 },
+});

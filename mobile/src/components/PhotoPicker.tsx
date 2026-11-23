@@ -83,11 +83,17 @@ export function PhotoPicker({
       {remaining > 0 ? (
         <View style={styles.buttons}>
           <View style={styles.grow}>
-            <Button variant="outline" label={t("app.takePhoto")} onPress={() => void takePhoto()} />
+            <Button
+              variant="outline"
+              icon="camera-outline"
+              label={t("app.takePhoto")}
+              onPress={() => void takePhoto()}
+            />
           </View>
           <View style={styles.grow}>
             <Button
               variant="outline"
+              icon="images-outline"
               label={t("media.addPhotos")}
               onPress={() => void choosePhotos()}
             />
@@ -103,7 +109,7 @@ export function PhotoPicker({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   thumbs: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  thumb: { width: 88, height: 88, borderRadius: radius },
+  thumb: { width: 92, height: 92, borderRadius: radius },
   remove: {
     position: "absolute",
     top: 4,
