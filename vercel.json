@@ -7,7 +7,7 @@
       "use": "@vercel/node",
       "config": { "includeFiles": ["api/assets/**"] }
     },
-    { "src": "ui/next.config.ts", "use": "@vercel/next" }
+    { "src": "ui/next.config.js", "use": "@vercel/next" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/src/server.ts" },

@@ -52,13 +52,11 @@ vi.mock("web-push", () => {
   }
   return {
     WebPushError,
-    default: {
-      setVapidDetails: () => undefined,
-      sendNotification: (sub: { endpoint: string }, payload: string) => {
-        if (sent.pushFailure) return Promise.reject(new WebPushError(sent.pushFailure));
-        sent.push.push({ endpoint: sub.endpoint, payload });
-        return Promise.resolve({ statusCode: 201 });
-      },
+    setVapidDetails: () => undefined,
+    sendNotification: (sub: { endpoint: string }, payload: string) => {
+      if (sent.pushFailure) return Promise.reject(new WebPushError(sent.pushFailure));
+      sent.push.push({ endpoint: sub.endpoint, payload });
+      return Promise.resolve({ statusCode: 201 });
     },
   };
 });
