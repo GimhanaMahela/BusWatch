@@ -10,12 +10,11 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
   type ScrollViewInstance,
 } from "react-native";
 
+import { Text, TextInput } from "@/components/Text";
 import { WEB_URL } from "@/api/client";
 import {
   getAssistantStatus,

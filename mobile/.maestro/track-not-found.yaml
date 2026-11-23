@@ -4,10 +4,11 @@ name: Track an unknown receipt
 ---
 - launchApp:
     clearState: true
+- tapOn: "Skip"
 - tapOn:
     text: "Track a report"
     index: 0
 - tapOn: "BW-2026-XXXXXX"
 - inputText: "BW-2026-NOPE00"
-- tapOn: "Track"
+- pressKey: Enter
 - assertVisible: "We couldn't find a report with that Receipt ID."

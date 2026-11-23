@@ -1,7 +1,8 @@
 // Numbers for the impact and scorecard screens: big stat tiles and category bars.
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { Text } from "@/components/Text";
 import type { CategoryCount } from "@/api/explore";
 import { AppText, type IconName } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";

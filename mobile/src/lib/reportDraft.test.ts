@@ -1,6 +1,8 @@
 import {
   APP_COMPLAINT_CATEGORIES,
   emptyDraft,
+  errorsForStep,
+  firstStepWithErrors,
   toFormData,
   validateDraft,
   type ReportDraft,
@@ -97,5 +99,25 @@ describe("APP_COMPLAINT_CATEGORIES", () => {
   it("leaves out accessibility, which needs the website's checklist", () => {
     expect(APP_COMPLAINT_CATEGORIES).not.toContain("accessibility");
     expect(APP_COMPLAINT_CATEGORIES).toContain("other");
+  });
+});
+
+describe("form steps", () => {
+  it("checks only the current step's fields", () => {
+    const busOnly = {
+      ...emptyDraft(),
+      busNumber: "NB-1234",
+      routeNumber: "08",
+      busService: "sltb" as const,
+    };
+    expect(errorsForStep(busOnly, 0)).toEqual({});
+    expect(Object.keys(errorsForStep(busOnly, 1))).toEqual(["category"]);
+    expect(Object.keys(errorsForStep(busOnly, 2)).sort()).toEqual(["description", "location"]);
+  });
+
+  it("points at the first step that still needs something", () => {
+    expect(firstStepWithErrors(emptyDraft())).toBe(0);
+    expect(firstStepWithErrors(complete())).toBe(-1);
+    expect(firstStepWithErrors({ ...complete(), email: "nope" })).toBe(3);
   });
 });

@@ -4,6 +4,7 @@ name: Language switch
 ---
 - launchApp:
     clearState: true
+- tapOn: "Skip"
 - tapOn: "Settings"
 - tapOn: "தமிழ்"
 - assertVisible: "அமைப்புகள்"

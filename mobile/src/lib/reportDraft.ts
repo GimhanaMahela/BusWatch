@@ -161,3 +161,26 @@ export const toFormData = (
   }
   return form;
 };
+
+/**
+ * The report form's steps (like the website's): 1 the bus, 2 what happened, 3 where and the
+ * details, 4 contact details and review. Each step checks only its own fields before moving on.
+ */
+export const STEP_FIELDS: readonly (readonly (keyof ReportDraft)[])[] = [
+  ["busNumber", "routeNumber", "busService", "commendee"],
+  ["category"],
+  ["location", "description"],
+  ["email", "phone"],
+];
+
+export const errorsForStep = (draft: ReportDraft, step: number): DraftErrors => {
+  const all = validateDraft(draft);
+  const fields = STEP_FIELDS[step] ?? [];
+  return Object.fromEntries(
+    Object.entries(all).filter(([field]) => fields.includes(field as keyof ReportDraft)),
+  ) as DraftErrors;
+};
+
+/** The first step with something to fix, or -1 when the whole report is ready */
+export const firstStepWithErrors = (draft: ReportDraft): number =>
+  STEP_FIELDS.findIndex((_, step) => Object.keys(errorsForStep(draft, step)).length > 0);

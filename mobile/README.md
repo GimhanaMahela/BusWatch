@@ -59,6 +59,19 @@ src/
 └── theme/          # TransitX palette, light and dark
 ```
 
+## Look and feel
+
+- **Type:** the website's Plus Jakarta Sans, with Noto Sans Sinhala and Noto Sans Tamil for those
+  languages (`theme/typography.ts`). Use `Text` and `TextInput` from `components/Text.tsx`, never
+  React Native's: they turn `fontWeight` into the right font file for the current language.
+- **Motion** (`components/motion.tsx`): `PressableScale` (spring and haptic on every tap), `Rise`
+  (staggered entrances), `Skeleton`, `useCountUp`, `Float`. All of it honours the phone's reduce
+  motion setting.
+- **Signature pieces:** the floating tab bar with the raised Report button
+  (`FloatingTabBar.tsx`), the first-launch welcome tour (`app/welcome.tsx`), the four-step report
+  wizard with category tiles (`CategoryGrid.tsx`), and the confetti receipt (`Celebration.tsx`).
+- **Icon and splash** come from the website's logo (`ui/public/logo512.png`).
+
 ## Offline reports
 
 A report sent without a connection (or whose upload drops mid-way) is saved in the outbox: a

@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
+import { Text } from "@/components/Text";
 import { checkFare, getFareRoute, getFareRoutes } from "@/api/explore";
 import { ChoiceChips, TextField } from "@/components/form";
 import { AppText, Button, Card, Hero, Screen, SectionTitle } from "@/components/ui";

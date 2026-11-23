@@ -3,12 +3,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { ApiError } from "@/api/client";
 import { getMyReports, requestSignInCode, verifySignInCode } from "@/api/passenger";
 import { TextField } from "@/components/form";
-import { AppText, Badge, Button, Card, Hero, Screen, SectionTitle } from "@/components/ui";
+import { PressableScale, Skeleton } from "@/components/motion";
+import {
+  AppText,
+  Badge,
+  Button,
+  Card,
+  Hero,
+  PageHeader,
+  Screen,
+  SectionTitle,
+} from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
 import { accents, spacing, statusColors } from "@/theme/colors";
@@ -75,11 +85,11 @@ export default function MyReportsScreen() {
     },
   });
 
-  if (!loaded) return <Screen>{null}</Screen>;
+  if (!loaded) return <Screen tab>{null}</Screen>;
 
   if (!token || expired) {
     return (
-      <Screen>
+      <Screen tab>
         <Hero
           eyebrow={t("myReports.eyebrow")}
           title={t("myReports.title")}
@@ -152,25 +162,36 @@ export default function MyReportsScreen() {
   const list = reports.data?.reports ?? [];
 
   return (
-    <Screen>
-      <Card accent={accents.violet}>
-        <SectionTitle icon="person-circle" color={accents.violet}>
-          {t("myReports.listTitle")}
-        </SectionTitle>
-        {reports.data && (
-          <AppText variant="secondary">
+    <Screen tab>
+      <PageHeader
+        subtitle={t("myReports.eyebrow")}
+        title={t("myReports.listTitle")}
+        right={
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={t("myReports.signOut")}
+            onPress={signOut}
+            style={[styles.signOut, { backgroundColor: `${theme.error}14` }]}
+          >
+            <Ionicons name="log-out-outline" size={20} color={theme.error} />
+          </PressableScale>
+        }
+      />
+      {reports.data && (
+        <View style={[styles.who, { backgroundColor: `${accents.violet}12` }]}>
+          <Ionicons name="person-circle" size={22} color={accents.violet} />
+          <AppText style={{ flex: 1, color: accents.violet, fontWeight: "600", fontSize: 14 }}>
             {t("myReports.signedInAs", { contact: reports.data.contact.display })}
           </AppText>
-        )}
-        <Button
-          variant="outline"
-          icon="log-out-outline"
-          label={t("myReports.signOut")}
-          onPress={signOut}
-        />
-      </Card>
+        </View>
+      )}
 
-      {reports.isPending && <AppText variant="secondary">…</AppText>}
+      {reports.isPending && (
+        <>
+          <Skeleton height={130} radius={22} />
+          <Skeleton height={130} radius={22} />
+        </>
+      )}
       {reports.isError && <AppText style={{ color: theme.error }}>{t("myReports.error")}</AppText>}
       {reports.isSuccess && list.length === 0 && (
         <Card>
@@ -180,7 +201,7 @@ export default function MyReportsScreen() {
       )}
 
       {list.map((report) => (
-        <Pressable
+        <PressableScale
           key={report.receiptId}
           accessibilityRole="link"
           onPress={() =>
@@ -210,7 +231,7 @@ export default function MyReportsScreen() {
               {t("myReports.lastUpdate", { time: formatDateTime(report.lastUpdateAt, locale) })}
             </AppText>
           </Card>
-        </Pressable>
+        </PressableScale>
       ))}
     </Screen>
   );
@@ -218,4 +239,19 @@ export default function MyReportsScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  signOut: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  who: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    borderRadius: 14,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.sm + 2,
+  },
 });

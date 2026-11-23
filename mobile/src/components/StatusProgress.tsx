@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import type { ReportStatus } from "../../../api/src/config/constants";
+import { Text } from "@/components/Text";
 import { useI18n } from "@/i18n/I18nProvider";
 import { statusColors } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";

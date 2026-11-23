@@ -1,0 +1,16 @@
+# First launch shows the welcome tour once; picking a language there applies straight away.
+appId: com.transitx.app
+name: Welcome tour
+---
+- launchApp:
+    clearState: true
+- assertVisible: "See something wrong on a bus? Report it."
+- tapOn: "Continue"
+- assertVisible: "Follow it all the way"
+- tapOn: "Continue"
+- tapOn: "සිංහල"
+- tapOn: "ආරම්භ කරන්න"
+- assertVisible: "TransitX"
+- stopApp
+- launchApp
+- assertNotVisible: "මඟ හරින්න"
