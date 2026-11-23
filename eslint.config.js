@@ -58,6 +58,6 @@ export default tseslint.config(
   { files: ["ui/public/sw.js"], languageOptions: { globals: globals.serviceworker } },
 
   // --- Root config files ---
-  { files: ["*.{js,ts}"], languageOptions: { globals: globals.node } },
+  { files: ["*.{js,ts}", "ui/next.config.js"], languageOptions: { globals: globals.node } },
   prettier,
 );
