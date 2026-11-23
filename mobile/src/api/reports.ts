@@ -82,3 +82,21 @@ export const STATUS_TEXT_GROUP: Record<ReportType, string> = {
   lost_item: "track.lost",
   road_incident: "track.road",
 };
+
+/** Follow (or stop following) a report's updates on this phone, by its Expo push token */
+export const followReport = (receiptId: string, token: string) =>
+  call<{ subscribed: boolean }>(
+    apiClient.post(`/reports/track/${encodeURIComponent(receiptId)}/app-push`, { token }),
+  );
+
+export const unfollowReport = (receiptId: string, token: string) =>
+  call<{ subscribed: boolean }>(
+    apiClient.post(`/reports/track/${encodeURIComponent(receiptId)}/app-push/unsubscribe`, {
+      token,
+    }),
+  );
+
+export const isFollowingReport = (receiptId: string, token: string) =>
+  call<{ subscribed: boolean }>(
+    apiClient.post(`/reports/track/${encodeURIComponent(receiptId)}/app-push/status`, { token }),
+  );

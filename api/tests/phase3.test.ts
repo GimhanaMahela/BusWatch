@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { env } from "../src/config/env.js";
-import { pushSubscriptions, reports, reportStatusChanges } from "../src/db/schema.js";
+import {
+  expoPushTokens,
+  pushSubscriptions,
+  reports,
+  reportStatusChanges,
+} from "../src/db/schema.js";
 import type * as EmailService from "../src/services/email.service.js";
 import { normalisePhone } from "../src/utils/phone.js";
 import { app, createAdminAndLogin, db, submitReport, useTestDatabase } from "./helpers.js";
@@ -436,5 +441,74 @@ describe("status updates by SMS and browser push", () => {
           .send({ ...subscription, endpoint: "http://insecure" })
       ).status,
     ).toBe(400);
+  });
+});
+
+describe("status updates in the TransitX app (Expo push)", () => {
+  const phone = "ExponentPushToken[abc123_-XYZ]";
+  const expoCalls: { to: string; title: string; data: { url: string } }[][] = [];
+  let ticket: Record<string, unknown> = { status: "ok", id: "ticket-1" };
+
+  beforeEach(() => {
+    expoCalls.length = 0;
+    ticket = { status: "ok", id: "ticket-1" };
+    // Expo's push service is stubbed at fetch: the sender runs for real, the network call doesn't
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: { body: string }) => {
+        if (!url.startsWith("https://exp.host/")) throw new Error(`Unexpected fetch ${url}`);
+        const messages = JSON.parse(init.body) as (typeof expoCalls)[number];
+        expoCalls.push(messages);
+        return Promise.resolve(Response.json({ data: messages.map(() => ticket) }));
+      }),
+    );
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("notifies a following phone when the status changes, without any push setup", async () => {
+    const submitted = await submitReport();
+    const receiptId = String(submitted.body.receiptId);
+    const base = `/api/reports/track/${receiptId}/app-push`;
+    expect((await request(app).post(base).send({ token: phone })).status).toBe(201);
+    expect((await request(app).post(`${base}/status`).send({ token: phone })).body).toEqual({
+      subscribed: true,
+    });
+
+    const report = await db.query.reports.findFirst({ where: eq(reports.receiptId, receiptId) });
+    const token = await createAdminAndLogin();
+    const update = await request(app)
+      .put(`/api/reports/${report?.id}/status`)
+      .set("x-auth-token", token)
+      .send({ status: "escalated" });
+    expect(update.body.delivery.push).toBe(1);
+    expect(expoCalls[0]?.[0]).toMatchObject({
+      to: phone,
+      title: "Your report was updated",
+      data: { url: `/track/${receiptId}` },
+    });
+
+    // The app was uninstalled: Expo says so and the token is forgotten
+    ticket = { status: "error", details: { error: "DeviceNotRegistered" } };
+    await request(app)
+      .put(`/api/reports/${report?.id}/status`)
+      .set("x-auth-token", token)
+      .send({ status: "resolved" });
+    expect(await db.$count(expoPushTokens)).toBe(0);
+  });
+
+  it("lets a phone stop following and rejects anything that isn't an Expo token", async () => {
+    const submitted = await submitReport();
+    const base = `/api/reports/track/${submitted.body.receiptId}/app-push`;
+    await request(app).post(base).send({ token: phone });
+    await request(app).post(`${base}/unsubscribe`).send({ token: phone });
+    expect((await request(app).post(`${base}/status`).send({ token: phone })).body).toEqual({
+      subscribed: false,
+    });
+    expect((await request(app).post(base).send({ token: "https://evil" })).status).toBe(400);
+    expect(
+      (await request(app).post("/api/reports/track/BW-2026-NOPE00/app-push").send({ token: phone }))
+        .status,
+    ).toBe(404);
   });
 });

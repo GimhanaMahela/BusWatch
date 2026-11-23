@@ -283,6 +283,23 @@ export const pushSubscriptions = pgTable(
   (t) => [uniqueIndex().on(t.reportId, t.endpoint), index().on(t.endpoint)],
 ).enableRLS();
 
+/**
+ * Phones following a report through the TransitX app: Expo push tokens, sent through Expo's push
+ * service (which reaches Firebase Cloud Messaging and Apple Push Notification service for us).
+ */
+export const expoPushTokens = pgTable(
+  "expo_push_tokens",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    reportId: uuid()
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    token: text().notNull(),
+    createdAt: timestamptz().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.reportId, t.token), index().on(t.token)],
+).enableRLS();
+
 /** Telegram chats following a report: the passenger pressed Start on the TransitX bot. */
 export const telegramSubscriptions = pgTable(
   "telegram_subscriptions",

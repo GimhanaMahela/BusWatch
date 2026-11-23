@@ -66,6 +66,18 @@ outbox: invalid reports are dropped with the server's reason, anything else stay
 Turnstile on, every send needs a fresh token, so saved reports are sent from the "Waiting to send"
 screen instead. Receipt IDs of reports sent from the phone are listed on the Track tab.
 
+## Push notifications
+
+Passengers turn on "Get notified on this device" on a report (receipt and tracking screens). The
+API stores the phone's Expo push token and sends status changes, team messages and operator
+replies through Expo's push service, beside the website's browser push.
+
+Setup, once: run `npx eas-cli@latest init` in `mobile/`. It creates the EAS project and writes its
+`projectId` into `app.json`; without it the app says notifications aren't available. Android also
+needs Firebase credentials uploaded to EAS (`npx eas-cli@latest credentials`). Expo Go can't
+receive push on Android, so test with a development build
+(`npx eas-cli@latest build --profile development --platform android`).
+
 ## Builds
 
 `eas.json` has three profiles: `development` (dev client), `preview` (internal APK, `preview`
