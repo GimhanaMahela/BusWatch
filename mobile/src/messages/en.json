@@ -19,5 +19,6 @@
   "scanHint": "Point your camera at the TransitX sticker inside the bus.",
   "scanInvalid": "That isn't a TransitX bus sticker. Try the QR code inside the bus.",
   "allowCamera": "Allow camera",
-  "cameraDenied": "Camera access is off for TransitX. Turn it on in your phone's Settings."
+  "cameraDenied": "Camera access is off for TransitX. Turn it on in your phone's Settings.",
+  "exploreTitle": "Explore TransitX"
 }

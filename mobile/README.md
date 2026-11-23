@@ -49,7 +49,8 @@ from the lockfile, and `npm ci` on CI then fails with "Missing: fsevents from lo
 src/
 ├── app/            # Screens (Expo Router): (tabs)/ Home, Track, My reports, Settings;
 │                   #   track/[receiptId]; report (?type=commendation|lost_item, ?bus=&src=qr),
-│                   #   report-sent, outbox, scan (bus QR sticker)
+│                   #   report-sent, outbox, scan (bus QR sticker), fare, impact,
+│                   #   bus/[busNumber], route/[routeNumber], safety, chat (helper)
 ├── api/            # HTTP calls: client.ts (axios + ApiError), reports.ts
 ├── components/     # Themed building blocks (ui, form), PhotoPicker, Turnstile (CAPTCHA WebView)
 ├── i18n/           # Language provider and translator

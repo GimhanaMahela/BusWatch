@@ -11,6 +11,7 @@ import {
   type BusService,
   type Commendee,
   type ReportCategory,
+  type SafetyKind,
 } from "../../../api/src/config/constants";
 import { normalisePhone } from "../../../api/src/utils/phone";
 
@@ -34,6 +35,8 @@ export interface ReportDraft {
   source: "app" | "qr";
   /** Who a commendation thanks */
   commendee: Commendee | "";
+  /** Safety mode's quick harassment report: what happened (description and place optional) */
+  safetyKinds?: SafetyKind[];
   busNumber: string;
   routeNumber: string;
   busService: BusService | "";
@@ -88,9 +91,11 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const validateDraft = (draft: ReportDraft): DraftErrors => {
   const errors: DraftErrors = {};
   const complaint = draft.type === "complaint";
+  // Safety mode's quick report: the ticked boxes say what happened, place and bus kind optional
+  const quick = draft.safetyKinds !== undefined;
   if (!draft.busNumber.trim()) errors.busNumber = "app.required";
   if (!draft.routeNumber.trim()) errors.routeNumber = "app.required";
-  if (complaint && !draft.busService) errors.busService = "submit.chooseBusService";
+  if (complaint && !quick && !draft.busService) errors.busService = "submit.chooseBusService";
   if (!draft.category) {
     errors.category =
       draft.type === "commendation"
@@ -100,8 +105,8 @@ export const validateDraft = (draft: ReportDraft): DraftErrors => {
           : "submit.chooseCategory";
   }
   if (draft.type === "commendation" && !draft.commendee) errors.commendee = "commend.chooseWho";
-  if (complaint && !draft.location.trim()) errors.location = "app.required";
-  if (!draft.description.trim()) errors.description = "app.required";
+  if (complaint && !quick && !draft.location.trim()) errors.location = "app.required";
+  if (!quick && !draft.description.trim()) errors.description = "app.required";
   if (draft.email.trim() && !EMAIL.test(draft.email.trim())) errors.email = "app.emailInvalid";
   if (draft.phone.trim() && !normalisePhone(draft.phone)) errors.phone = "submit.phoneInvalid";
   // Someone has to be able to tell the passenger their bag was found
@@ -138,7 +143,9 @@ export const toFormData = (
     details:
       draft.type === "commendation" && draft.commendee
         ? JSON.stringify({ commendee: draft.commendee })
-        : undefined,
+        : draft.safetyKinds
+          ? JSON.stringify({ safety: { kinds: draft.safetyKinds } })
+          : undefined,
     "cf-turnstile-response": turnstileToken ?? undefined,
   };
   for (const [name, value] of Object.entries(fields)) {

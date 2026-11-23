@@ -63,6 +63,22 @@ describe("validateDraft per report type", () => {
   });
 });
 
+describe("safety mode's quick report", () => {
+  it("needs only the bus and route; the ticked boxes say what happened", () => {
+    const quick = {
+      ...emptyDraft(),
+      category: "harassment" as const,
+      busNumber: "NB-1234",
+      routeNumber: "08",
+      safetyKinds: ["staring" as const],
+    };
+    expect(validateDraft(quick)).toEqual({});
+    expect(toFormData(quick, "en", null).get("details")).toBe(
+      JSON.stringify({ safety: { kinds: ["staring"] } }),
+    );
+  });
+});
+
 describe("toFormData", () => {
   it("sends the type, the QR source and who is thanked", () => {
     const form = toFormData(
