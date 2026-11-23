@@ -301,3 +301,6 @@ One Vercel project deploys both apps from the repo root (`vercel.json`): the UI 
 the API as a serverless function under `/api`. Set the variables from `.env.example` in the project settings;
 `DATABASE_URL` should point to a hosted Postgres (for Supabase, the transaction pooler, with
 `DATABASE_DIRECT_URL` for migrations; see above). Migrations run during the build.
+`vercel-build` is run by both builders: the Next.js builder (which sets `NEXT_PRIVATE_TARGET`) builds the
+UI, and the API builder applies the migrations. Running `next build` a second time would delete the files
+Vercel's adapter wrote during the first build and fail the deploy.
