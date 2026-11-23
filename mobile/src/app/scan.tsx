@@ -2,8 +2,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { Text } from "@/components/Text";
 import { AppText, Button, Card, Screen, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { parseBusSticker } from "@/lib/qr";

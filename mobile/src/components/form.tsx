@@ -1,7 +1,10 @@
 // Form inputs in the TransitX style: labelled text fields and single-choice chips.
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
+import { useState } from "react";
+import { StyleSheet, View, type TextInputProps } from "react-native";
 
+import { PressableScale } from "@/components/motion";
+import { TextInput } from "@/components/Text";
 import { AppText, type IconName } from "@/components/ui";
 import { radius, spacing } from "@/theme/colors";
 import { useTheme } from "@/theme/useTheme";
@@ -13,8 +16,17 @@ type FieldProps = Omit<TextInputProps, "style"> & {
   error?: string;
 };
 
-export function TextField({ label, helper, error, multiline, ...input }: FieldProps) {
+export function TextField({
+  label,
+  helper,
+  error,
+  multiline,
+  onFocus,
+  onBlur,
+  ...input
+}: FieldProps) {
   const theme = useTheme();
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
       <AppText variant="label">{label}</AppText>
@@ -22,14 +34,22 @@ export function TextField({ label, helper, error, multiline, ...input }: FieldPr
         {...input}
         multiline={multiline}
         accessibilityLabel={label}
-        placeholderTextColor={theme.textSecondary}
+        placeholderTextColor={`${theme.textSecondary}99`}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
         style={[
           styles.input,
           multiline && styles.multiline,
           {
             color: theme.text,
-            backgroundColor: theme.surfaceAlt,
-            borderColor: error ? theme.error : theme.surfaceAlt,
+            backgroundColor: focused ? theme.surface : theme.surfaceAlt,
+            borderColor: error ? theme.error : focused ? theme.primary : theme.surfaceAlt,
           },
         ]}
       />
@@ -68,9 +88,10 @@ export function ChoiceChips<T extends string>({
           const tint = option.color ?? theme.primary;
           const foreground = selected ? "#FFFFFF" : option.color ? tint : theme.text;
           return (
-            <Pressable
+            <PressableScale
               key={option.value}
               accessibilityRole="radio"
+              haptics="selection"
               accessibilityState={{ selected }}
               onPress={() => onChange(option.value)}
               style={[
@@ -87,7 +108,7 @@ export function ChoiceChips<T extends string>({
               >
                 {option.label}
               </AppText>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
@@ -147,9 +168,10 @@ export function MultiChips<T extends string>({
         {options.map((option) => {
           const selected = values.includes(option.value);
           return (
-            <Pressable
+            <PressableScale
               key={option.value}
               accessibilityRole="checkbox"
+              haptics="selection"
               accessibilityState={{ checked: selected }}
               onPress={() => toggle(option.value)}
               style={[
@@ -174,7 +196,7 @@ export function MultiChips<T extends string>({
               >
                 {option.label}
               </AppText>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>

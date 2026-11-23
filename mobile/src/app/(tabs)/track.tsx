@@ -1,8 +1,10 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { PressableScale } from "@/components/motion";
+import { TextInput } from "@/components/Text";
 import { AppText, Button, Card, Hero, Screen, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
@@ -23,7 +25,7 @@ export default function TrackScreen() {
   };
 
   return (
-    <Screen>
+    <Screen tab>
       <Hero title={t("track.title")} subtitle={t("track.subtitle")} />
       <Card>
         <SectionTitle icon="receipt" color={accents.sky}>
@@ -57,7 +59,7 @@ export default function TrackScreen() {
             {t("app.sentFromPhone")}
           </SectionTitle>
           {sent.map((report) => (
-            <Pressable
+            <PressableScale
               key={report.receiptId}
               accessibilityRole="link"
               onPress={() =>
@@ -78,7 +80,7 @@ export default function TrackScreen() {
                 <AppText variant="secondary">{formatDateTime(report.sentAt, locale)}</AppText>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-            </Pressable>
+            </PressableScale>
           ))}
         </Card>
       )}

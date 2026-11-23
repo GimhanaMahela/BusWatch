@@ -1,12 +1,20 @@
-# The report form won't send until the required fields are filled in.
+# The report form is a four-step wizard; a step won't move on until its fields are filled in.
 appId: com.transitx.app
-name: Report form checks required fields
+name: Report form checks each step
 ---
 - launchApp:
     clearState: true
+- tapOn: "Skip"
 - tapOn: "Report an incident"
-- scrollUntilVisible:
-    element: "Send report"
-- tapOn: "Send report"
-- assertVisible: "Check the highlighted fields."
+- assertVisible: "Step 1 of 4"
+- tapOn: "Continue"
+- assertVisible: "Required."
+- tapOn: "NB-1234"
 - inputText: "NB-1234"
+- tapOn: "08 or Colombo–Matale"
+- inputText: "08"
+- tapOn: "Private bus"
+- tapOn: "Continue"
+- assertVisible: "Step 2 of 4"
+- tapOn: "Reckless / dangerous driving"
+- assertVisible: "Step 3 of 4"

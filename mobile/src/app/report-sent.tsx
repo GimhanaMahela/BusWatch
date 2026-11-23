@@ -1,47 +1,40 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Clipboard from "expo-clipboard";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Share, StyleSheet, View } from "react-native";
 
+import { Celebration } from "@/components/Celebration";
 import { FollowReport } from "@/components/FollowReport";
+import { haptic, PressableScale, Rise } from "@/components/motion";
+import { Text } from "@/components/Text";
 import { AppText, Button, Card, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
-import { gradients, radiusLarge, spacing } from "@/theme/colors";
+import { accents, gradients, radiusLarge, spacing } from "@/theme/colors";
+import { useTheme } from "@/theme/useTheme";
 
-function Banner({
-  colors,
-  icon,
-  title,
-}: {
-  colors: readonly [string, string, ...string[]];
-  icon: "checkmark" | "cloud-offline";
-  title: string;
-}) {
-  return (
-    <LinearGradient
-      colors={colors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.banner}
-    >
-      <View style={styles.bannerIcon}>
-        <Ionicons name={icon} size={40} color="#FFFFFF" />
-      </View>
-      <Text style={styles.bannerTitle}>{title}</Text>
-    </LinearGradient>
-  );
-}
+const TITLE: Record<string, string> = {
+  commendation: "success.commendTitle",
+  lost_item: "success.lostTitle",
+};
+const TEXT: Record<string, string> = {
+  commendation: "success.commendText",
+  lost_item: "success.lostText",
+};
+const ANOTHER: Record<string, string> = {
+  commendation: "success.anotherCommendation",
+  lost_item: "success.anotherLost",
+};
 
 export default function ReportSentScreen() {
   const { t } = useI18n();
+  const theme = useTheme();
   const {
     receiptId = "",
     emailed,
     texted,
     queued,
-    type,
+    type = "complaint",
   } = useLocalSearchParams<{
     type?: string;
     receiptId?: string;
@@ -54,10 +47,19 @@ export default function ReportSentScreen() {
   // Saved offline: there is no receipt ID until the outbox sends it
   if (queued) {
     return (
-      <Screen>
-        <Banner colors={gradients.sunrise} icon="cloud-offline" title={t("offline.queuedTitle")} />
-        <Card>
-          <AppText>{t("offline.queuedText")}</AppText>
+      <Screen fullscreen>
+        <View style={styles.center}>
+          <View style={[styles.offlineIcon, { backgroundColor: `${accents.amber}1F` }]}>
+            <Ionicons name="cloud-offline" size={48} color={accents.amber} />
+          </View>
+          <AppText variant="title" style={{ textAlign: "center" }}>
+            {t("offline.queuedTitle")}
+          </AppText>
+          <AppText variant="secondary" style={{ textAlign: "center" }}>
+            {t("offline.queuedText")}
+          </AppText>
+        </View>
+        <Card accent={accents.amber}>
           <AppText variant="secondary">{t("offline.queuedHint")}</AppText>
         </Card>
         <Button icon="home" label={t("header.home")} onPress={() => router.replace("/")} />
@@ -67,48 +69,115 @@ export default function ReportSentScreen() {
 
   const copy = async () => {
     await Clipboard.setStringAsync(receiptId);
+    haptic("success");
     setCopied(true);
   };
 
   return (
-    <Screen>
-      <Banner
-        colors={gradients.success}
-        icon="checkmark"
-        title={t(
-          type === "commendation"
-            ? "success.commendTitle"
-            : type === "lost_item"
-              ? "success.lostTitle"
-              : "success.title",
-        )}
-      />
-      {type === "commendation" || type === "lost_item" ? (
-        <AppText variant="secondary" style={{ textAlign: "center" }}>
-          {t(type === "commendation" ? "success.commendText" : "success.lostText")}
+    <Screen fullscreen>
+      <Celebration colors={gradients.success} />
+      <Rise index={1} style={{ gap: spacing.sm }}>
+        <AppText variant="title" style={{ textAlign: "center" }}>
+          {t(TITLE[type] ?? "success.title")}
         </AppText>
-      ) : null}
-      <Card style={styles.ticket}>
-        <AppText variant="label" style={{ textAlign: "center" }}>
-          {t("track.receiptId")}
-        </AppText>
-        <AppText variant="title" style={styles.receipt} selectable>
-          {receiptId}
-        </AppText>
-        <AppText variant="secondary" style={{ textAlign: "center" }}>
-          {t("success.saveId")}
-        </AppText>
-        <Button
-          variant="outline"
-          icon={copied ? "checkmark-done" : "copy-outline"}
-          label={copied ? t("common.copied") : t("success.copyId")}
-          onPress={() => void copy()}
-        />
-        {emailed ? <AppText variant="secondary">✉️ {t("success.emailed")}</AppText> : null}
-        {texted ? <AppText variant="secondary">💬 {t("success.texted")}</AppText> : null}
-      </Card>
-      <FollowReport receiptId={receiptId} />
-      <View style={{ gap: spacing.sm }}>
+        {TEXT[type] ? (
+          <AppText variant="secondary" style={{ textAlign: "center" }}>
+            {t(TEXT[type])}
+          </AppText>
+        ) : null}
+      </Rise>
+
+      {/* The receipt, as a ticket with punched notches */}
+      <Rise index={2}>
+        <View
+          style={[
+            styles.ticket,
+            {
+              backgroundColor: theme.surface,
+              borderColor: theme.divider,
+              shadowColor: theme.shadow,
+            },
+          ]}
+        >
+          <View style={styles.ticketTop}>
+            <AppText variant="label">{t("track.receiptId")}</AppText>
+            <Text selectable style={[styles.receipt, { color: theme.text }]}>
+              {receiptId}
+            </Text>
+            <AppText variant="secondary" style={{ textAlign: "center", fontSize: 14 }}>
+              {t("success.saveId")}
+            </AppText>
+          </View>
+          <View style={styles.tear}>
+            <View
+              style={[
+                styles.notch,
+                styles.notchLeft,
+                { backgroundColor: theme.background, borderColor: theme.divider },
+              ]}
+            />
+            <View style={[styles.dashes, { borderColor: theme.divider }]} />
+            <View
+              style={[
+                styles.notch,
+                styles.notchRight,
+                { backgroundColor: theme.background, borderColor: theme.divider },
+              ]}
+            />
+          </View>
+          <View style={styles.ticketActions}>
+            <PressableScale
+              accessibilityRole="button"
+              onPress={() => void copy()}
+              style={[styles.action, { backgroundColor: `${theme.primary}12` }]}
+            >
+              <Ionicons
+                name={copied ? "checkmark-done" : "copy-outline"}
+                size={20}
+                color={theme.primary}
+              />
+              <AppText style={{ color: theme.primary, fontWeight: "700", fontSize: 14 }}>
+                {copied ? t("common.copied") : t("common.copy")}
+              </AppText>
+            </PressableScale>
+            <PressableScale
+              accessibilityRole="button"
+              onPress={() => void Share.share({ message: receiptId })}
+              style={[styles.action, { backgroundColor: `${accents.violet}12` }]}
+            >
+              <Ionicons name="share-social-outline" size={20} color={accents.violet} />
+              <AppText style={{ color: accents.violet, fontWeight: "700", fontSize: 14 }}>
+                {t("app.share")}
+              </AppText>
+            </PressableScale>
+          </View>
+          {emailed || texted ? (
+            <View style={styles.sentNotes}>
+              {emailed ? (
+                <View style={styles.note}>
+                  <Ionicons name="mail" size={16} color={accents.green} />
+                  <AppText variant="secondary" style={{ flex: 1, fontSize: 13 }}>
+                    {t("success.emailed")}
+                  </AppText>
+                </View>
+              ) : null}
+              {texted ? (
+                <View style={styles.note}>
+                  <Ionicons name="chatbubble" size={16} color={accents.green} />
+                  <AppText variant="secondary" style={{ flex: 1, fontSize: 13 }}>
+                    {t("success.texted")}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      </Rise>
+
+      <Rise index={3}>
+        <FollowReport receiptId={receiptId} />
+      </Rise>
+      <Rise index={4} style={{ gap: spacing.sm }}>
         <Button
           icon="pulse"
           label={t("success.track")}
@@ -117,42 +186,59 @@ export default function ReportSentScreen() {
         <Button
           variant="outline"
           icon="add-circle-outline"
-          label={t(
-            type === "commendation"
-              ? "success.anotherCommendation"
-              : type === "lost_item"
-                ? "success.anotherLost"
-                : "success.another",
-          )}
-          onPress={() => router.replace({ pathname: "/report", params: type ? { type } : {} })}
+          label={t(ANOTHER[type] ?? "success.another")}
+          onPress={() => router.replace({ pathname: "/report", params: { type } })}
         />
-      </View>
+        <Button
+          variant="ghost"
+          icon="home-outline"
+          label={t("header.home")}
+          onPress={() => router.replace("/")}
+        />
+      </Rise>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    borderRadius: radiusLarge + 6,
-    padding: spacing.lg,
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  bannerIcon: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "rgba(255,255,255,0.22)",
+  center: { alignItems: "center", gap: spacing.md, paddingTop: spacing.xl },
+  offlineIcon: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: "center",
     justifyContent: "center",
   },
-  bannerTitle: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "800",
-    textAlign: "center",
-    lineHeight: 30,
+  ticket: {
+    borderWidth: 1,
+    borderRadius: radiusLarge,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 3,
   },
-  ticket: { borderStyle: "dashed", borderWidth: 2 },
-  receipt: { textAlign: "center", letterSpacing: 2, fontSize: 30 },
+  ticketTop: { alignItems: "center", gap: 8, padding: spacing.lg, paddingBottom: spacing.md },
+  receipt: { fontSize: 30, fontWeight: "800", letterSpacing: 2, textAlign: "center" },
+  tear: { height: 28, justifyContent: "center" },
+  dashes: { marginHorizontal: 22, borderTopWidth: 2, borderStyle: "dashed" },
+  notch: { position: "absolute", width: 28, height: 28, borderRadius: 14, borderWidth: 1 },
+  notchLeft: { left: -15 },
+  notchRight: { right: -15 },
+  ticketActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  action: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 46,
+    borderRadius: 14,
+  },
+  sentNotes: { gap: 6, paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  note: { flexDirection: "row", alignItems: "center", gap: 8 },
 });

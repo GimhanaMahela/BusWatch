@@ -3,8 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, Share, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Pressable, Share, StyleSheet, View, useColorScheme } from "react-native";
 
+import { Text } from "@/components/Text";
 import { TURNSTILE_SITE_KEY } from "@/api/client";
 import { MultiChips, TextField } from "@/components/form";
 import { Turnstile } from "@/components/Turnstile";

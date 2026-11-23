@@ -14,7 +14,7 @@
     "android": {
       "package": "com.transitx.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0068C2",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -46,9 +46,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0068C2",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/splash-icon.png",
-          "imageWidth": 96
+          "imageWidth": 240
         }
       ],
       "expo-sqlite",

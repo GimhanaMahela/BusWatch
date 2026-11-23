@@ -1,20 +1,16 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
+import { Text } from "@/components/Text";
 import { ApiError } from "@/api/client";
 import { STATUS_TEXT_GROUP, trackReport, type PublicReport } from "@/api/reports";
 import { FollowReport } from "@/components/FollowReport";
+import { Skeleton } from "@/components/motion";
 import { StatusProgress } from "@/components/StatusProgress";
-import { AppText, Badge, Card, Field, SectionTitle } from "@/components/ui";
+import { AppText, Badge, Button, Card, Field, SectionTitle } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { formatDateTime } from "@/lib/format";
 import { normaliseReceiptId } from "@/lib/receiptId";
@@ -42,8 +38,11 @@ export default function ReportStatusScreen() {
 
   if (query.isPending) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator color={theme.primary} size="large" />
+      <View style={[styles.content, { flex: 1, backgroundColor: theme.background }]}>
+        <Skeleton height={150} radius={radiusLarge + 6} />
+        <Skeleton height={140} radius={radiusLarge} />
+        <Skeleton height={110} radius={radiusLarge} />
+        <Skeleton height={220} radius={radiusLarge} />
       </View>
     );
   }
@@ -64,14 +63,27 @@ export default function ReportStatusScreen() {
         contentContainerStyle={styles.content}
         refreshControl={refresh}
       >
-        <Card>
-          <AppText variant="heading">
+        <View style={styles.empty}>
+          <View style={[styles.emptyIcon, { backgroundColor: `${accents.amber}1F` }]}>
+            <Ionicons
+              name={notFound ? "search" : "cloud-offline"}
+              size={44}
+              color={accents.amber}
+            />
+          </View>
+          <AppText variant="title" style={{ textAlign: "center" }}>
             {notFound ? t("track.notFoundTitle") : t("track.error")}
           </AppText>
-          <AppText variant="secondary">
+          <AppText variant="secondary" style={{ textAlign: "center" }}>
             {notFound ? t("track.notFoundText") : query.error.message}
           </AppText>
-        </Card>
+          <Button
+            variant="ghost"
+            icon="refresh"
+            label={t("offline.pageRetry")}
+            onPress={() => void query.refetch()}
+          />
+        </View>
       </ScrollView>
     );
   }
@@ -152,14 +164,36 @@ export default function ReportStatusScreen() {
           <SectionTitle icon="time" color={accents.violet}>
             {t("track.timeline")}
           </SectionTitle>
-          {[...report.timeline].reverse().map((entry) => (
-            <View
-              key={`${entry.status}-${entry.changedAt}`}
-              style={[styles.timelineEntry, { borderLeftColor: statusColors[entry.status] }]}
-            >
-              <AppText variant="label">{formatDateTime(entry.changedAt, locale)}</AppText>
-              <AppText style={{ fontWeight: "600" }}>{t(`statuses.${entry.status}`)}</AppText>
-              {entry.note ? <AppText variant="secondary">{entry.note}</AppText> : null}
+          {[...report.timeline].reverse().map((entry, index, entries) => (
+            <View key={`${entry.status}-${entry.changedAt}`} style={styles.timelineEntry}>
+              <View style={styles.timelineRail}>
+                <View
+                  style={[
+                    styles.timelineDot,
+                    { backgroundColor: statusColors[entry.status] },
+                    index === 0 && {
+                      shadowColor: statusColors[entry.status],
+                      ...styles.timelineGlow,
+                    },
+                  ]}
+                />
+                {index < entries.length - 1 && (
+                  <View style={[styles.timelineLine, { backgroundColor: theme.divider }]} />
+                )}
+              </View>
+              <View style={{ flex: 1, gap: 2, paddingBottom: spacing.md }}>
+                <AppText style={{ fontWeight: "700", color: statusColors[entry.status] }}>
+                  {t(`statuses.${entry.status}`)}
+                </AppText>
+                <AppText variant="secondary" style={{ fontSize: 13 }}>
+                  {formatDateTime(entry.changedAt, locale)}
+                </AppText>
+                {entry.note ? (
+                  <View style={[styles.note, { backgroundColor: theme.surfaceAlt }]}>
+                    <AppText variant="secondary">{entry.note}</AppText>
+                  </View>
+                ) : null}
+              </View>
             </View>
           ))}
         </Card>
@@ -182,7 +216,25 @@ export default function ReportStatusScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl },
-  timelineEntry: { borderLeftWidth: 3, paddingLeft: spacing.md, paddingVertical: spacing.xs },
+  timelineEntry: { flexDirection: "row", gap: spacing.sm + 4 },
+  timelineRail: { alignItems: "center", width: 16, paddingTop: 4 },
+  timelineDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: "#FFFFFF" },
+  timelineGlow: {
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  timelineLine: { width: 2, flex: 1, marginTop: 4, borderRadius: 1 },
+  note: { borderRadius: 12, padding: spacing.sm + 2, marginTop: 4 },
+  empty: { alignItems: "center", gap: spacing.md, paddingTop: spacing.xl },
+  emptyIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   header: { borderRadius: radiusLarge + 6, padding: spacing.lg, gap: spacing.sm },
   headerLabel: {
     color: "rgba(255,255,255,0.8)",
