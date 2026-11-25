@@ -394,7 +394,9 @@ function ReportDetailsView({ id }: { id: string }) {
         )}
       </Box>
       <Typography color="text.secondary" sx={{ mb: 4 }}>
-        {categoryLabel(report.category)} · reported {timeAgo(report.reportedAt)}
+        {categoryLabel(report.category)}
+        {report.extraCategories?.length ? ` +${report.extraCategories.length} more` : ""} · reported{" "}
+        {timeAgo(report.reportedAt)}
       </Typography>
 
       <Grid container spacing={3}>
@@ -496,7 +498,9 @@ function ReportDetailsView({ id }: { id: string }) {
                   )}
                   {details?.road?.hazard && (
                     <DetailRow label="Road problem">
-                      {roadHazardLabel(details.road.hazard)}
+                      {[details.road.hazard, ...(details.road.extraHazards ?? [])]
+                        .map(roadHazardLabel)
+                        .join(", ")}
                     </DetailRow>
                   )}
                 </>
@@ -513,7 +517,9 @@ function ReportDetailsView({ id }: { id: string }) {
               {details?.commendee && (
                 <DetailRow label="Thanking">{commendeeLabel(details.commendee)}</DetailRow>
               )}
-              <DetailRow label="Category">{categoryLabel(report.category)}</DetailRow>
+              <DetailRow label="Category">
+                {[report.category, ...(report.extraCategories ?? [])].map(categoryLabel).join(", ")}
+              </DetailRow>
               {details?.accessibility && (
                 <DetailRow label="Accessibility issues">
                   {details.accessibility.map(accessibilityLabel).join(", ")}

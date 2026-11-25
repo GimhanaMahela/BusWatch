@@ -46,7 +46,7 @@ describe("SubmitReportView", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("සිදුවීමක් වාර්තා කරන්න");
     await user.click(screen.getByRole("radio", { name: "පුද්ගලික බස් රථය" }));
     await user.type(screen.getByRole("textbox", { name: /මාර්ගය/ }), "08");
-    await user.click(screen.getByRole("radio", { name: "අධික ගාස්තු / වැරදි ගාස්තු" }));
+    await user.click(screen.getByRole("checkbox", { name: "අධික ගාස්තු / වැරදි ගාස්තු" }));
     await user.click(screen.getByRole("button", { name: "ඉදිරියට" }));
 
     await user.type(screen.getByLabelText(/කොහේද/), "Pettah");
@@ -86,7 +86,9 @@ describe("SubmitReportView", () => {
     renderWithProviders(<SubmitReportView />);
 
     await user.click(screen.getByRole("radio", { name: "SLTB bus (government)" }));
-    await user.click(screen.getByRole("radio", { name: /Accessibility/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Accessibility/ }));
+    // More than one thing can be ticked; the first stays the main category
+    await user.click(screen.getByRole("checkbox", { name: "Loud music" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.type(screen.getByLabelText(/Where/), "Kurunegala");
     await user.type(screen.getByLabelText(/Describe what happened/), "Drove past my grandmother");
@@ -104,6 +106,7 @@ describe("SubmitReportView", () => {
     expect(mockedSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         category: "accessibility",
+        extraCategories: "loud_music",
         details: JSON.stringify({ accessibility: ["passed_by"] }),
       }),
       [],
@@ -117,7 +120,7 @@ describe("SubmitReportView", () => {
     renderWithProviders(<SubmitReportView />);
 
     await user.click(screen.getByRole("radio", { name: "Metro Bus" }));
-    await user.click(screen.getByRole("radio", { name: /Reckless/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Reckless/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.queryByText("Is someone in danger right now?")).not.toBeInTheDocument();
     await user.type(
@@ -177,7 +180,7 @@ describe("SubmitReportView", () => {
     await user.click(screen.getByRole("radio", { name: "A bus" }));
     await user.type(screen.getByLabelText(/Bus number/), "NB-1234");
     await user.type(screen.getByLabelText(/Route/), "138");
-    await user.click(screen.getByRole("radio", { name: /Overcrowding/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Overcrowding/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByText("Choose the bus service.")).toBeInTheDocument();
     // Bus name is only asked for private buses
@@ -261,7 +264,8 @@ describe("SubmitReportView", () => {
     );
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByText("Choose what's wrong with the road.")).toBeInTheDocument();
-    await user.click(screen.getByRole("radio", { name: "Pothole / broken road" }));
+    await user.click(screen.getByRole("checkbox", { name: "Pothole / broken road" }));
+    await user.click(screen.getByRole("checkbox", { name: "Flooding" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.type(screen.getByLabelText(/Where/), "Galle Road, Wellawatte");
     await user.type(screen.getByLabelText(/Describe what happened/), "Deep pothole, left lane");
@@ -274,7 +278,7 @@ describe("SubmitReportView", () => {
       expect.objectContaining({
         type: "road_incident",
         category: "road_hazard",
-        details: JSON.stringify({ road: { hazard: "pothole" } }),
+        details: JSON.stringify({ road: { hazard: "pothole", extraHazards: ["flooding"] } }),
       }),
       [],
       [],

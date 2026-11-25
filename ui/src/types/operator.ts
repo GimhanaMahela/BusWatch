@@ -6,6 +6,7 @@ export interface FleetReport {
   id: string;
   type: ReportType;
   category: ReportCategory;
+  extraCategories?: ReportCategory[];
   busNumber: string;
   routeNumber: string;
   busName: string | null;

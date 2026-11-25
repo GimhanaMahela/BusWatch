@@ -97,7 +97,11 @@ export const reports = pgTable(
     busName: text(),
     // Private, SLTB (government) or Metro Bus; null for road incidents and older reports
     busService: busService(),
+    // The main incident type: the first one the passenger picked. Stats, "me too" matching and the
+    // AI work on this one
     category: reportCategory().notNull().default("other"),
+    // Complaints can name more than one thing: the other types ticked, in the order picked
+    extraCategories: reportCategory().array().notNull().default([]),
     location: text(), // human-readable location; required for complaints, optional for commendations
     latitude: doublePrecision(), // optional GPS pin
     longitude: doublePrecision(),
@@ -173,7 +177,10 @@ export interface RoadIncidentDetails {
     injuries: InjuryLevel;
     vehiclesInvolved: number | null;
   };
+  /** The main problem with the road: the first one ticked */
   hazard?: RoadHazard;
+  /** Anything else wrong with the road there, in the order ticked */
+  extraHazards?: RoadHazard[];
 }
 
 export interface ReportDetails {

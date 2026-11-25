@@ -88,6 +88,7 @@ const operatorColumns = {
   id: reports.id,
   type: reports.type,
   category: reports.category,
+  extraCategories: reports.extraCategories,
   busNumber: reports.busNumber,
   routeNumber: reports.routeNumber,
   busName: reports.busName,

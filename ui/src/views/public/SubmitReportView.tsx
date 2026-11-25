@@ -53,6 +53,7 @@ import { trackEvent } from "@/api/metricsApi";
 import { findSimilarReports } from "@/api/reportApi";
 import { GradientButton } from "@/components/atoms";
 import {
+  CategoryChecklist,
   CategoryPicker,
   ChoiceCards,
   ChoiceChips,
@@ -115,7 +116,10 @@ interface ReportForm extends RoadFields {
   routeNumber: string;
   busName: string;
   busService: BusService | "";
+  /** The main incident type: the first one ticked */
   category: FormCategory;
+  /** Bus complaints: anything else ticked, in order */
+  extraCategories: ComplaintCategory[];
   incidentAt: string;
   location: string;
   description: string;
@@ -130,6 +134,7 @@ const EMPTY_FORM: ReportForm = {
   busName: "",
   busService: "",
   category: "",
+  extraCategories: [],
   vehicleKind: "",
   plate: "",
   colour: "",
@@ -138,6 +143,7 @@ const EMPTY_FORM: ReportForm = {
   injuries: "",
   vehiclesInvolved: "",
   hazard: "",
+  extraHazards: [],
   incidentAt: "",
   location: "",
   description: "",
@@ -176,6 +182,10 @@ const isEmptyDraft = ({ form, images, videos, coords }: Draft) =>
   !coords &&
   images.length === 0 &&
   videos.length === 0;
+
+/** The ticked options of a checklist: the main one first, then the extras */
+const ticked = <T extends string>(main: T | "", extras: readonly T[]): T[] =>
+  main ? [main, ...extras] : [];
 
 /** Road incident categories about another vehicle ("road_hazard" is its own choice) */
 const VEHICLE_CATEGORIES = ROAD_INCIDENT_CATEGORIES.filter((c) => c.value !== "road_hazard");
@@ -285,6 +295,12 @@ function SubmitReportView() {
   const seriousInjury =
     subject === "vehicle" && formData.category === "accident" && formData.injuries === "serious";
   const isBus = subject === "bus";
+  // Bus complaints can name several things; the follow-up questions go with any of them
+  // (the bus form only offers complaint categories)
+  const complaintCategories = isBus
+    ? ticked(formData.category as ComplaintCategory | "", formData.extraCategories)
+    : [];
+  const hasCategory = (category: ComplaintCategory) => complaintCategories.includes(category);
 
   const draft = useMemo<Draft>(
     () => ({ subject, form: formData, coords, images, videos, step, source, accessibility, fare }),
@@ -335,6 +351,7 @@ function SubmitReportView() {
       setFormData((current) => ({
         ...current,
         category: next === "road" ? "road_hazard" : "",
+        extraCategories: [],
       }));
     }
   };
@@ -342,9 +359,11 @@ function SubmitReportView() {
   /** Extras for this category: the accessibility checklist, the fare check, or the road incident */
   const details = (): ReportDetailsInput | null => {
     if (!isBus) return roadDetails(subject || "vehicle", formData);
-    if (formData.category === "accessibility") return { accessibility };
-    if (formData.category === "overcharging" && fare && fareResult) return { fare };
-    return null;
+    const extras: ReportDetailsInput = {
+      ...(hasCategory("accessibility") && { accessibility }),
+      ...(hasCategory("overcharging") && fare && fareResult && { fare }),
+    };
+    return Object.keys(extras).length ? extras : null;
   };
 
   const send = async () => {
@@ -364,6 +383,10 @@ function SubmitReportView() {
             : // Road incidents aren't about a route bus; the plate goes in the details
               { busNumber: "", routeNumber: "" }),
           category: formData.category,
+          ...(isBus &&
+            formData.extraCategories.length > 0 && {
+              extraCategories: formData.extraCategories.join(","),
+            }),
           location: formData.location,
           description: formData.description,
           passengerEmail: formData.passengerEmail,
@@ -473,7 +496,7 @@ function SubmitReportView() {
       setInvolvementError(true);
       return;
     }
-    if (step === 1 && formData.category === "accessibility" && !accessibility.length) {
+    if (step === 1 && hasCategory("accessibility") && !accessibility.length) {
       setAccessibilityError(true);
       return;
     }
@@ -598,18 +621,19 @@ function SubmitReportView() {
               slotProps={startIcon(<CommuteRoundedIcon color="action" />)}
             />
           )}
-          <CategoryPicker
+          <CategoryChecklist
             label={t("categoryQuestion")}
+            hint={t("tickAllThatApply")}
             options={CATEGORIES.map((c) => ({ value: c.value, label: tCategory(c.value) }))}
-            value={formData.category}
-            onChange={(category) => {
+            value={complaintCategories}
+            onChange={([category, ...extraCategories]) => {
               markStarted();
-              setFormData({ ...formData, category });
+              setFormData({ ...formData, category: category ?? "", extraCategories });
               setCategoryError(false);
             }}
             error={categoryError ? t("chooseCategory") : undefined}
           />
-          {formData.category === "harassment" && (
+          {hasCategory("harassment") && (
             <Alert
               severity="info"
               icon={<ShieldRoundedIcon />}
@@ -697,13 +721,19 @@ function SubmitReportView() {
       )}
 
       {subject === "road" && (
-        <CategoryPicker
+        <CategoryChecklist
           label={tRoad("hazardQuestion")}
+          hint={t("tickAllThatApply")}
           options={ROAD_HAZARDS.map((h) => ({ value: h.value, label: tHazard(h.value) }))}
-          value={formData.hazard}
-          onChange={(hazard) => {
+          value={ticked(formData.hazard, formData.extraHazards)}
+          onChange={([hazard, ...extraHazards]) => {
             markStarted();
-            setFormData({ ...formData, hazard, category: "road_hazard" });
+            setFormData({
+              ...formData,
+              hazard: hazard ?? "",
+              extraHazards,
+              category: "road_hazard",
+            });
             setCategoryError(false);
           }}
           error={categoryError ? tRoad("chooseHazard") : undefined}
@@ -713,7 +743,7 @@ function SubmitReportView() {
 
     // 1: What happened
     <Box key="incident" sx={{ display: "grid", gap: 2.5 }}>
-      {formData.category === "accessibility" && (
+      {hasCategory("accessibility") && (
         <ChoiceChips
           required
           label={t("accessibilityQuestion")}
@@ -729,7 +759,7 @@ function SubmitReportView() {
           error={accessibilityError ? t("accessibilityRequired") : undefined}
         />
       )}
-      {formData.category === "overcharging" && (
+      {hasCategory("overcharging") && (
         <Box sx={{ borderRadius: 3, border: 1, borderColor: "divider", p: 2 }}>
           <Box
             sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}
@@ -935,16 +965,22 @@ function SubmitReportView() {
           </DetailRow>
         )}
         <DetailRow label={t("reviewCategory")}>
-          {subject === "road" && formData.hazard
-            ? tHazard(formData.hazard)
-            : formData.category
-              ? tCategory(formData.category)
-              : ""}
-          {formData.category === "accessibility" &&
-            accessibility.length > 0 &&
-            `: ${accessibility.map((i) => tIssue(i)).join(", ")}`}
+          {subject === "road"
+            ? ticked(formData.hazard, formData.extraHazards)
+                .map((h) => tHazard(h))
+                .join(", ")
+            : isBus
+              ? complaintCategories.map((c) => tCategory(c)).join(", ")
+              : formData.category
+                ? tCategory(formData.category)
+                : ""}
         </DetailRow>
-        {formData.category === "overcharging" && fareResult && (
+        {hasCategory("accessibility") && accessibility.length > 0 && (
+          <DetailRow label={t("reviewAccessibility")}>
+            {accessibility.map((i) => tIssue(i)).join(", ")}
+          </DetailRow>
+        )}
+        {hasCategory("overcharging") && fareResult && (
           <DetailRow label={t("reviewFare")}>
             {t("reviewFareValue", {
               official: fareResult.officialFare,
