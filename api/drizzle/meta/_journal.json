@@ -120,6 +120,13 @@
       "when": 1795169234735,
       "tag": "0016_expo_push_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795438571738,
+      "tag": "0017_report_extra_categories",
+      "breakpoints": true
     }
   ]
 }

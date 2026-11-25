@@ -1,5 +1,6 @@
 import {
   and,
+  arrayContains,
   asc,
   count,
   desc,
@@ -143,7 +144,10 @@ export const listReports = async ({
       : status
         ? eq(reports.status, status)
         : undefined,
-    category ? eq(reports.category, category) : undefined,
+    // The main category or one of the extras a passenger ticked
+    category
+      ? or(eq(reports.category, category), arrayContains(reports.extraCategories, [category]))
+      : undefined,
     type ? eq(reports.type, type) : undefined,
     from ? gte(reports.reportedAt, from) : undefined,
     to ? lte(reports.reportedAt, to) : undefined,
@@ -237,9 +241,15 @@ export const setBlurredImages = async (id: string, blurredImages: string[]) => {
   await db.update(reports).set({ blurredImages }).where(eq(reports.id, id));
 };
 
-/** An admin corrects the category (e.g. after an AI suggestion). */
+/** An admin corrects the category (e.g. after an AI suggestion). It leaves the extras if listed. */
 export const setReportCategory = async (id: string, category: ReportCategory) => {
-  await db.update(reports).set({ category }).where(eq(reports.id, id));
+  await db
+    .update(reports)
+    .set({
+      category,
+      extraCategories: sql`array_remove(${reports.extraCategories}, ${category}::report_category)`,
+    })
+    .where(eq(reports.id, id));
 };
 
 /** Returns false when the report does not exist. */

@@ -31,6 +31,8 @@ export interface RoadIncidentDetails {
     vehiclesInvolved: number | null;
   };
   hazard?: RoadHazard;
+  /** Anything else wrong with the road there, besides the main problem */
+  extraHazards?: RoadHazard[];
 }
 
 /** The official fare, worked out by the server from the admins' fare tables */
@@ -76,6 +78,7 @@ export interface ReportDetailsInput {
       vehiclesInvolved: number | null;
     };
     hazard?: RoadHazard;
+    extraHazards?: RoadHazard[];
   };
   commendee?: Commendee;
 }
@@ -185,6 +188,8 @@ export interface Report {
   busName?: string | null;
   busService?: BusService | null;
   category: ReportCategory;
+  /** Complaints: the other incident types the passenger ticked (older reports: none) */
+  extraCategories?: ReportCategory[];
   location: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -229,6 +234,8 @@ export interface PublicReport {
   type: ReportType;
   status: ReportStatus;
   category: ReportCategory;
+  /** Complaints: the other incident types the passenger ticked */
+  extraCategories?: ReportCategory[];
   busNumber: string;
   routeNumber: string;
   busService?: BusService | null;
@@ -260,6 +267,8 @@ export interface SubmitReportFields {
   busName?: string;
   busService?: BusService | "";
   category: ReportCategory | "";
+  /** Complaints: other incident types besides the main one, comma-separated */
+  extraCategories?: string;
   incidentAt?: string;
   location?: string;
   latitude?: number | "";

@@ -404,7 +404,11 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                       {tCommendee(report.details.commendee)}
                     </DetailRow>
                   )}
-                  <DetailRow label={t("category")}>{tCategory(report.category)}</DetailRow>
+                  <DetailRow label={t("category")}>
+                    {[report.category, ...(report.extraCategories ?? [])]
+                      .map((category) => tCategory(category))
+                      .join(", ")}
+                  </DetailRow>
                   {report.details?.accessibility && (
                     <DetailRow label={t("accessibilityIssues")}>
                       {report.details.accessibility.map((issue) => tIssue(issue)).join(", ")}
@@ -443,7 +447,11 @@ function TrackReportView({ receiptId }: { receiptId?: string }) {
                     </>
                   )}
                   {report.details?.road?.hazard && (
-                    <DetailRow label={t("hazard")}>{tHazard(report.details.road.hazard)}</DetailRow>
+                    <DetailRow label={t("hazard")}>
+                      {[report.details.road.hazard, ...(report.details.road.extraHazards ?? [])]
+                        .map((hazard) => tHazard(hazard))
+                        .join(", ")}
+                    </DetailRow>
                   )}
                   {!road && (
                     <>

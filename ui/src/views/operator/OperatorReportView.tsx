@@ -149,7 +149,9 @@ function OperatorReportView({ id }: { id: string }) {
               {details?.commendee && (
                 <DetailRow label="Thanking">{commendeeLabel(details.commendee)}</DetailRow>
               )}
-              <DetailRow label="Category">{categoryLabel(r.category)}</DetailRow>
+              <DetailRow label="Category">
+                {[r.category, ...(r.extraCategories ?? [])].map(categoryLabel).join(", ")}
+              </DetailRow>
               {details?.accessibility && (
                 <DetailRow label="Accessibility issues">
                   {details.accessibility.map(accessibilityLabel).join(", ")}

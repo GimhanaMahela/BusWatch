@@ -14,6 +14,8 @@ export interface ReceiptData {
   busName?: string;
   busService?: BusService | null;
   category?: string;
+  /** Other incident types ticked on a complaint */
+  extraCategories?: string[];
   location?: string | null;
   incidentAt?: Date | string;
   reportedAt: Date | string;
@@ -437,7 +439,16 @@ export const generatePdfReceipt = async (reportData: ReceiptData): Promise<Recei
                   },
                 ]
               : []),
-            ...(road?.hazard ? [{ label: r.hazard, value: r.hazards[road.hazard] }] : []),
+            ...(road?.hazard
+              ? [
+                  {
+                    label: r.hazard,
+                    value: [road.hazard, ...(road.extraHazards ?? [])]
+                      .map((hazard) => r.hazards[hazard])
+                      .join(", "),
+                  },
+                ]
+              : []),
           ]
         : [
             ...(reportData.details?.commendee
@@ -455,8 +466,12 @@ export const generatePdfReceipt = async (reportData: ReceiptData): Promise<Recei
       {
         label: t.category,
         value: reportData.category
-          ? (messages.categories[reportData.category as keyof typeof messages.categories] ??
-            reportData.category)
+          ? [reportData.category, ...(reportData.extraCategories ?? [])]
+              .map(
+                (category) =>
+                  messages.categories[category as keyof typeof messages.categories] ?? category,
+              )
+              .join(", ")
           : t.none,
       },
       { label: t.location, value: reportData.location || t.notSpecified },

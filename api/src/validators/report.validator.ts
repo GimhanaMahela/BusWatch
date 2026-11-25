@@ -5,6 +5,7 @@ import {
   BUS_SERVICES,
   CATEGORIES_BY_TYPE,
   COMMENDEES,
+  COMPLAINT_CATEGORIES,
   INJURY_LEVELS,
   ROAD_CATEGORIES_WITHOUT_VEHICLE,
   ROAD_HAZARDS,
@@ -67,8 +68,20 @@ const roadDetailsSchema = z
       .strict()
       .optional(),
     hazard: z.enum(ROAD_HAZARDS, { error: "Choose what is wrong with the road." }).optional(),
+    extraHazards: z
+      .array(z.enum(ROAD_HAZARDS, { error: "Choose what is wrong with the road." }))
+      .max(ROAD_HAZARDS.length)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine((road) => !road.extraHazards?.length || road.hazard, {
+    error: "Choose what is wrong with the road.",
+  })
+  // Without the main one repeated or duplicates; dropped when empty
+  .transform(({ extraHazards, ...road }) => {
+    const extras = [...new Set(extraHazards)].filter((h) => h !== road.hazard);
+    return extras.length ? { ...road, extraHazards: extras } : road;
+  });
 
 const roadNeedsVehicle = (category: ReportCategory) =>
   !(ROAD_CATEGORIES_WITHOUT_VEHICLE as readonly ReportCategory[]).includes(category);
@@ -118,6 +131,31 @@ const parseJson = (value: unknown) => {
   }
 };
 
+/**
+ * The other incident types on a complaint. Multipart forms send them as one comma-separated
+ * string ("harassment,loud_music"); JSON clients may send an array. Duplicates are dropped.
+ */
+const extraCategoriesSchema = z.preprocess(
+  (value) =>
+    typeof value === "string"
+      ? value
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean)
+      : value,
+  z
+    .array(z.enum(REPORT_CATEGORIES, { error: "Invalid incident category." }))
+    .max(COMPLAINT_CATEGORIES.length)
+    .transform((categories) => [...new Set(categories)])
+    .default([]),
+);
+
+/** Every incident type on the report: the main one, then the extras. */
+const allCategories = (data: { category: ReportCategory; extraCategories: ReportCategory[] }) => [
+  data.category,
+  ...data.extraCategories,
+];
+
 // Allow a few minutes of clock skew between the passenger's device and the server
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
@@ -145,6 +183,8 @@ export const submitReportSchema = z
       blankToUndefined,
       z.enum(REPORT_CATEGORIES, { error: "Invalid incident category." }).default("other"),
     ),
+    // Complaints only: anything else that happened, besides the main category
+    extraCategories: extraCategoriesSchema,
     // Required for complaints (checked below); optional for a commendation, for a lost item
     // and on the quick safety-mode form
     location: optionalText,
@@ -224,6 +264,13 @@ export const submitReportSchema = z
     error: "Invalid incident category.",
     path: ["category"],
   })
+  .refine(
+    (data) =>
+      data.extraCategories.length === 0 ||
+      (data.type === "complaint" &&
+        data.extraCategories.every((c) => CATEGORIES_BY_TYPE.complaint.includes(c))),
+    { error: "Invalid incident category.", path: ["extraCategories"] },
+  )
   // Someone has to be able to tell the passenger their bag was found
   .refine(
     (data) =>
@@ -238,18 +285,20 @@ export const submitReportSchema = z
   // Each extra belongs to one kind of complaint
   .refine(
     (data) =>
-      (data.type === "complaint" && data.category === "accessibility") ===
+      (data.type === "complaint" && allCategories(data).includes("accessibility")) ===
       Boolean(data.details?.accessibility),
     { error: "Tick what went wrong.", path: ["details"] },
   )
   .refine(
     (data) =>
-      !data.details?.fare || (data.type === "complaint" && data.category === "overcharging"),
+      !data.details?.fare ||
+      (data.type === "complaint" && allCategories(data).includes("overcharging")),
     { error: "Fare details only go with an overcharging complaint.", path: ["details"] },
   )
   .refine(
     (data) =>
-      !data.details?.safety || (data.type === "complaint" && data.category === "harassment"),
+      !data.details?.safety ||
+      (data.type === "complaint" && allCategories(data).includes("harassment")),
     { error: "Invalid submission.", path: ["details"] },
   )
   .refine((data) => !data.details?.commendee || data.type === "commendation", {
