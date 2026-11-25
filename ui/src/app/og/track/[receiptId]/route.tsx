@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { categoryLabel, statusLabel } from "@/constants/reportConstants";
 import { renderOgCard } from "@/lib/ogImage";
+import { internalApiHeaders } from "@/lib/serverApi";
 import { activeTheme } from "@/theme/themes";
 import type { PublicReport } from "@/types/report";
 
@@ -30,6 +31,7 @@ export async function GET(
     const response = await fetch(
       `${apiBase(request)}/reports/track/${encodeURIComponent(receiptId)}`,
       {
+        headers: internalApiHeaders(),
         signal: AbortSignal.timeout(4000),
         next: { revalidate: 300 },
       },
