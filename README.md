@@ -151,10 +151,11 @@ tracking, average outcome rating, reports from QR codes and time to first respon
 counts, no personal data), plus messages, passenger replies, My reports sign-ins, push sign-ups, "me too" confirmations,
 fare checks, safety-mode reports, shared trips and how often the emergency shortcut appeared.
 
-| App           | What it is                                  |
-| ------------- | ------------------------------------------- |
-| [`api/`](api) | REST API: TypeScript, Express 5, PostgreSQL |
-| [`ui/`](ui)   | Web app: TypeScript, Next.js 16, MUI 9      |
+| App                 | What it is                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| [`api/`](api)       | REST API: TypeScript, Express 5, PostgreSQL                                                        |
+| [`ui/`](ui)         | Web app: TypeScript, Next.js 16, MUI 9                                                             |
+| [`mobile/`](mobile) | Passenger app for Android and iOS: Expo SDK 58, React Native (its own npm project; see its README) |
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the structure, naming conventions and tech stack.
 
@@ -300,3 +301,6 @@ One Vercel project deploys both apps from the repo root (`vercel.json`): the UI 
 the API as a serverless function under `/api`. Set the variables from `.env.example` in the project settings;
 `DATABASE_URL` should point to a hosted Postgres (for Supabase, the transaction pooler, with
 `DATABASE_DIRECT_URL` for migrations; see above). Migrations run during the build.
+`vercel-build` is run by both builders: the Next.js builder (which sets `NEXT_PRIVATE_TARGET`) builds the
+UI, and the API builder applies the migrations. Running `next build` a second time would delete the files
+Vercel's adapter wrote during the first build and fail the deploy.

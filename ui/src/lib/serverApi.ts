@@ -12,6 +12,14 @@ const apiBase = async () => {
   return `${proto}://${host}/api`;
 };
 
+// On Vercel, preview (and *.vercel.app) deployments sit behind Deployment Protection, which answers
+// this server's own /api calls with its login page. With "Protection Bypass for Automation" on,
+// Vercel provides this secret, and the header lets the call through to the API.
+export const internalApiHeaders = (): Record<string, string> =>
+  process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+    ? { "x-vercel-protection-bypass": process.env.VERCEL_AUTOMATION_BYPASS_SECRET }
+    : {};
+
 export class PublicDataError extends Error {}
 
 /**
@@ -25,6 +33,7 @@ export const fetchPublic = async <T>(path: string, revalidate = 300): Promise<T 
   let response: Response;
   try {
     response = await fetch(`${base}${path}`, {
+      headers: internalApiHeaders(),
       next: { revalidate, tags: ["public"] },
       signal: AbortSignal.timeout(8000),
     });
@@ -33,5 +42,9 @@ export const fetchPublic = async <T>(path: string, revalidate = 300): Promise<T 
   }
   if (response.status === 404) return null;
   if (!response.ok) throw new PublicDataError(`API responded ${response.status}`);
+  // Anything but JSON (a proxy or login page) means the API wasn't reached
+  if (!response.headers.get("content-type")?.includes("application/json")) {
+    throw new PublicDataError("API responded with a non-JSON page");
+  }
   return (await response.json()) as T;
 };

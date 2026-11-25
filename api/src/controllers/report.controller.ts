@@ -97,6 +97,7 @@ export const toPublicView = (report: ReportWithRelations) => {
     type: report.type,
     status: report.status,
     category: report.category,
+    extraCategories: report.extraCategories,
     busNumber: report.busNumber,
     routeNumber: report.routeNumber,
     busService: report.busService,
@@ -158,6 +159,7 @@ export const submitReport = async (
     busName,
     busService,
     details: detailsInput,
+    extraCategories,
     ...fields
   } = req.body;
   // Road incidents aren't about a route bus: no bus number, route or bus name is kept
@@ -182,6 +184,8 @@ export const submitReport = async (
 
   const { saved, pdfUrl, emailSent, smsSent } = await fileReport({
     ...fields,
+    // The main category isn't repeated among the extras
+    extraCategories: extraCategories.filter((c) => c !== fields.category),
     description: fields.description ?? safetyDescription(details),
     busNumber: isRoad ? "" : (busNumber ?? "").toUpperCase(),
     routeNumber: isRoad ? "" : (routeNumber ?? ""),

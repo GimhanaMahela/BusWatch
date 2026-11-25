@@ -1,0 +1,1 @@
+ALTER TYPE "public"."report_source" ADD VALUE 'app';

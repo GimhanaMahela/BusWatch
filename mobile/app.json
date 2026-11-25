@@ -1,0 +1,78 @@
+{
+  "expo": {
+    "name": "TransitX",
+    "slug": "transitx",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "transitx",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.transitx.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.transitx.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-localization",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TransitX attaches the photos you choose to your report.",
+          "cameraPermission": "TransitX uses the camera to take photos for your report.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TransitX adds where the incident happened to your report."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240
+        }
+      ],
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "color": "#0068C2",
+          "defaultChannel": "report-updates"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TransitX uses the camera to scan the QR sticker inside the bus and to take photos for your report.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}

@@ -5,3 +5,7 @@ ui/public
 .refact
 ui/.next
 ui/next-env.d.ts
+mobile/.expo
+mobile/android
+mobile/ios
+mobile/package-lock.json

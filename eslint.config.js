@@ -11,7 +11,8 @@ const unusedVars = [
 ];
 
 export default tseslint.config(
-  { ignores: ["**/dist", "**/coverage", "ui/.next", "ui/next-env.d.ts"] },
+  // mobile/ is its own npm project with its own lint (`npm run lint` inside mobile/)
+  { ignores: ["**/dist", "**/coverage", "ui/.next", "ui/next-env.d.ts", "mobile/**"] },
   js.configs.recommended,
 
   // --- API: Node, type-aware rules ---

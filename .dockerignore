@@ -1,5 +1,6 @@
 # Build context is the repo root for both images
 **/node_modules
+mobile
 **/dist
 **/coverage
 .git

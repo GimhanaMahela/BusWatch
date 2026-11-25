@@ -97,6 +97,13 @@ describe("language and source", () => {
     expect(saved).toMatchObject({ language: "si", source: "qr" });
   });
 
+  it("stores reports sent from the mobile app as the app source", async () => {
+    const res = await submitReport({ language: "ta", source: "app" });
+    expect(res.status).toBe(201);
+    const saved = await reportByReceipt(res.body.receiptId);
+    expect(saved).toMatchObject({ language: "ta", source: "app" });
+  });
+
   it("falls back to English and web for unknown values", async () => {
     const res = await submitReport({ language: "fr", source: "billboard" });
     expect(res.status).toBe(201);

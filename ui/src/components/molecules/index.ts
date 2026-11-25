@@ -1,5 +1,6 @@
 export { default as BentoTile, type BentoVariant } from "./BentoTile";
 export { default as BusLookupForm } from "./BusLookupForm";
+export { default as CategoryChecklist } from "./CategoryChecklist";
 export { default as CategoryPicker } from "./CategoryPicker";
 export { default as DetailRow } from "./DetailRow";
 export { default as EmptyState } from "./EmptyState";

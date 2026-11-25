@@ -1,0 +1,62 @@
+name: Mobile release
+
+# Store releases of the TransitX app. Tag a commit on main as mobile-v<version> (e.g. mobile-v1.0.0)
+# to make production builds and submit them: Android to the Play Console's internal testing track,
+# iOS to TestFlight. Promote them to the public from the stores' own consoles.
+# Changes to JavaScript only can also ship as an over-the-air update to the production channel:
+# run this workflow by hand and pick "update".
+# Needs the EXPO_TOKEN secret, and the store credentials stored in EAS (npx eas-cli credentials).
+on:
+  push:
+    tags: ["mobile-v*"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to release"
+        type: choice
+        options: [update, build-and-submit]
+        default: update
+      platform:
+        description: "Platform for builds"
+        type: choice
+        options: [android, ios, all]
+        default: android
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # Releases come from main only (a tag on another branch is ignored)
+    if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: The tag is on main
+        if: github.ref_type == 'tag'
+        working-directory: .
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - run: npm run lint && npm run typecheck && npm test -- --ci
+      - name: Over-the-air update (production channel)
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'update'
+        run: eas update --channel production --message "Release from ${GITHUB_SHA::7}" --non-interactive
+      - name: Production builds, submitted to the stores' test tracks
+        if: github.ref_type == 'tag' || inputs.mode == 'build-and-submit'
+        run: eas build --profile production --platform "${{ inputs.platform || 'android' }}" --auto-submit --non-interactive --no-wait

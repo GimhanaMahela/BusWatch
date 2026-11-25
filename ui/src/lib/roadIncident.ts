@@ -24,7 +24,10 @@ export interface RoadFields {
   involvement: AccidentInvolvement | "";
   injuries: InjuryLevel | "";
   vehiclesInvolved: string;
+  /** The main problem with the road: the first one ticked */
   hazard: RoadHazard | "";
+  /** The other problems ticked, in order */
+  extraHazards: RoadHazard[];
 }
 
 /**
@@ -51,6 +54,10 @@ export const roadDetails = (subject: ReportSubject, form: RoadFields): ReportDet
           vehiclesInvolved: form.vehiclesInvolved ? Number(form.vehiclesInvolved) : null,
         },
       }),
-    ...(subject === "road" && form.hazard && { hazard: form.hazard }),
+    ...(subject === "road" &&
+      form.hazard && {
+        hazard: form.hazard,
+        ...(form.extraHazards.length > 0 && { extraHazards: form.extraHazards }),
+      }),
   },
 });

@@ -1,0 +1,1 @@
+ALTER TABLE "reports" ADD COLUMN "extra_categories" "report_category"[] DEFAULT '{}' NOT NULL;

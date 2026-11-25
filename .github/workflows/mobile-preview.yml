@@ -1,0 +1,62 @@
+name: Mobile preview
+
+# Every change to the app that lands on dev goes out to testers as an over-the-air update on the
+# "preview" channel (installs of the preview build pick it up on their next launch). Native changes
+# (new native modules, app.json plugins) need a new preview build: run this workflow by hand with
+# "build" ticked. Skips itself until the EXPO_TOKEN secret exists (expo.dev > Access tokens).
+on:
+  push:
+    branches: [dev]
+    paths: ["mobile/**", "ui/messages/**", "api/src/config/**", "api/src/utils/**"]
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Also make a new preview build (APK) for testers"
+        type: boolean
+        default: false
+
+concurrency:
+  group: mobile-preview
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Publish preview update
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check for the Expo token
+        id: token
+        working-directory: .
+        run: echo "present=${{ env.EXPO_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+      - if: steps.token.outputs.present != 'true'
+        working-directory: .
+        run: echo "::notice::EXPO_TOKEN is not set, so no preview was published."
+      - if: steps.token.outputs.present == 'true'
+        uses: actions/checkout@v7
+      - if: steps.token.outputs.present == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - if: steps.token.outputs.present == 'true'
+        uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - if: steps.token.outputs.present == 'true'
+        run: npm ci
+      - name: Over-the-air update
+        if: steps.token.outputs.present == 'true'
+        env:
+          # Through the environment, never pasted into the script (commit messages are free text)
+          MESSAGE: ${{ github.event.head_commit.message || 'Manual preview' }}
+        run: eas update --channel preview --message "$MESSAGE" --non-interactive
+      - name: Preview build for testers
+        if: steps.token.outputs.present == 'true' && inputs.build
+        run: eas build --profile preview --platform android --non-interactive --no-wait

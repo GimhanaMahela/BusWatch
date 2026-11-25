@@ -1,9 +1,12 @@
 name: CI
 
+# Branch flow: feature branches are cut from dev and merged into dev by PR;
+# dev is merged into main (production) by a release PR.
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
   pull_request:
+    branches: [dev, main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -25,3 +28,22 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  mobile:
+    name: Mobile app (lint, type-check, test, doctor)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      - run: npx expo-doctor
